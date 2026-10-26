@@ -1,5 +1,6 @@
 import type { ComponentType, RefObject } from 'react';
 
+import { BlameChip, BlameMenuToggle, BlameSurface } from './blame/Blame';
 import type { NoteSession } from './session';
 
 /**
@@ -24,4 +25,6 @@ export interface NoteFeature {
 }
 
 /** The features mounted on every note page, in order. */
-export const NOTE_FEATURES: readonly NoteFeature[] = [];
+export const NOTE_FEATURES: readonly NoteFeature[] = [
+  { id: 'blame', dockEnd: BlameChip, menuTop: BlameMenuToggle, surface: BlameSurface },
+];

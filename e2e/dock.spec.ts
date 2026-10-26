@@ -44,6 +44,7 @@ test('the dock holds Aa and ⋯, and their menus act', async ({ page }) => {
   await dock.getByRole('button', { name: 'More' }).click();
   const more = page.getByRole('menu', { name: 'More' });
   await expect(more.locator('[role^="menuitem"]')).toHaveText([
+    'Show blame',
     /Note info/,
     'Work offline',
     /Copy link/,
@@ -70,6 +71,8 @@ test('the ⋯ menu works from the keyboard', async ({ page }) => {
   await page.getByTestId('dock').getByRole('button', { name: 'More' }).focus();
   await page.keyboard.press('Enter');
   const more = page.getByRole('menu', { name: 'More' });
+  await expect(more.getByRole('menuitemcheckbox', { name: 'Show blame' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
   await expect(more.getByRole('menuitem', { name: /Note info/ })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(more.getByRole('menuitemcheckbox', { name: 'Work offline' })).toBeFocused();
@@ -106,9 +109,14 @@ test('Note info shows the size, who is here and how long the note is kept', asyn
   await expect(info.locator('.note-info-people li').first()).toContainText('editing');
   await expect(info).toContainText('90 days after the last visit');
 
-  // The pill carries the same size.
-  const pillSize = (await a.getByTestId('status-pill').innerText()).replace('Synced · ', '');
-  await expect(info.getByTestId('note-info-size')).toHaveText(pillSize);
+  // The pill carries the same size (read together: a save or the people
+  // registry can change it while the test runs).
+  await expect
+    .poll(async () => {
+      const pill = (await a.getByTestId('status-pill').innerText()).replace('Synced · ', '');
+      return pill === (await info.getByTestId('note-info-size').innerText());
+    })
+    .toBe(true);
 });
 
 test('⌘⇧C copies the note link', async ({ context, page }) => {

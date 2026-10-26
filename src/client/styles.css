@@ -34,6 +34,9 @@
   --peer-5: #a16207;
   --peer-6: #2563eb;
   --peer-7: #4d7c0f;
+  /* Blame: how much of a colour people out of focus keep. */
+  --blame-faded: 28%;
+  --blame-faded-opacity: 0.32;
 }
 
 [data-theme='dark'] {
@@ -1082,6 +1085,157 @@ button {
   margin-left: auto;
 }
 
+/* Blame: underlines are ::highlight(jot-blame-N) rules (blame/highlights.ts). */
+
+.dock-slot {
+  display: contents;
+}
+
+.blame-chip {
+  background: var(--select);
+  color: var(--accent);
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.dock-button.blame-chip:not(:disabled):hover,
+.dock-button.blame-chip[aria-expanded='true'] {
+  background: var(--select);
+  color: var(--accent);
+}
+
+.blame-dots {
+  display: inline-flex;
+  padding-left: 3px;
+}
+
+.blame-dots i {
+  width: 8px;
+  height: 8px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--peer);
+  box-shadow: 0 0 0 2px var(--select);
+}
+
+.blame-legend {
+  width: min(250px, calc(100vw - 24px));
+  padding: 8px;
+  font-size: 13.5px;
+}
+
+.blame-person .person-name {
+  font-weight: 600;
+}
+
+.blame-person[aria-checked='true'] {
+  background: var(--hover);
+}
+
+.blame-person .menu-hint {
+  font-variant-numeric: tabular-nums;
+}
+
+.blame-empty {
+  margin: 4px 8px 8px;
+  color: var(--muted);
+}
+
+.blame-legend-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.blame-hide {
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.blame-hide:hover,
+.blame-hide:focus-visible {
+  background: var(--hover);
+  color: var(--ink);
+  outline: none;
+}
+
+.blame-margin {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.blame-run {
+  position: absolute;
+  left: -22px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--peer);
+  transition: opacity var(--enter) var(--ease);
+}
+
+.blame-name {
+  position: absolute;
+  top: 3px;
+  right: 14px;
+  width: 88px;
+  overflow: hidden;
+  color: var(--peer);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blame-run.is-faded {
+  opacity: var(--blame-faded-opacity);
+}
+
+.blame-card {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  max-width: min(320px, calc(100vw - 16px));
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 10px 28px var(--shadow-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: none;
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.blame-card b {
+  font-weight: 600;
+}
+
+.blame-card span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Names need the margin beside the column; narrower windows keep the bars. */
+@media (max-width: 900px) {
+  .blame-name {
+    display: none;
+  }
+}
+
 /* ⌘K command menu. */
 
 .command-scrim {
@@ -1166,6 +1320,15 @@ button {
   }
 
   .note-avatars {
+    display: none;
+  }
+
+  /* No room for names beside the column: bars only, in the padding. */
+  .blame-run {
+    left: -12px;
+  }
+
+  .blame-name {
     display: none;
   }
 }

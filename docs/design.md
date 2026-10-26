@@ -13,17 +13,18 @@ dark. `<html data-theme>` picks the set; an inline script in `index.html` sets i
 the first paint from the stored choice or `prefers-color-scheme`. ⋯ → Dark theme and ⌘K →
 Toggle theme flip and remember it.
 
-| Token                        | Use                                                       |
-| ---------------------------- | --------------------------------------------------------- |
-| `--bg`                       | the page, edge to edge                                    |
-| `--ink`, `--body`, `--muted` | text; muted stays above 5:1 on the page                   |
-| `--rule`, `--rule-strong`    | hairlines, borders, checkbox outlines                     |
-| `--hover`, `--select`        | hover and selected rows, inline code, text selection      |
-| `--accent`                   | the one accent: links, focus, checked boxes, the caret    |
-| `--btn`, `--btn-ink`         | the primary button, a draft's Share, Reconnect            |
-| `--ok`, `--warn`, `--bad`    | status only, always beside a word                         |
-| `--peer-0` … `--peer-7`      | collaborators' identity colours, with `--peer-ink` labels |
-| `--shadow`, `--shadow-soft`  | popovers and menus; the dock's lighter lift               |
+| Token                                    | Use                                                       |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `--bg`                                   | the page, edge to edge                                    |
+| `--ink`, `--body`, `--muted`             | text; muted stays above 5:1 on the page                   |
+| `--rule`, `--rule-strong`                | hairlines, borders, checkbox outlines                     |
+| `--hover`, `--select`                    | hover and selected rows, inline code, text selection      |
+| `--accent`                               | the one accent: links, focus, checked boxes, the caret    |
+| `--btn`, `--btn-ink`                     | the primary button, a draft's Share, Reconnect            |
+| `--ok`, `--warn`, `--bad`                | status only, always beside a word                         |
+| `--peer-0` … `--peer-7`                  | collaborators' identity colours, with `--peer-ink` labels |
+| `--shadow`, `--shadow-soft`              | popovers and menus; the dock's lighter lift               |
+| `--blame-faded`, `--blame-faded-opacity` | how much of their colour people out of blame's focus keep |
 
 The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
 to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
@@ -68,18 +69,31 @@ playground needs: no toolbar is always there.
 
 - **Share** is quiet on a shared note and dark on a draft, where it is the one action that
   creates the link. Both confirm with "Link copied".
-- **The dock,** one floating row centred at the bottom: **Aa** and **⋯**, with slots between
-  them for Ask AI and the blame chip. Aa is disabled while the note is read only.
+- **The dock,** one floating row centred at the bottom: **Aa** and **⋯**, with a slot between
+  them for Ask AI, and the blame chip right before ⋯ while blame shows. Aa is disabled
+  while the note is read only.
   - **Aa** opens block types (Text, Heading 1 to 3, Bulleted, Numbered and Todo lists,
     Quote, Code, each with its markdown shortcut as a hint) and a row of inline formats
     (bold, italic, underline, strikethrough, inline code, link). Pointer presses keep the
     editor's focus and selection.
-  - **⋯** opens Note info (with the size), Work offline (a switch), Copy link (⌘⇧C), New
-    note and Dark theme (a switch).
+  - **⋯** opens Show blame (a switch), Note info (with the size), Work offline (a switch),
+    Copy link (⌘⇧C), New note and Dark theme (a switch).
   - **Note info:** the Yjs size as "238 KB of 2 MB" with a meter, "Here now" (colour, name,
     editing or idle), and "Kept until <date> · 90 days after the last visit".
   - Menus open above the dock, move with the arrow keys and close on Escape or a press
     outside.
+- **Blame** (D19), drawn over the page without changing it:
+  - a 2px underline in each author's `--peer-*` colour (the CSS Custom Highlight API);
+  - in the margin, a 3px bar per run of lines with the same main author, and their name
+    at the top of the run, right aligned beside the bar. Under 900px the names go and the
+    bars stay; under 640px the bars sit in the column's padding;
+  - "Blame" and up to four colour dots on `--select`, in the dock; it opens the legend:
+    a row per person (dot, name, share), "Click a name to focus" and "Hide blame". A
+    focused person keeps full colour and everyone else fades;
+  - hovering attributed text shows a small card: the name in bold, then "wrote this ·
+    last active 5 min ago", and for AI "· asked by <name>";
+  - the person in this browser is "You". Two people with one colour are kept apart: the
+    smaller share takes the next free colour.
 - A new note shows the placeholder "Untitled" and "Start writing. Anyone with this link can
   edit." (a draft: "It stays on this device until you press Share."). ⌘K opens a command
   menu that performs actions.
@@ -127,7 +141,7 @@ them off and shows the final state.
 - **The editor** moves only on state change: the pill label, the avatars and Share's
   "Link copied" fade in; the dock's popovers and the ⌘K menu rise in over 180 to 220ms with
   `cubic-bezier(0.2, 0, 0, 1)`; switches slide; the size meter scales; carets glide between
-  positions. Nothing loops.
+  positions; blame's margin and chip fade in, and focus fades the others. Nothing loops.
 - **The landing page** has slow, continuous motion on the hero: the fan's sway (7 s), the
   drifting glow (20 s), the blinking carets and the example typing. The underline wipes in
   once. Below the hero, the two windows loop every 7.6 s and the tabs advance every 3 s.

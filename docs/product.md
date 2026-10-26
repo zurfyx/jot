@@ -23,13 +23,19 @@ version of the engine.
   Markdown shortcuts while typing; **Aa** in the bottom dock for block types and formats;
   a ⌘K menu (New note, Copy link, Toggle theme, Insert table, Go home). Collaborators'
   carets show their name and colour, and their avatars sit top right.
+- **See who wrote what.** ⋯ → Show blame underlines each person's text in their colour and
+  puts a bar with their name beside each run of lines they wrote most of. A "Blame" chip
+  in the dock opens the legend: each person's share in characters; a click on a name
+  fades everyone else; Hide blame. Hovering text says who wrote it and when they were
+  last active (for jot AI, who asked). Deleted text is not shown (D19).
 - **See the note's state.** The status pill says "Synced · 238 KB" (the note's Yjs size),
   "Connecting…", "Offline · 3 edits waiting", "Syncing · 3 edits waiting", "Back online ·
   merged" or, for a draft, "Only on this device". ⋯ → Note info shows the size against the 2 MB cap, who is here, and
   until when the note is kept.
 - **Work offline on purpose.** ⋯ → Work offline, or a click on the pill, disconnects the
   note and keeps it editable, so a merge can be tried: edit in two windows, then
-  Reconnect. Losing the network behaves the same way. Edits made offline stay in the page
+  Reconnect; blame then shows for four seconds, so the merge is visible. Losing the network
+  behaves the same way. Edits made offline stay in the page
   until it reconnects; closing a shared note's tab while offline loses them (D13).
 
 ## Promises

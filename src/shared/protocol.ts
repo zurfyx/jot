@@ -24,6 +24,13 @@ export const MESSAGE_NOTE_STATUS = 64;
 /** Flag: the server rejected an update because the note is full. */
 export const NOTE_STATUS_REJECTED = 1;
 
+/**
+ * The second root of a note's Y.Doc, beside `lexical-y`: the people registry
+ * that maps Yjs client ids to people, for blame (D19). The relay stores it
+ * like any other content.
+ */
+export const PEOPLE_ROOT = 'jot-people';
+
 /** y-protocols sync message subtypes. */
 export const SYNC_STEP_1 = 0;
 export const SYNC_STEP_2 = 1;

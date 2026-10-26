@@ -59,10 +59,15 @@ export function Dock({ session }: { session: NoteSession }) {
         >
           Aa
         </button>
-        {NOTE_FEATURES.map(
-          ({ id, dockStart: Item }) => Item && <Item key={id} session={session} />,
-        )}
-        {NOTE_FEATURES.map(({ id, dockEnd: Item }) => Item && <Item key={id} session={session} />)}
+        {/* A press on a feature's control closes Aa or ⋯ (features run their own popovers). */}
+        <span className="dock-slot" onPointerDown={() => open !== null && close()}>
+          {NOTE_FEATURES.map(
+            ({ id, dockStart: Item }) => Item && <Item key={id} session={session} />,
+          )}
+          {NOTE_FEATURES.map(
+            ({ id, dockEnd: Item }) => Item && <Item key={id} session={session} />,
+          )}
+        </span>
         <button
           type="button"
           className="dock-button"
