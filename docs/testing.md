@@ -30,9 +30,11 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   kept apart; nested blocks and inline nodes in hand-built deltas; malformed deltas never
   throw; line matching skips unknown lines, never pairs repeated text out of order, and
   finds unique moved ones;
-- blame and moves: when Bea moves her line "same" above Ana's "same", neither is painted
-  (never the wrong person); a line joined from a moved range ("onefour") is skipped while
-  the others keep their authors; a walk that disagrees with the delta marks every line;
+- blame and moves: a move is written again by its mover (layout 1, no `↷` records), so
+  when Bea moves her line "same" above Ana's "same" the two are painted Bea then Ana, never
+  swapped; a line joined from a moved one ("onefour") gets its main author, and the
+  others keep theirs; a walk of layout 2 move records that disagrees with the delta marks
+  every line;
 - painting: runs map onto text nodes and line breaks in one sweep, linear on long lines;
   the recompute debounce still runs at least once a second while updates keep coming;
 - the people registry: entries parsed defensively, the newest entry names a person, a
@@ -69,7 +71,7 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   theirs); the snapshot sees underline and alignment that Markdown drops. With a fake
   model on a real binding: nothing is sent before Ask; jot AI joins only once the model
   is ready, writes the reply under its own client id with its registry entry (kind `ai`,
-  `askedBy`) and its caret, and is credited only with the characters it changed; on
+  `askedBy`) and its caret, and is credited only with the words it changed (the binding replaces whole words); on
   someone else's note, an asker who has typed nothing is recorded as this browser's own
   and named by `askedBy`; it writes into an empty block, shows the download, runs one
   request at a time, and a cancelled request never resets a newer one; it writes nothing
@@ -113,6 +115,9 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 - the expiry alarm is 90 days out and deletes storage when it fires;
 - malformed frames close only their socket;
 - deleted content is compacted out of the stored row;
+- format items the clients keep (a bold around text another client deleted) are stored
+  and relayed as they are: the room's document has Yjs's format cleanup off and sends no
+  deletions of its own;
 - malformed ids, `public` included, get 400 on both routes;
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
   `X-Robots-Tag: noindex, nofollow`.

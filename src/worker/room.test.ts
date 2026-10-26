@@ -1,5 +1,6 @@
 import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
+import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 
 import { generateNoteId, noteSocketPath } from '../shared/ids';
@@ -264,6 +265,53 @@ describe('NoteRoom', () => {
       return (row.state as ArrayBuffer).byteLength;
     });
     expect(stored).toBeLessThan(1_000);
+    a.close();
+    witness.close();
+  });
+
+  it('keeps the format items the clients keep, and writes nothing of its own', async () => {
+    // Ana bolds "A" while Bea deletes it: the bold's format items stay around
+    // the deleted text. The clients keep them (@lexical/y turns Yjs's format
+    // cleanup off in its containers); the room must store them as they are.
+    const quiet = () => {
+      const doc = new Y.Doc();
+      doc.cleanupFormatting = false;
+      return doc;
+    };
+    const ana = quiet();
+    const bea = quiet();
+    ana.get('text').insert(0, 'AB');
+    Y.applyUpdate(bea, Y.encodeStateAsUpdate(ana));
+    ana.get('text').format(0, 1, { bold: true });
+    bea.get('text').delete(0, 1);
+    Y.applyUpdate(ana, Y.encodeStateAsUpdate(bea));
+    const formats = (doc: Y.Doc) => {
+      const out: string[] = [];
+      for (let item = doc.get('text')._start; item !== null; item = item.right) {
+        if (!item.deleted && item.content instanceof Y.ContentFormat) {
+          out.push(`${item.content.key}=${JSON.stringify(item.content.value)}`);
+        }
+      }
+      return out;
+    };
+    expect(formats(ana)).toEqual(['bold=true', 'bold=null']);
+
+    const id = generateNoteId();
+    const a = await TestClient.connect(id);
+    Y.applyUpdate(a.doc, Y.encodeStateAsUpdate(ana));
+    const witness = await TestClient.connect(id);
+    await witness.until(() => witness.text === 'B');
+    await flush(id);
+    const stored = await runInDurableObject(stubFor(id), (_room: NoteRoom, state) => {
+      const row = state.storage.sql.exec('SELECT state FROM note').one();
+      return new Uint8Array(row.state as ArrayBuffer);
+    });
+    const reloaded = quiet();
+    Y.applyUpdate(reloaded, stored);
+    expect(formats(reloaded)).toEqual(['bold=true', 'bold=null']);
+    // The room sent no deletions of its own: the clients keep them too.
+    expect(formats(witness.doc)).toEqual(['bold=true', 'bold=null']);
+    expect(formats(a.doc)).toEqual(['bold=true', 'bold=null']);
     a.close();
     witness.close();
   });

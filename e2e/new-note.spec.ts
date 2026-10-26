@@ -27,7 +27,17 @@ async function storedNote(page: Page, baseURL: string, lines: string[]) {
   await openNote(page, id);
   await editor(page).click();
   await page.keyboard.type(lines.join('\n'));
-  await expect(page.getByTestId('status-pill')).toContainText('Synced');
+  // The pill already said Synced before the last keys: wait for the relay to
+  // hold the last line instead, so closing the page loses nothing.
+  const last = lines.at(-1)!;
+  await expect(editor(page)).toContainText(last);
+  await expect
+    .poll(async () => {
+      const doc = new Y.Doc();
+      Y.applyUpdate(doc, await readRawNote(baseURL, id));
+      return doc.get('lexical-y').toString();
+    })
+    .toContain(last);
   await page.close();
   const state = Buffer.from(await readRawNote(baseURL, id)).toString('base64');
   return JSON.stringify({ id: 'old-draft', state });

@@ -58,6 +58,7 @@ How expensive is this to get wrong?
 | [D17](D17-notes-out-of-search-engines.md)        | Notes and the API are `noindex, nofollow` and disallowed in robots.txt  | LOW    | `DECIDED` |
 | [D22](D22-docs-in-the-app.md)                    | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`   | LOW    | `DECIDED` |
 | [D24](D24-previews-on-workers-dev.md)            | Branch Previews on rovira.workers.dev, noindex, own Durable Objects     | LOW    | `DECIDED` |
+| [D25](D25-older-layout-notes-stay-read-only.md)  | Notes in an older `@lexical/y` layout stay read only; no conversion     | MED    | `DECIDED` |
 
 ## Superseded
 

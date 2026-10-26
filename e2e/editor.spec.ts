@@ -166,7 +166,7 @@ test('a note from a newer layout opens read only', async ({ page, baseURL }) => 
   const id = freshNoteId();
   await writeRawNote(baseURL!, id, (doc) => {
     const root = doc.get('lexical-y');
-    root.setAttr('lexical-y', 99);
+    root.setAttr('lexical-y:99', true);
     root.insert(0, 'From the future');
   });
   await page.goto(`/n/${id}`);

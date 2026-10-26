@@ -163,35 +163,35 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@lexical/a11y': https://pkg.pr.new/facebook/lexical/@lexical/a11y@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/clipboard': https://pkg.pr.new/facebook/lexical/@lexical/clipboard@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/code': https://pkg.pr.new/facebook/lexical/@lexical/code@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/code-core': https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/devtools-core': https://pkg.pr.new/facebook/lexical/@lexical/devtools-core@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/dragon': https://pkg.pr.new/facebook/lexical/@lexical/dragon@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/file': https://pkg.pr.new/facebook/lexical/@lexical/file@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/hashtag': https://pkg.pr.new/facebook/lexical/@lexical/hashtag@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/headless': https://pkg.pr.new/facebook/lexical/@lexical/headless@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/history': https://pkg.pr.new/facebook/lexical/@lexical/history@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/link': https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/list': https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/mark': https://pkg.pr.new/facebook/lexical/@lexical/mark@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/markdown': https://pkg.pr.new/facebook/lexical/@lexical/markdown@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/offset': https://pkg.pr.new/facebook/lexical/@lexical/offset@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/overflow': https://pkg.pr.new/facebook/lexical/@lexical/overflow@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/plain-text': https://pkg.pr.new/facebook/lexical/@lexical/plain-text@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/react': https://pkg.pr.new/facebook/lexical/@lexical/react@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/rich-text': https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/table': https://pkg.pr.new/facebook/lexical/@lexical/table@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/text': https://pkg.pr.new/facebook/lexical/@lexical/text@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/y': https://pkg.pr.new/facebook/lexical/@lexical/y@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  '@lexical/yjs': https://pkg.pr.new/facebook/lexical/@lexical/yjs@4f04dcdd119d218fb54008f3d94cb208e5f48382
-  lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382
+  '@lexical/a11y': https://pkg.pr.new/facebook/lexical/@lexical/a11y@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/clipboard': https://pkg.pr.new/facebook/lexical/@lexical/clipboard@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/code': https://pkg.pr.new/facebook/lexical/@lexical/code@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/code-core': https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/devtools-core': https://pkg.pr.new/facebook/lexical/@lexical/devtools-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/dragon': https://pkg.pr.new/facebook/lexical/@lexical/dragon@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/file': https://pkg.pr.new/facebook/lexical/@lexical/file@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/hashtag': https://pkg.pr.new/facebook/lexical/@lexical/hashtag@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/headless': https://pkg.pr.new/facebook/lexical/@lexical/headless@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/history': https://pkg.pr.new/facebook/lexical/@lexical/history@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/link': https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/list': https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/mark': https://pkg.pr.new/facebook/lexical/@lexical/mark@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/markdown': https://pkg.pr.new/facebook/lexical/@lexical/markdown@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/offset': https://pkg.pr.new/facebook/lexical/@lexical/offset@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/overflow': https://pkg.pr.new/facebook/lexical/@lexical/overflow@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/plain-text': https://pkg.pr.new/facebook/lexical/@lexical/plain-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/react': https://pkg.pr.new/facebook/lexical/@lexical/react@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/rich-text': https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/table': https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/text': https://pkg.pr.new/facebook/lexical/@lexical/text@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/y': https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  '@lexical/yjs': https://pkg.pr.new/facebook/lexical/@lexical/yjs@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+  lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b
 
 importers:
 
@@ -204,38 +204,38 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@lexical/code-core':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/extension':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/internal':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/link':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/list':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/markdown':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/markdown@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/markdown@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/markdown@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/markdown@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/rich-text':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/selection':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/table':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/table@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/table@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/utils':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@lexical/y':
-        specifier: https://pkg.pr.new/facebook/lexical/@lexical/y@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/@lexical/y@4f04dcdd119d218fb54008f3d94cb208e5f48382(@y/y@14.0.0-rc.29)(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b(@y/y@14.0.0-rc.29)(typescript@6.0.3)
       '@y/protocols':
         specifier: 1.0.6-rc.1
         version: 1.0.6-rc.1(@y/y@14.0.0-rc.29)
@@ -246,8 +246,8 @@ importers:
         specifier: 14.0.0-rc.29
         version: 14.0.0-rc.29
       lexical:
-        specifier: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382
-        version: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+        specifier: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b
+        version: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       lib0:
         specifier: 1.0.0-rc.36
         version: 1.0.0-rc.36
@@ -866,144 +866,144 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lexical/a11y@https://pkg.pr.new/facebook/lexical/@lexical/a11y@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-8iyhx01I5BBWL5+aDea9dJkOeylp+ewmrgNe85QApahfP7XtvMb5lMjhrPNz3U5UvPirt2TMhxnn0naLTdePiQ==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/a11y@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/a11y@https://pkg.pr.new/facebook/lexical/@lexical/a11y@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-Fla4xQGbzOUaFfE24gYTKjNYdNCsIUWx7Hh3Yb38mXhsMkT38f4uGamPHiiEc3cykoAz/vl9gq+u+fmotQV3vA==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/a11y@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/clipboard@https://pkg.pr.new/facebook/lexical/@lexical/clipboard@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-wDhYye6kfLFFubfuTd73em/0FKUR/EaSnzs8oTbM+nNMrT5sAwkKr37TUEMXl5/2U6gtvE1pTWMQ9GebVJ5doQ==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/clipboard@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/clipboard@https://pkg.pr.new/facebook/lexical/@lexical/clipboard@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-32tRGw1BcuYB/qPN9sgl9HbQ9To9dMXOAr074isLZdiNb52vskfu1n5gVjQdDjJzTyw/RLlJsAWAIwXuVHj1EQ==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/clipboard@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/code-core@https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-KY5c1fi6SU3GD4EVKBCCJgS68sbO9XYDjhO9tMO+QuZltJ3FyurQ/I7RVoX+C06dBxWF03Kx3zb915DBbjIrBA==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/code-core@https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-b32TyRzqjZ1bVgJ968dmc4zj32gCoO0+NTvUUCbl7jyGr3avUHSjyRv28QFVC7w+sRQc7/AE6IgtCuuG46f3CA==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/dragon@https://pkg.pr.new/facebook/lexical/@lexical/dragon@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-MwWgSRt0s43+uUOtOJNFsrnDP6JlEwwjqnJTigmzCPT0r9Cb+0kUZeGlfy5uOClvuCriPU8nLZzFF0OUrVHDnw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/dragon@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/dragon@https://pkg.pr.new/facebook/lexical/@lexical/dragon@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-Ifq2rf1yvPK/Bra2AOqlQpZY5daOBtDaBf5/Nty7g8mXmgEaTjPnqO0lxKKq2mVRpkAV3YshciBkwT0R/vTgtw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/dragon@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/extension@https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-gfOJeGBCtAutIfpztR+7A0DWUe0MvWNrBmi4o+BBc44Grsokpuzvus6GyEjnZhmkzx9i9Ja01caGRLPw/Mxq2g==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/extension@https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-fcOyyCo6MSQmWI73KR9/jYqX3YB5Ap3TPsDmMrXbmLr4GjbpKAvXy1pMtuauOvPpdLdMoow0V14Rz6mAu49dAg==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/html@https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-2Q1yWm+N2k54hEme09wMWUodZDj8G75g7+QEPkzYU37fCgNv7bO87QMU5b4wBAfSYJfWVuj+sKBKex37c8fxsQ==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/html@https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-mslmo/VosrcIHbE6hD/AMvjkYfN2FGz6y8JSSvVz8JEr1vuNLEy3+11v7WclAMP0mXOdblPK1keibscvV6p0qg==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/internal@https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-MLpbSF8KQNGoKhTXXxNvXDtPQOVaIoz1rbZUY6Xn3Uq0kCAEWBe7WpDcTsYJrG6pWw1PDAfaLh0ShB6PY1mF4g==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/internal@https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-/8XgK0Pt07zAUsq1VMVAqVT1Mk42UaKa1kEFW2otO+KOxVg9xAsE2UwZfErjkt3Aq04Y39MDyQdwFIz/Sq0ELw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/link@https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-ZaWHF9yHMEkHj9CwUDOK6ezkvDiXgXCgvxTl8qrXTO6Xs6wXKGy7rxny9Bib8X72PpwZsNcAUoBA5prSpSL57A==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/link@https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-lpcLxK8s3RQzKp6UCR2ZUbJ0gYsH0rKGFhMUQQMBJRgXpOdg8P6Pbx7K9JxnBaxAPQFAmZxV6Ebj5JTql4WYtQ==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/list@https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-oQ/Q/rU69Fd3CXefmgSNXp6mEwbVVMbbbScaaaKMzGLgrtOrkuk/gKH0UjvS9KClLpRP9hkwlcKgCmVFwEVEfg==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/list@https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-CZV3jVMvB00LfL23NVhvdYA5JvKzKAEV/hRczMK5IYvGrKqVQi58Q/nPe452r6d7BHG61Ez8GKFip4BsOrziAg==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/markdown@https://pkg.pr.new/facebook/lexical/@lexical/markdown@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-qvOoTwdQRJc7JklBXRPEAw0vjk3GGMDg1RnkaKtpLfc6Sf2Cv1tGCc/5yp8EUgpx0O33tkZpUBuc/fstgHmEpA==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/markdown@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/markdown@https://pkg.pr.new/facebook/lexical/@lexical/markdown@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-cNsmuToOt5BldgcLN6NzTlQtN7HP9mYkSePyMk18xYUGJeT1d0FGSyZKaj1f3bGr4bK2as4I6AyGmpv54aeKaA==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/markdown@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/rich-text@https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-HxOwV5guvyoRBJQxlB1RQl+i6X5+Ou4IfUcdbEjwmeKnwdJz9Y3XyamwDoMbNP6LN5rhOilwI2z9u7I9g207ag==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/rich-text@https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-wkm7BBl7YWKa+9zc4jzRO2klN9reTZZOZq9G+BU/6xN5GxR6pr2Yi0PTIduAPUDoGfFohMbJRcpDjVl2piGWow==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/selection@https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-bBNW1yPeLPP3ZTJc+9fwNYnD89CC61K4i5kICqgo1eS/e+cyQARkYWO0E5XfEzdKdp9T7/hH4w7443CsGsPxZw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/selection@https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-2zfHPdrKStUxyr0X2XyjP5CopFQi+j+YF6GFHNth9c7l3pCgYi2UNkGNQ7tI9w8DB0QOBC/pehbhw4hArsT57w==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/table@https://pkg.pr.new/facebook/lexical/@lexical/table@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-NamHRvzrNx9dRT2QtPH8umOgIRhtaoEOvejxRH0w6EYaPcgU7sFv77P6o85RcZpNN4zw4tgocnrKMUT9glAkHw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/table@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/table@https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-rLkJ8Yc9wx/WD71WfjsbSqS8VyPVrG7QVQObv+uwK/1v8Bo4joF0CSFqUncwxIdCPmQXdblm0XkeSNer99BDrw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/text@https://pkg.pr.new/facebook/lexical/@lexical/text@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-Jx9UmAkOvg+4W0Wp1otg3NQO23uzQMe41HDjIqhcrgPdKyetBk+RPEslejeIfb3GLePvqwfG1HvMIecrGbHJnA==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/text@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/text@https://pkg.pr.new/facebook/lexical/@lexical/text@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-3xPa73IDwxC1ZT9M6cx1aAyoAneSTNL9g2XPUf8jsrDWQyxd+m3UsTU4iqeRyI3wHtUHXN01nBkKK+Or3x4nzw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/text@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/utils@https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-1DliWEa8mDFORQaQgCnc9AOMTdYVO0m9fJgk68C3r4CSDnQX6moy6NQsmcqyTUvA0F9qjPvmpn3kIsQY/Tj4QQ==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/utils@https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-BSIbpnO1iGtJPfSHKND0O84nUaECromlZmwsxw+nEa06/q6jYEoIJfXJQQdo4GFbkhZp0Xd13Xwb5cGIiz+Izw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/y@https://pkg.pr.new/facebook/lexical/@lexical/y@4f04dcdd119d218fb54008f3d94cb208e5f48382':
-    resolution: {integrity: sha512-B32lja/fM6fwzaWuTHEgbEWXzNjwyqjFELE5TarK3qyGyql4bJUtGKkaX6WApeMiNsGvkCtvM9TWEU9J2tdl7g==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/y@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  '@lexical/y@https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b':
+    resolution: {integrity: sha512-iIKEBSi+267mkYVQ6B2swZuFOh3TrxSOMHANw/bGXB5jeJodmLfQdI/wnaQ/in901h8iJpOx2zF69dR6CgdeTw==, tarball: https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       '@y/y': 14.0.0-rc.29
       typescript: '>=5.2'
@@ -1557,9 +1557,9 @@ packages:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
 
-  lexical@https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382:
-    resolution: {integrity: sha512-MBxxtSmRIPaWNaSz5GdFatm+NegcR/yU84sVt3jvZGpqpl2PQwUMGOo9t80RkNEmq+Zz95G1ECmxPKjUu6LXMg==, tarball: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382}
-    version: 0.52.1-pr.9439.g4f04dcd
+  lexical@https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b:
+    resolution: {integrity: sha512-oc+L+9mhmnIBBmaGdC+HbOmbBPbo/Fm6FXlB7X3UVWKzKubeZcy8/Y6GSbcax8B3hPCFuexhJWLb2reyN0X1oA==, tarball: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b}
+    version: 0.52.1-pr.9439.g62f1300
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
@@ -2476,154 +2476,154 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lexical/a11y@https://pkg.pr.new/facebook/lexical/@lexical/a11y@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/a11y@https://pkg.pr.new/facebook/lexical/@lexical/a11y@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/clipboard@https://pkg.pr.new/facebook/lexical/@lexical/clipboard@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/clipboard@https://pkg.pr.new/facebook/lexical/@lexical/clipboard@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/list': https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/list': https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@types/trusted-types': 2.0.7
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/code-core@https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/code-core@https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/dragon@https://pkg.pr.new/facebook/lexical/@lexical/dragon@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/dragon@https://pkg.pr.new/facebook/lexical/@lexical/dragon@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/extension@https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/extension@https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@preact/signals-core': 1.14.4
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/html@https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/html@https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/internal@https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/internal@https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/link@https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/link@https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/a11y': https://pkg.pr.new/facebook/lexical/@lexical/a11y@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/a11y': https://pkg.pr.new/facebook/lexical/@lexical/a11y@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/list@https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/list@https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/markdown@https://pkg.pr.new/facebook/lexical/@lexical/markdown@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/markdown@https://pkg.pr.new/facebook/lexical/@lexical/markdown@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/code-core': https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/link': https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/list': https://pkg.pr.new/facebook/lexical/@lexical/list@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/rich-text': https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/text': https://pkg.pr.new/facebook/lexical/@lexical/text@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/code-core': https://pkg.pr.new/facebook/lexical/@lexical/code-core@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/link': https://pkg.pr.new/facebook/lexical/@lexical/link@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/list': https://pkg.pr.new/facebook/lexical/@lexical/list@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/rich-text': https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/text': https://pkg.pr.new/facebook/lexical/@lexical/text@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/rich-text@https://pkg.pr.new/facebook/lexical/@lexical/rich-text@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/rich-text@https://pkg.pr.new/facebook/lexical/@lexical/rich-text@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/a11y': https://pkg.pr.new/facebook/lexical/@lexical/a11y@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/clipboard': https://pkg.pr.new/facebook/lexical/@lexical/clipboard@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/dragon': https://pkg.pr.new/facebook/lexical/@lexical/dragon@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/a11y': https://pkg.pr.new/facebook/lexical/@lexical/a11y@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/clipboard': https://pkg.pr.new/facebook/lexical/@lexical/clipboard@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/dragon': https://pkg.pr.new/facebook/lexical/@lexical/dragon@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/selection@https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/selection@https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/table@https://pkg.pr.new/facebook/lexical/@lexical/table@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/table@https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/clipboard': https://pkg.pr.new/facebook/lexical/@lexical/clipboard@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/clipboard': https://pkg.pr.new/facebook/lexical/@lexical/clipboard@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/html': https://pkg.pr.new/facebook/lexical/@lexical/html@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/utils': https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/text@https://pkg.pr.new/facebook/lexical/@lexical/text@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/text@https://pkg.pr.new/facebook/lexical/@lexical/text@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/utils@https://pkg.pr.new/facebook/lexical/@lexical/utils@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)':
+  '@lexical/utils@https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/selection': https://pkg.pr.new/facebook/lexical/@lexical/selection@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/y@https://pkg.pr.new/facebook/lexical/@lexical/y@4f04dcdd119d218fb54008f3d94cb208e5f48382(@y/y@14.0.0-rc.29)(typescript@6.0.3)':
+  '@lexical/y@https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b(@y/y@14.0.0-rc.29)(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/facebook/lexical/@lexical/extension@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
       '@y/y': 14.0.0-rc.29
-      lexical: https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      lexical: https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
@@ -3129,9 +3129,9 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
-  lexical@https://pkg.pr.new/facebook/lexical/lexical@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3):
+  lexical@https://pkg.pr.new/facebook/lexical/lexical@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3):
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
+      '@lexical/internal': https://pkg.pr.new/facebook/lexical/@lexical/internal@62f1300b71dadbf6fa0e89f51b821a783f61c54b(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
