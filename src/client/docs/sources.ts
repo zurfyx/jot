@@ -5,7 +5,6 @@
  */
 
 import aiPeer from '../../docs/snippets/ai-peer.ts?raw';
-import draft from '../../docs/snippets/draft.ts?raw';
 import inspect from '../../docs/snippets/inspect.ts?raw';
 import merge from '../../docs/snippets/merge.ts?raw';
 import presence from '../../docs/snippets/presence.ts?raw';
@@ -80,7 +79,6 @@ export const SNIPPETS = {
   merge: snippet('merge.ts', merge),
   reconnect: snippet('reconnect.ts', reconnect),
   workOffline: snippet('work-offline.ts', workOffline),
-  draft: snippet('draft.ts', draft),
   registry: snippet('registry.ts', registry),
   underline: snippet('underline.ts', underline),
   aiPeer: snippet('ai-peer.ts', aiPeer),

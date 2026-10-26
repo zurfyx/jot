@@ -171,21 +171,12 @@ export function Offline() {
         chose to work offline:
       </p>
       <Code source={SNIPPETS.reconnect} />
-      <h2>Drafts: offline from the start</h2>
-      <p>
-        A new note at <code>/new</code> has no server at all. Its binding initializes at once,
-        without waiting for a sync, and the document is saved in this browser half a second after
-        each change, so a reload loses nothing. Share gives it an id and connects a provider to the
-        same document: the empty room receives everything, and since the binding already wrote the
-        first content, nothing is seeded twice.
-      </p>
-      <Code source={SNIPPETS.draft} />
       <h2>Where offline edits live</h2>
       <p>
-        A draft lives in <code>localStorage</code> until it's shared and confirmed. A shared note's
-        offline edits stay in memory: there's no Yjs 14 IndexedDB provider yet, so closing its tab
-        while offline loses them. A full note is the one exception to "nothing is lost": an edit
-        that would pass <DocLink slug="size">2 MB</DocLink> is refused when it arrives.
+        In memory. There's no Yjs 14 IndexedDB provider yet, so a note's unsynced edits stay in the
+        page until the socket is back, and closing its tab while offline loses them. A full note is
+        the one exception to "nothing is lost": an edit that would pass{' '}
+        <DocLink slug="size">2 MB</DocLink> is refused when it arrives.
       </p>
     </>
   );

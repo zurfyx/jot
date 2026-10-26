@@ -85,8 +85,9 @@ export function QuickStart() {
         extensions (lists, checklists, links, code blocks, tables, markdown shortcuts) from{' '}
         <Source path="src/client/editor/extensions.ts">extensions.ts</Source>. The provider runs
         without a BroadcastChannel, so tabs sync through the server, which enforces the size cap,
-        and it adopts an <code>Awareness</code> the session owns. A new note at <code>/new</code>{' '}
-        has no provider at all until it's shared: see <DocLink slug="offline">drafts</DocLink>.
+        and it adopts an <code>Awareness</code> the session owns. A new note is shared from the
+        start: it opens at its own <code>/n/&lt;id&gt;</code>, connects, and initializes after that
+        first sync like any other.
       </p>
       <p>
         The extension's output also has a <code>status</code> signal: <code>'pending'</code> until
