@@ -2,7 +2,7 @@ import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from 'c
 import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import { generateNoteId, noteSocketPath, PUBLIC_NOTE_ID } from '../shared/ids';
+import { generateNoteId, noteSocketPath } from '../shared/ids';
 import { NOTE_EXPIRY_MS, NOTE_MAX_BYTES } from '../shared/limits';
 import { CLOSE_MALFORMED } from '../shared/protocol';
 import type { NoteRoom } from './room';
@@ -61,10 +61,48 @@ describe('routes', () => {
     expect(response.status).toBe(426);
   });
 
-  it('accepts the public note id', async () => {
-    const client = await TestClient.connect(PUBLIC_NOTE_ID);
-    expect(client.synced).toBe(true);
-    client.close();
+  it('has no public note: /n/public is a 400 like any malformed id', async () => {
+    for (const path of ['/n/public', '/api/n/public/ws']) {
+      const response = await exports.default.fetch(`http://jot.test${path}`, {
+        headers: { Upgrade: 'websocket' },
+      });
+      expect(response.status, path).toBe(400);
+    }
+  });
+});
+
+describe('search engines (D17)', () => {
+  const NOINDEX = 'noindex, nofollow';
+
+  // The test Worker has no ASSETS binding, so the SPA responses for valid
+  // notes and the landing page are covered in e2e (landing.spec.ts).
+  it('marks every note and API response noindex, nofollow', async () => {
+    const id = generateNoteId();
+    const cases: [string, RequestInit, number][] = [
+      ['/n/nope', {}, 400],
+      ['/n/public', {}, 400],
+      [noteSocketPath(id), {}, 426],
+      ['/api/n/nope/ws', { headers: { Upgrade: 'websocket' } }, 400],
+      ['/api/elsewhere', {}, 404],
+    ];
+    for (const [path, init, status] of cases) {
+      const response = await exports.default.fetch(`http://jot.test${path}`, init);
+      expect(response.status, path).toBe(status);
+      expect(response.headers.get('X-Robots-Tag'), path).toBe(NOINDEX);
+      await response.body?.cancel();
+    }
+  });
+
+  it('marks the WebSocket upgrade noindex, nofollow and keeps the socket', async () => {
+    const response = await exports.default.fetch(
+      `http://jot.test${noteSocketPath(generateNoteId())}`,
+      { headers: { Upgrade: 'websocket' } },
+    );
+    expect(response.status).toBe(101);
+    expect(response.headers.get('X-Robots-Tag')).toBe(NOINDEX);
+    const socket = response.webSocket!;
+    socket.accept();
+    socket.close();
   });
 });
 
@@ -184,15 +222,6 @@ describe('NoteRoom', () => {
     const b = await TestClient.connect(id);
     expect(b.text).toBe('');
     b.close();
-  });
-
-  it('never schedules expiry for the public note', async () => {
-    const client = await TestClient.connect(PUBLIC_NOTE_ID);
-    client.close();
-    const alarm = await runInDurableObject(stubFor(PUBLIC_NOTE_ID), (_room: NoteRoom, state) =>
-      state.storage.getAlarm(),
-    );
-    expect(alarm).toBeNull();
   });
 
   it('closes a socket that sends a malformed message, and keeps serving others', async () => {

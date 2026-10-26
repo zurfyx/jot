@@ -23,8 +23,12 @@ One Worker with static assets (D01). `wrangler.jsonc` runs the Worker first for 
 | `/api/*` otherwise  | 404                                                               |
 | anything else       | static assets                                                     |
 
-A valid id is 22 base64url characters encoding 128 bits, or `public` (D02). The Worker
-passes the id to the object in the `x-jot-note` header.
+A valid id is 22 base64url characters encoding 128 bits, and nothing else: there are no
+fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note` header.
+
+Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade included,
+carries `X-Robots-Tag: noindex, nofollow`, and `public/robots.txt` disallows `/n/` and
+`/api/` (D17). The landing page carries neither and stays indexable.
 
 ## NoteRoom (`src/worker/room.ts`)
 
@@ -46,8 +50,7 @@ clients (D03).
   `mergeUpdates([state, update])` exactly. An update that would pass the cap is not applied,
   and its sender gets a note-status message with the rejected flag.
 - **Expiry.** Each connection sets the alarm to now + 90 days. When it fires with nobody
-  connected, the object deletes all storage; with someone connected it reschedules. The
-  public note never has an alarm (D06).
+  connected, the object deletes all storage; with someone connected it reschedules (D06).
 - **Robustness.** Any malformed frame (text, unknown type, truncated varint, bad awareness
   JSON, undecodable update) closes that socket with 1007 and leaves the others alone.
   Clients reconnect with backoff and re-sync with the sync steps.

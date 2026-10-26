@@ -1,4 +1,4 @@
-# D02: The link is the key; 128-bit ids; public note id
+# D02: The link is the key; 128-bit ids; no fixed ids
 
 Status: `DECIDED`
 
@@ -9,7 +9,8 @@ Status: `DECIDED`
   character is one of `A`, `Q`, `g`, `w`; validation is that exact pattern.
 - Possession of the link is the only access control: no accounts, no listing, no
   read-only links. Anyone with it can read and edit.
-- One note has a fixed id, `public`, linked from the landing page.
+- Every note id is generated. There are no fixed or well-known ids, so there is no public
+  note (D15).
 - The Worker validates ids on `/n/:id` and `/api/n/:id/ws` and answers 400 otherwise, so
   no Durable Object is created for junk.
 
@@ -17,5 +18,6 @@ Status: `DECIDED`
 
 - Ids cannot be guessed (2^128), but links leak through chat logs and screenshots. The
   product says so: don't paste anything private.
-- The public note is shared by everyone; see D15 for how it is kept usable.
+- Nobody can find a note they were not given a link to; search engines are kept away from
+  note pages too (D17).
 - Moving to accounts or per-note permissions later is a new model, not a tweak.

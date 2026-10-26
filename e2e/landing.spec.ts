@@ -34,13 +34,31 @@ test('a bare code opens its note', async ({ page }) => {
   await expect(page).toHaveURL(`/n/${id}`);
 });
 
-test('the public note is linked', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('link', { name: 'public note' }).click();
-  await expect(page).toHaveURL('/n/public');
-});
-
 test('a malformed note link is a 400', async ({ request }) => {
   const response = await request.get('/n/not-a-note');
   expect(response.status()).toBe(400);
+});
+
+test('there is no public note', async ({ page, request }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Write together, live.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'public note' })).toHaveCount(0);
+  const response = await request.get('/n/public');
+  expect(response.status()).toBe(400);
+});
+
+test('notes stay out of search engines and the landing page does not', async ({ request }) => {
+  const note = await request.get(`/n/${freshNoteId()}`);
+  expect(note.status()).toBe(200);
+  expect(note.headers()['x-robots-tag']).toBe('noindex, nofollow');
+
+  const landing = await request.get('/');
+  expect(landing.headers()['x-robots-tag']).toBeUndefined();
+
+  const robots = await request.get('/robots.txt');
+  expect(robots.status()).toBe(200);
+  const lines = (await robots.text()).split('\n');
+  expect(lines).toEqual(
+    expect.arrayContaining(['User-agent: *', 'Disallow: /n/', 'Disallow: /api/']),
+  );
 });

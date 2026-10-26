@@ -1,4 +1,4 @@
-# D06: 90-day expiry without visits; the public note never expires
+# D06: 90-day expiry without visits
 
 Status: `DECIDED`
 
@@ -7,7 +7,7 @@ Status: `DECIDED`
 - Every WebSocket connection to a note resets its Durable Object alarm to now + 90 days.
 - When the alarm fires and nobody is connected, the object deletes all its storage. If
   someone is connected, that counts as a visit and the alarm is rescheduled.
-- The public note (`public`) never has an alarm; a connection to it clears any alarm.
+- Every note expires this way; there are no exceptions.
 
 ## Consequences
 

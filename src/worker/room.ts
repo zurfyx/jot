@@ -4,7 +4,7 @@ import { DurableObject } from 'cloudflare:workers';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
-import { isNoteId, PUBLIC_NOTE_ID } from '../shared/ids';
+import { isNoteId } from '../shared/ids';
 import { fitsUnderCap, NOTE_EXPIRY_MS, NOTE_MAX_BYTES, SAVE_DEBOUNCE_MS } from '../shared/limits';
 import {
   CLOSE_MALFORMED,
@@ -150,17 +150,10 @@ export class NoteRoom extends DurableObject<Env> {
   // Expiry (D06)
 
   private touch(): void {
-    if (this.noteId === PUBLIC_NOTE_ID) {
-      void this.ctx.storage.deleteAlarm();
-    } else {
-      void this.ctx.storage.setAlarm(Date.now() + NOTE_EXPIRY_MS);
-    }
+    void this.ctx.storage.setAlarm(Date.now() + NOTE_EXPIRY_MS);
   }
 
   async alarm(): Promise<void> {
-    if (this.noteId === PUBLIC_NOTE_ID) {
-      return;
-    }
     if (this.ctx.getWebSockets().length > 0) {
       // Someone is visiting right now: that counts as a visit.
       await this.ctx.storage.setAlarm(Date.now() + NOTE_EXPIRY_MS);

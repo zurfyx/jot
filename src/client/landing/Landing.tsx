@@ -1,4 +1,4 @@
-import { generateNoteId, notePath, PUBLIC_NOTE_ID } from '../../shared/ids';
+import { generateNoteId, notePath } from '../../shared/ids';
 import { navigate } from '../router';
 import { JoinField } from './JoinField';
 
@@ -38,18 +38,6 @@ export function Landing() {
             </button>
             <p className="or">or join with a link or code</p>
             <JoinField />
-            <p className="public-link">
-              Or open the{' '}
-              <a
-                href={notePath(PUBLIC_NOTE_ID)}
-                onClick={(event) => {
-                  event.preventDefault();
-                  navigate(notePath(PUBLIC_NOTE_ID));
-                }}
-              >
-                public note
-              </a>
-            </p>
           </div>
         </section>
 

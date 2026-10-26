@@ -376,12 +376,6 @@ button {
   color: var(--bad);
 }
 
-.public-link {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 13.5px;
-}
-
 .about {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
