@@ -204,3 +204,91 @@ test('New note while a Share is unconfirmed keeps the shared content', async ({
   await next.goto(url);
   await expect(editor(next)).toContainText('Precious words');
 });
+
+test('an older copy confirmed by one page never drops newer edits another page saved', async ({
+  context,
+  page,
+}) => {
+  // A shares, but its content doesn't reach the relay.
+  const a = await holdOutgoingContent(page);
+  a.hold = true;
+  await page.goto('/new');
+  await editor(page).click();
+  await page.keyboard.type('Shared start');
+  await page.getByRole('button', { name: 'Share' }).click();
+  await expect(page).toHaveURL(/\/n\//);
+  const url = page.url();
+
+  // B opens the link and restores the pending copy; its content is held too.
+  const second = await context.newPage();
+  const b = await holdOutgoingContent(second);
+  b.hold = true;
+  await second.goto(url);
+  await expect(editor(second)).toContainText('Shared start');
+
+  // A writes more and leaves: its newer state goes to the pending copy.
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('LATEST LOST');
+  await page.goto('about:blank');
+
+  // B's older state is confirmed. The copy holds more, so B sends it rather
+  // than dropping it, and drops it only once that is confirmed too.
+  b.release();
+  await expect(editor(second)).toContainText('LATEST LOST');
+  await expect
+    .poll(() => second.evaluate((key) => localStorage.getItem(key), pendingKey(url)))
+    .toBeNull();
+  const reader = await context.newPage();
+  await reader.goto(url);
+  await expect(editor(reader)).toContainText('LATEST LOST');
+});
+
+test('Share keeps the draft and shares nothing when the browser cannot store the copy', async ({
+  page,
+}) => {
+  const sockets: string[] = [];
+  page.on('websocket', (ws) => {
+    if (ws.url().includes('/api/n/')) {
+      sockets.push(ws.url());
+    }
+  });
+  await page.goto('/new');
+  await editor(page).click();
+  await page.keyboard.type('Kept safe');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('jot:draft'))).not.toBeNull();
+  await page.waitForTimeout(700);
+  const before = await page.evaluate(() => localStorage.getItem('jot:draft'));
+
+  // Storage is full: the pending copy can't be written.
+  await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    const flag = window as unknown as { storageFull: boolean };
+    flag.storageFull = true;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (flag.storageFull && key.startsWith('jot:pending:')) {
+        throw new DOMException('full', 'QuotaExceededError');
+      }
+      setItem.call(this, key, value);
+    };
+  });
+  await page.getByRole('button', { name: 'Share' }).click();
+  await expect(page.getByRole('button', { name: "Couldn't share · retry" })).toBeVisible();
+  await expect(page).toHaveURL(/\/new$/);
+  await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  expect(await page.evaluate(() => localStorage.getItem('jot:draft'))).toBe(before);
+  expect(sockets).toEqual([]);
+  // Still a draft that keeps saving.
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' and editable');
+  await page.waitForTimeout(700);
+  await page.reload();
+  await expect(editor(page)).toContainText('Kept safe and editable');
+
+  // With room again, Share works.
+  await page.getByRole('button', { name: 'Share' }).click();
+  await expect(page).toHaveURL(/\/n\//);
+  await expect(page.getByTestId('status-pill')).toHaveText(/^Synced · /);
+});

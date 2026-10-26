@@ -99,9 +99,12 @@ Work offline, edits waiting and "merged".
   (`synced: true`). Changes are written back 500 ms after the last one (a debounce) and on
   `pagehide`. `share()` moves the draft to `jot:pending:<id>`, frees `jot:draft` if it still
   holds this draft, and connects a provider with the same document; the draft's content is
-  pushed onto the provider's `unconfirmedUpdates`. The pending copy keeps being saved until
-  nothing is unconfirmed, then is removed. A shared note that finds a pending copy for its
-  id applies it before connecting and confirms it the same way.
+  pushed onto the provider's `unconfirmedUpdates`. If the copy can't be stored, `share()`
+  returns null and nothing changes. Saves merge with the stored copy of the same draft. Once
+  nothing is unconfirmed, the pending copy is removed only if it adds nothing to the
+  document (checked on a scratch copy); a newer one is applied and sent first. A shared
+  note that finds a pending copy for its id applies it before connecting and confirms it
+  the same way.
 - **Confirmation.** A wrapped sync handler removes from `unconfirmedUpdates` what the server's
   sync step 1 already covers (content another client wrote first under the same derived
   client id never comes back as an echo); the provider removes what the relay echoes. The

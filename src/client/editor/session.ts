@@ -23,10 +23,14 @@ import { DRAFT_STORAGE_KEY } from '../drafts';
 import { excludeServerState, type Unconfirmed, unconfirmedDocument } from './confirm';
 import {
   DRAFT_SAVE_DEBOUNCE_MS,
-  encodeDraftState,
+  draftStateAddsTo,
+  mergedDraftState,
+  moveDraft,
+  parseDraft,
   pendingStorageKey,
   readDraft,
-  removeDraft,
+  readRawDraft,
+  removeDraftIfUnchanged,
   restoreDraftState,
   writeDraft,
 } from './draft';
@@ -91,10 +95,11 @@ export interface NoteSession {
    * Shares a draft: picks an id, keeps the draft as the note's pending copy,
    * and connects a provider with this document, so the empty room receives
    * everything. Returns the note's id at once; the pending copy is kept up
-   * to date until the relay has confirmed all of it. On a shared note,
-   * returns its id.
+   * to date until the relay has confirmed all of it. Returns null, sharing
+   * nothing, when the browser can't store the pending copy. On a shared
+   * note, returns its id.
    */
-  share(): string;
+  share(): string | null;
   /** The note's link; null for a draft. */
   link(): string | null;
   /** Stops saving this draft (before "New note" replaces it). A pending copy is kept. */
@@ -183,18 +188,45 @@ export function createNoteSession(id: string | null): NoteSession {
       saveTimer = null;
     }
     if (storageKey !== null) {
-      writeDraft(storageKey, { id: draftId, state: encodeDraftState(doc) });
+      // Merged with what is stored, so newer edits another page saved under
+      // the same draft are never overwritten.
+      const state = mergedDraftState(doc, readDraft(storageKey), draftId);
+      writeDraft(storageKey, { id: draftId, state });
     }
   };
-  const stopSaving = (remove: boolean) => {
+  const stopSaving = () => {
     if (saveTimer !== null) {
       clearTimeout(saveTimer);
       saveTimer = null;
     }
-    if (remove && storageKey !== null) {
-      removeDraft(storageKey, draftId);
-    }
     storageKey = null;
+  };
+
+  /**
+   * Called when the server has confirmed everything this page holds. The
+   * pending copy is dropped only if it adds nothing to this document (so
+   * nothing in it is unconfirmed). If it is newer (another page saved later
+   * edits to it), they are applied and sent instead, and this runs again
+   * once they are confirmed. Returns whether the copy is gone.
+   */
+  const dropPendingCopy = (): boolean => {
+    if (storageKey === null) {
+      return true;
+    }
+    const raw = readRawDraft(storageKey);
+    const stored = parseDraft(raw);
+    if (raw === null || stored === null || stored.id !== draftId) {
+      // Gone already, or not this draft's: leave it be.
+      stopSaving();
+      return true;
+    }
+    if (draftStateAddsTo(doc, stored.state)) {
+      restoreDraftState(doc, stored.state);
+      return false;
+    }
+    removeDraftIfUnchanged(storageKey, raw);
+    stopSaving();
+    return true;
   };
 
   let measureTimer: ReturnType<typeof setTimeout> | null = null;
@@ -264,8 +296,9 @@ export function createNoteSession(id: string | null): NoteSession {
       }
       const unconfirmed = created.unconfirmedUpdates;
       if (storageKey !== null && noteId.peek() !== null && unconfirmed.length === 0) {
-        // The server has everything this page wrote: the pending copy goes.
-        stopSaving(true);
+        // The server has everything this page holds: the pending copy can go,
+        // unless it holds more.
+        dropPendingCopy();
       }
       if (confirmed.peek()) {
         return;
@@ -428,9 +461,13 @@ export function createNoteSession(id: string | null): NoteSession {
       // The draft becomes the note's pending copy first, then leaves the
       // draft slot (only if that slot still holds this draft: another tab
       // may have stored its own). It stays saved until the relay confirms.
+      // If the browser can't store the copy, nothing is shared: the draft
+      // stays as it was, and Share can be tried again.
       const pendingKey = pendingStorageKey(shared);
-      writeDraft(pendingKey, { id: draftId, state: encodeDraftState(doc) });
-      removeDraft(DRAFT_STORAGE_KEY, draftId);
+      const state = mergedDraftState(doc, readDraft(DRAFT_STORAGE_KEY), draftId);
+      if (!moveDraft(DRAFT_STORAGE_KEY, pendingKey, { id: draftId, state })) {
+        return null;
+      }
       storageKey = pendingKey;
       noteId.value = shared;
       hasLocalContent.value = true;
@@ -442,7 +479,7 @@ export function createNoteSession(id: string | null): NoteSession {
     link,
     forgetDraft() {
       if (noteId.peek() === null) {
-        stopSaving(false);
+        stopSaving();
       }
     },
     dispose() {

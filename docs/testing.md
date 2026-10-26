@@ -14,8 +14,11 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - size and copy formatting for the pill and Note info ("238 KB", "1.72 MB", "2 MB", edits
   waiting, the kept-until date);
 - drafts: a document round-trips through the stored string, large ones included; a
-  corrupt draft is ignored; a page removes a stored draft only while it is still its own;
-  pending copies are kept per note;
+  corrupt draft is ignored; a page removes a stored draft only while it is still its own,
+  and a copy only while it is exactly what it checked; a stored copy "adds" newer inserts
+  and deletes and nothing when the document holds it; writes merge with the same draft,
+  never another; a move keeps one copy when there is room for only one, and leaves the
+  draft in place when the copy can't be stored; pending copies are kept per note;
 - confirmation: the server's state vector confirms inserts it covers, never deletes.
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
@@ -84,6 +87,10 @@ Durable Objects, over real WebSockets.
   leaves another tab's new draft alone; reconnecting stays "Syncing · N edits waiting"
   until the server has the edits, then shows "Back online · merged";
 - ⋯ → New note during an unconfirmed Share keeps the shared content;
+- a page that restored an older pending copy and gets it confirmed sends, rather than
+  drops, the newer edits another page saved to it before leaving;
+- when the pending copy can't be stored, Share shares nothing, says "Couldn't share ·
+  retry", keeps the draft (still editable and saved), and works once there is room;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
 - the ⌘K menu toggles the theme;
