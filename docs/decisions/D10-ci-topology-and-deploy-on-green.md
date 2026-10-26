@@ -26,15 +26,12 @@ One workflow, **`ci.yml`**, runs on pushes to `main` and on pull requests, with
   sticky comment with the preview URL, updated on every push. It has `pull-requests: write`
   for that comment and nothing else.
 
-A second workflow, **`preview-cleanup.yml`**, runs when a same-repo pull request closes,
-merged or not: it deletes that PR's preview Worker and marks the comment as removed.
+A second workflow, **`preview-cleanup.yml`**, deletes previews: when a same-repo pull
+request closes, merged or not, it deletes that PR's Worker and marks the comment as removed,
+and a weekly sweep (also runnable by hand) deletes any `jot-pr-*` Worker whose PR is closed.
 
 `static`, `test` and `e2e` are the required checks (D08). `deploy` and `preview` are not: on
 a pull request `deploy` shows as skipped, and on `main` so does `preview`.
-
-Both deploy jobs use the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets;
-previews need only the account's Workers Scripts edit permission. No account id in
-`wrangler.jsonc`; CI provides it.
 
 ## PR previews
 
@@ -44,32 +41,56 @@ open the link and try the change, two windows on one note included.
 
 Cloudflare's own Workers preview URLs (per-version and per-alias) are not generated for
 Workers that use Durable Objects, and jot's whole server is one. So each PR deploys a
-**separate Worker**, `wrangler deploy --name jot-pr-<number>`, built with the `preview`
-environment in `wrangler.jsonc` (`CLOUDFLARE_ENV=preview pnpm build`; the Vite plugin bakes
-the environment into `dist/jot/wrangler.json`). That environment:
+**separate Worker**, `jot-pr-<number>`. A separate Worker owns a separate Durable Object
+namespace, so preview notes never touch production's, and deleting the Worker deletes them.
 
-- has `routes: []`, since routes are inheritable and production's custom domain would
-  otherwise come along, and `workers_dev: true`, so the Worker is reachable only on
-  workers.dev;
-- declares its own `NOTES` binding to `NoteRoom` and its own `v1` migration, with no
-  `script_name`. A separate Worker owns a separate Durable Object namespace, so preview
-  notes never touch production's, and deleting the Worker deletes them.
+The job builds with the `preview` environment in `wrangler.jsonc`
+(`CLOUDFLARE_ENV=preview pnpm build`; the Vite plugin bakes it into
+`dist/jot/wrangler.json`), then `scripts/preview-config.mjs` writes the config that is
+actually deployed, `dist/jot/wrangler.preview.json`. Everything that decides what a preview
+can touch is a constant in that script, not copied from the build: the name
+`jot-pr-<number>`, `routes: []` (routes are inheritable, and production's custom domain
+would otherwise come along), `workers_dev: true`, one `NOTES` binding to its own `NoteRoom`
+with no `script_name`, and one `v1` migration that only creates `NoteRoom`. The build
+contributes only the bundle, assets and compatibility settings, and the script refuses the
+deploy if the build carries anything else: routes, a `script_name`, transferred, renamed or
+deleted classes (a transfer from `jot` would move production's notes into the preview, and
+the cleanup would then delete them), or any other binding or trigger. Its unit tests pin
+those refusals.
 
-The job checks the built config is the preview environment, with no routes and no
-`script_name`, before deploying. The deploy always names `jot-pr-<number>` explicitly, so it
-can never update the Worker named `jot`.
+The job deploys only if its run is for the PR's current head and the PR is still open, so a
+re-run of an older commit never overwrites a newer preview and a run that finishes after
+the PR closed never recreates a deleted one. It shares the concurrency group
+`preview-<number>` with the cleanup, which cancels a deploy in flight.
 
-Cleanup runs wrangler outside the checkout, where no config exists, with
-`delete --name jot-pr-<number> --force` behind a name pattern check, so a bad name can never
-fall back to `jot`. A PR that never deployed (Cloudflare error 10090, no such Worker) is not
-a failure. The `preview` job and the cleanup share the concurrency group
-`preview-<number>`: the cleanup cancels a deploy in flight, and a deploy that starts after
-the PR closed checks the PR state and skips, so no preview outlives its PR.
+The cleanup runs on `pull_request_target`, so it runs even for a PR that conflicts with
+`main` or was retargeted, and always runs `main`'s copy of the workflow. It never checks out
+or runs the PR's code: it installs `main` for wrangler and takes only the PR number.
+`scripts/remove-preview.sh` runs `wrangler delete --name jot-pr-<number> --force` outside
+the checkout, where no config exists, behind a name pattern check, so a bad name can never
+fall back to `jot`. A Worker that is already gone (Cloudflare error 10090) is not a failure.
 
-Previews are never built for a fork's pull request: its code would run with the deploy
-token, and GitHub withholds the secrets from it anyway. Those PRs are verified by the three
-checks alone, as every PR is: the e2e job runs the same Worker and Durable Object in workerd
-against the local dev server.
+## The trust boundary
+
+Both deploy jobs use the same `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository
+secrets; previews need the account's Workers Scripts edit permission. No account id in
+`wrangler.jsonc`; CI provides it.
+
+- **Forks never get the secrets.** GitHub withholds them from a fork's `pull_request` run,
+  and the `preview` job does not run for one. Fork PRs are verified by the three checks
+  alone; the e2e job runs the same Worker and Durable Object in workerd.
+- **Same-repo branches are trusted.** Only the owner and his agents push to `zurfyx/jot`. A
+  same-repo PR runs its own copy of `ci.yml` and its own scripts with a token that can edit
+  every Worker on the account, production included.
+- **The guards prevent accidents, not malice.** The preview config builder, the name checks
+  and the head and state checks stop a mistaken config or a stale run from touching
+  production. A malicious same-repo branch could rewrite them in the same PR; no code in
+  this repository can stop that.
+
+Hardening, if the set of people who push to the repository ever grows: give previews their
+own Cloudflare account and token, so a preview token cannot reach production at all, and
+move production's token into a secret of the `production` GitHub environment, restricted to
+`main`, so PR runs cannot read it.
 
 ## Why one workflow
 
@@ -77,4 +98,4 @@ Keeping production's deploy in `ci.yml`, rather than a separate `workflow_run` w
 means a deploy run exists only for pushes to `main`, sits next to the checks that gate it,
 and adds no skipped check to `main` for every PR's CI run. The preview deploy lives there
 too for the same reason: it waits on the checks of the same run. Only the cleanup, which
-answers a different event, is its own workflow.
+answers other events, is its own workflow.

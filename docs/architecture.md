@@ -259,5 +259,5 @@ until the socket reconnects (D13).
 `@cloudflare/vite-plugin` builds the client and the Worker together (`dist/client`,
 `dist/jot`); `wrangler deploy` reads the built config. CI deploys the green tip of `main` to
 jot.rovira.sh, and every same-repo pull request as its own Worker, `jot-pr-<number>` on
-workers.dev, built with the `preview` wrangler environment: no routes and its own Durable
-Object namespace, deleted when the PR closes (D10).
+workers.dev, deployed from a config `scripts/preview-config.mjs` writes: no routes and only
+its own Durable Object namespace, deleted when the PR closes (D10).

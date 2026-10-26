@@ -152,11 +152,11 @@ jobs:
   preview:
     # PR previews (D10). Cloudflare's version preview URLs do not support
     # Workers with Durable Objects, so each pull request deploys as its own
-    # Worker, jot-pr-<number>, on workers.dev, built with the `preview`
-    # environment in wrangler.jsonc: no routes, so it never touches
-    # jot.rovira.sh, and its own Durable Object namespace, so preview notes
-    # never reach production. preview-cleanup.yml deletes it when the PR
-    # closes.
+    # Worker, jot-pr-<number>, on workers.dev. scripts/preview-config.mjs
+    # writes the exact config deployed: no routes, so it never touches
+    # jot.rovira.sh, and only its own Durable Object namespace, so preview
+    # notes never reach production. preview-cleanup.yml deletes it when the
+    # PR closes.
     #
     # Only pull requests from this repository: a fork's PR never gets a
     # preview, and GitHub withholds the secrets from it anyway.
@@ -179,65 +179,63 @@ jobs:
     env:
       PR: ${{ github.event.pull_request.number }}
       WORKER: jot-pr-${{ github.event.pull_request.number }}
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Check the pull request is still open
-        id: open
+      - name: Check the run is for the PR's current head
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          # A run that finishes after the PR closed would otherwise redeploy a
-          # Worker the cleanup already deleted, and nothing would remove it.
-          state=$(gh pr view "$PR" --json state --jq .state)
-          echo "PR #$PR is $state."
-          if [ "$state" = OPEN ]; then open=true; else open=false; fi
-          echo "open=$open" >> "$GITHUB_OUTPUT"
+          # A run that finishes after the PR closed would redeploy a Worker the
+          # cleanup already deleted, and a re-run of an older commit would
+          # overwrite the preview of a newer one. Both skip.
+          read -r state head < <(gh pr view "$PR" --json state,headRefOid --jq '"\(.state) \(.headRefOid)"')
+          if [ "$state" != OPEN ]; then
+            echo "PR #$PR is $state: skipping."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          elif [ "$head" != "$HEAD_SHA" ]; then
+            echo "PR #$PR is now at $head, not $HEAD_SHA: skipping."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v5
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
       - uses: pnpm/action-setup@v4
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
       - uses: actions/setup-node@v5
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
       # The Vite plugin resolves the wrangler environment at build time and
-      # writes it into dist/jot/wrangler.json, which wrangler deploy reads.
+      # writes it into dist/jot/wrangler.json.
       - run: pnpm build
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
         env:
           CLOUDFLARE_ENV: preview
-      - name: Check the built config is the preview environment
-        if: steps.open.outputs.open == 'true'
-        run: |
-          node -e '
-            const c = require("./dist/jot/wrangler.json");
-            const ok =
-              c.targetEnvironment === "preview" &&
-              c.workers_dev === true &&
-              (c.routes ?? []).length === 0 &&
-              !c.route &&
-              c.durable_objects.bindings.every((b) => !b.script_name);
-            if (!ok) {
-              console.error("Not the preview config:", c);
-              process.exit(1);
-            }
-          '
+      # Rebuilds the deployed config from constants and refuses any binding,
+      # route or migration a preview must not have (D10).
+      - run: node scripts/preview-config.mjs dist/jot/wrangler.json "$WORKER"
+        if: steps.current.outputs.deploy == 'true'
       - uses: cloudflare/wrangler-action@v3
         id: deploy
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          command: deploy --name ${{ env.WORKER }}
+          command: deploy --config dist/jot/wrangler.preview.json --name ${{ env.WORKER }}
       - name: Comment the preview URL
-        if: steps.open.outputs.open == 'true'
+        if: steps.current.outputs.deploy == 'true'
         env:
           URL: ${{ steps.deploy.outputs.deployment-url }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           if [ -z "$URL" ]; then
