@@ -127,9 +127,12 @@ Durable Objects, over real WebSockets.
   outside the paste field each open a note, while space only scrolls; hovering the New note
   card and the example card lifts them and shows Open, and clicking each opens `/new` or
   `/new?example` (which lands on `/n/<id>` with the example banner), as do "See the
-  example" and the footer links; the feature tabs advance
-  every 3 s, stop when one is chosen, and follow the arrow keys; under reduced motion
-  nothing animates and the final states show; and it loads without the editor chunk;
+  example" and the footer links; the feature tabs advance every 3 s, stop when one is
+  chosen, and follow the arrow keys; the Blame tab's stage lays out as a narrow name
+  column, a bar of at most 4px as tall as its row and flowing text (a paragraph on one or
+  two lines, names never on the state pill or on each other) at 1440 and 390px; under
+  reduced motion nothing animates and the final states show; and it loads without the
+  editor chunk;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;

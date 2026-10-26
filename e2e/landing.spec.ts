@@ -216,6 +216,52 @@ test('the feature tabs advance every 3 s and stop when one is chosen', async ({ 
   await expect(tab('Blame')).toBeFocused();
 });
 
+for (const width of [1440, 390]) {
+  test(`the Blame stage lays out as name, bar, text at ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const tabs = page.getByRole('tablist', { name: 'Features' });
+    await tabs.scrollIntoViewIfNeeded();
+    await tabs.getByRole('tab', { name: /^Blame/ }).click();
+
+    const rows = page.getByTestId('stage-blame-row');
+    await expect(rows).toHaveCount(3);
+    await expect(page.getByTestId('stage-blame-name')).toHaveText(['You', 'jot AI', 'Ana']);
+
+    // The paragraph flows: one or two lines, not a word per line.
+    const paragraph = rows.first().locator('p');
+    const lineHeight = await paragraph.evaluate((el) =>
+      parseFloat(getComputedStyle(el).lineHeight),
+    );
+    const box = async (locator: ReturnType<typeof page.locator>) => {
+      const rect = await locator.boundingBox();
+      if (!rect) throw new Error('not rendered');
+      return rect;
+    };
+    expect((await box(paragraph)).height).toBeLessThanOrEqual(lineHeight * 2 + 1);
+    expect((await box(rows.nth(1).locator('li').first())).height).toBeLessThanOrEqual(
+      lineHeight * 2 + 1,
+    );
+
+    const pill = await box(page.getByTestId('engine-state'));
+    let previousBottom = pill.y + pill.height;
+    for (let index = 0; index < 3; index++) {
+      const row = await box(rows.nth(index));
+      const name = await box(rows.nth(index).getByTestId('stage-blame-name'));
+      const bar = await box(rows.nth(index).getByTestId('stage-blame-bar'));
+      // Each name sits in its own row, below the one before and the pill, never on them.
+      expect(name.y).toBeGreaterThanOrEqual(previousBottom);
+      expect(name.y + name.height).toBeLessThanOrEqual(row.y + row.height + 1);
+      previousBottom = name.y + name.height;
+      // A narrow name column, then a thin bar as tall as the row, then the text.
+      expect(name.width).toBeLessThanOrEqual(56);
+      expect(name.x + name.width).toBeLessThanOrEqual(bar.x);
+      expect(bar.width).toBeLessThanOrEqual(4);
+      expect(bar.height).toBeGreaterThan(row.height - 2);
+    }
+  });
+}
+
 test('nothing moves under reduced motion; the final states show', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');

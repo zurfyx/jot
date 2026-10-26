@@ -1004,7 +1004,12 @@ a.fan-card:focus-visible {
   color: var(--ai);
 }
 
-.blame-row {
+/*
+ * The stage's blame rows: name, bar, text. Prefixed, because the editor's
+ * global .blame-name is absolutely positioned and would pull the name out of
+ * the grid, leaving the bar in the name's column and the text in the bar's.
+ */
+.stage-blame-row {
   display: grid;
   grid-template-columns: 56px 4px minmax(0, 1fr);
   gap: 0 12px;
@@ -1012,7 +1017,7 @@ a.fan-card:focus-visible {
   margin: 2px 0;
 }
 
-.blame-name {
+.stage-blame-name {
   padding-top: 6px;
   color: var(--who);
   font-size: 11.5px;
@@ -1020,7 +1025,7 @@ a.fan-card:focus-visible {
   text-align: right;
 }
 
-.blame-bar {
+.stage-blame-bar {
   display: block;
   border-radius: 2px;
   background: var(--who);
@@ -1263,7 +1268,7 @@ a.fan-card:focus-visible {
     font-size: 15.5px;
   }
 
-  .blame-row {
+  .stage-blame-row {
     grid-template-columns: 44px 3px minmax(0, 1fr);
     gap: 0 10px;
   }

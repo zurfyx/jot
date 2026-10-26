@@ -178,10 +178,12 @@ function BigNote({ feature }: { feature: Feature }) {
   const u = (who: Who, text: string) => (blame ? <By who={who}>{text}</By> : text);
   const row = (who: Who, content: ReactNode) =>
     blame ? (
-      <div className="blame-row">
-        <span className={`blame-name is-${who}`}>{NAMES[who]}</span>
-        <i className={`blame-bar is-${who}`} />
-        <div>{content}</div>
+      <div className="stage-blame-row" data-testid="stage-blame-row">
+        <span className={`stage-blame-name is-${who}`} data-testid="stage-blame-name">
+          {NAMES[who]}
+        </span>
+        <i className={`stage-blame-bar is-${who}`} data-testid="stage-blame-bar" />
+        <div className="stage-blame-text">{content}</div>
       </div>
     ) : (
       content
