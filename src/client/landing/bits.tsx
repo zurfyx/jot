@@ -4,10 +4,10 @@ import type { ReactNode } from 'react';
 
 export type Who = 'you' | 'ana' | 'ai';
 
-/** A person's caret, with their name when they're someone else. */
-export function Caret({ who, name }: { who?: Who; name?: string }) {
+/** A person's caret (yours unless `who` says otherwise), with a name when given. */
+export function Caret({ who = 'you', name }: { who?: Who; name?: string }) {
   return (
-    <span className={`caret${who ? ` is-${who}` : ''}`} aria-hidden="true">
+    <span className={`caret is-${who}`} aria-hidden="true">
       {name !== undefined && <span className="caret-name">{name}</span>}
     </span>
   );

@@ -7,7 +7,7 @@ import { Fan } from './Fan';
 import { JoinField } from './JoinField';
 import { classifyTarget, landingKeyAction, startShortcutLabel } from './keys';
 import './landing.css';
-import { EXAMPLE_PATH, NEW_NOTE_PATH, openNote } from './open';
+import { EXAMPLE_PATH, NEW_NOTE_PATH, openNote, plainClick } from './open';
 import { TwoWindows } from './TwoWindows';
 
 const GITHUB_URL = 'https://github.com/zurfyx/jot';
@@ -31,8 +31,8 @@ function platform(): string {
 export function Landing() {
   const newCard = useRef<HTMLAnchorElement>(null);
   const exampleCard = useRef<HTMLAnchorElement>(null);
-  const startNew = () => openNote(NEW_NOTE_PATH, newCard.current);
-  const openExample = () => openNote(EXAMPLE_PATH, exampleCard.current);
+  const startNew = () => void openNote(NEW_NOTE_PATH, newCard.current);
+  const openExample = () => void openNote(EXAMPLE_PATH, exampleCard.current);
   const shortcut = startShortcutLabel(platform());
 
   useEffect(() => {
@@ -45,6 +45,10 @@ export function Landing() {
       if (event.defaultPrevented) {
         return;
       }
+      // A held ⌘ or Ctrl is likely ⌘↵ on its way: fetch the editor now.
+      if (event.key === 'Meta' || event.key === 'Control') {
+        prefetchNotePage();
+      }
       const action = landingKeyAction({
         key: event.key,
         metaKey: event.metaKey,
@@ -55,7 +59,7 @@ export function Landing() {
       });
       if (action === 'start') {
         event.preventDefault();
-        openNote(NEW_NOTE_PATH, newCard.current);
+        void openNote(NEW_NOTE_PATH, newCard.current);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -66,6 +70,7 @@ export function Landing() {
     <button
       type="button"
       className="land-primary"
+      aria-keyshortcuts="Meta+Enter Control+Enter"
       onClick={startNew}
       onPointerEnter={prefetchNotePage}
       onFocus={prefetchNotePage}
@@ -196,8 +201,12 @@ export function Landing() {
             <span>© 2026 Gerard Rovira · MIT License</span>
           </div>
           <FooterColumn title="Product">
-            <a href={NEW_NOTE_PATH}>New note</a>
-            <a href={EXAMPLE_PATH}>Example</a>
+            <a href={NEW_NOTE_PATH} onClick={(event) => plainClick(startNew)(event)}>
+              New note
+            </a>
+            <a href={EXAMPLE_PATH} onClick={(event) => plainClick(openExample)(event)}>
+              Example
+            </a>
           </FooterColumn>
           <FooterColumn title="Learn">
             <a href={DOCS.home}>Docs</a>

@@ -83,7 +83,6 @@ body:has(.landing) {
 
 .land-nav a {
   color: var(--muted);
-  transition: color 150ms ease-out;
 }
 
 .land-nav a:hover {
@@ -243,7 +242,6 @@ body:has(.landing) {
   align-items: center;
   gap: 8px;
   border-bottom: 1px solid var(--rule);
-  transition: border-color 150ms ease-out;
 }
 
 .join-row:focus-within {
@@ -344,6 +342,12 @@ body:has(.landing) {
   left: 44%;
   background: var(--ana);
   animation-delay: -13s;
+}
+
+/* Off screen or in a hidden tab, the hero's loops hold still (Fan.tsx). */
+.fan[data-active='false'] *,
+.fan[data-active='false'] *::before {
+  animation-play-state: paused;
 }
 
 .fan-cards {
@@ -590,7 +594,7 @@ a.fan-card:focus-visible {
   height: 1.15em;
   margin: 0 1px;
   vertical-align: -3px;
-  background: var(--who, var(--ink));
+  background: var(--who);
 }
 
 .caret-name {
@@ -896,7 +900,6 @@ a.fan-card:focus-visible {
   font-size: 19px;
   font-weight: 650;
   line-height: 1.35;
-  transition: color 0.2s ease-out;
 }
 
 .engine-tab:hover .engine-tab-title,

@@ -1,9 +1,9 @@
-import { type MouseEvent, type RefObject, useEffect, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 
 import { prefetchNotePage } from '../loadNote';
 import { Avatars, By, Caret, Check, OpenIcon } from './bits';
-import { useReducedMotion } from './motion';
-import { EXAMPLE_PATH, NEW_NOTE_PATH } from './open';
+import { useOnScreen, useReducedMotion } from './motion';
+import { EXAMPLE_PATH, NEW_NOTE_PATH, plainClick } from './open';
 
 const TYPED = ' with demos';
 /** Ticks per loop: type the words, Ana adds her line, then a pause. */
@@ -11,16 +11,19 @@ const LOOP = TYPED.length + 14;
 const ANA_AT = TYPED.length + 3;
 const TICK_MS = 170;
 
-/** The example card's loop position; the final state under reduced motion. */
-function useTypingTick(reduced: boolean): number {
+/**
+ * The example card's loop position: it holds while `running` is false, and
+ * shows the final state under reduced motion.
+ */
+function useTypingTick(reduced: boolean, running: boolean): number {
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !running) {
       return;
     }
     const timer = window.setInterval(() => setTick((t) => (t + 1) % (LOOP + 1)), TICK_MS);
     return () => window.clearInterval(timer);
-  }, [reduced]);
+  }, [reduced, running]);
   return reduced ? ANA_AT : tick;
 }
 
@@ -33,21 +36,19 @@ type FanProps = {
 
 /** The hero's three fanned notes: a recipe, the live example and a new note in front. */
 export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
-  const tick = useTypingTick(useReducedMotion());
+  const fan = useRef<HTMLDivElement>(null);
+  const active = useOnScreen(fan);
+  const tick = useTypingTick(useReducedMotion(), active);
   const typed = TYPED.slice(0, Math.min(tick, TYPED.length));
   const anaHere = tick >= ANA_AT;
 
-  const open = (action: () => void) => (event: MouseEvent) => {
-    // Let modified clicks open a tab the browser's way.
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
-      return;
-    }
-    event.preventDefault();
-    action();
-  };
-
   return (
-    <div className="fan" onPointerEnter={prefetchNotePage}>
+    <div
+      ref={fan}
+      className="fan"
+      data-active={active ? 'true' : 'false'}
+      onPointerEnter={prefetchNotePage}
+    >
       <div className="fan-glow" aria-hidden="true">
         <b />
         <b />
@@ -84,7 +85,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
           className="fan-card fan-example"
           href={EXAMPLE_PATH}
           aria-label="Open the example"
-          onClick={open(onExample)}
+          onClick={plainClick(onExample)}
           data-testid="example-card"
         >
           <div className="card-head">
@@ -134,7 +135,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
           className="fan-card fan-new"
           href={NEW_NOTE_PATH}
           aria-label="Open a new note"
-          onClick={open(onNew)}
+          onClick={plainClick(onNew)}
           data-testid="new-note-card"
         >
           <div className="card-head">

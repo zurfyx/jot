@@ -43,9 +43,9 @@ describe('any printable key', () => {
     expect(landingKeyAction(key('a', { target: 'field' }))).toBeNull();
   });
 
-  it('leaves space to a focused control, but not other keys', () => {
+  it('leaves space to scrolling and controls, wherever focus is', () => {
+    expect(landingKeyAction(key(' '))).toBeNull();
     expect(landingKeyAction(key(' ', { target: 'control' }))).toBeNull();
-    expect(landingKeyAction(key(' '))).toBe('start');
     expect(landingKeyAction(key('k', { target: 'control' }))).toBe('start');
   });
 

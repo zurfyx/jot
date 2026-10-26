@@ -82,25 +82,89 @@ test('any printable key starts a new note, except inside the paste field', async
   await expect(page).toHaveURL('/');
   await page.getByLabel('Note link or code').blur();
   await page.keyboard.press('Shift');
+  // Space scrolls the page instead.
+  await page.keyboard.press(' ');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.keyboard.press('Shift+ ');
   await expect(page).toHaveURL('/');
   await page.keyboard.press('k');
   await expectNotePage(page);
 });
 
-test('the New note card starts a note', async ({ page }) => {
+/** Records every client-side navigation, so a test can tell `/new` from `/new?example`. */
+async function recordPushes(page: Page) {
+  await page.addInitScript(() => {
+    const pushes: string[] = [];
+    (window as unknown as { __pushes: string[] }).__pushes = pushes;
+    const push = history.pushState.bind(history);
+    history.pushState = (state, unused, url) => {
+      pushes.push(String(url));
+      push(state, unused, url);
+    };
+  });
+}
+
+function pushes(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { __pushes: string[] }).__pushes);
+}
+
+/**
+ * A point inside `testId`'s card that is on top (the fan overlaps its cards),
+ * relative to the card's box, for `click({ position, force: true })`.
+ */
+async function visiblePoint(page: Page, testId: string) {
+  const point = await page.evaluate((id) => {
+    const card = document.querySelector(`[data-testid="${id}"]`)!;
+    const box = card.getBoundingClientRect();
+    for (let y = box.top + 30; y < box.bottom; y += 12) {
+      for (let x = box.right - 20; x > box.left; x -= 12) {
+        if (document.elementFromPoint(x, y)?.closest(`[data-testid="${id}"]`) === card) {
+          return { x: x - box.left, y: y - box.top };
+        }
+      }
+    }
+    return null;
+  }, testId);
+  expect(point).not.toBeNull();
+  return point!;
+}
+
+for (const { testId, name, path } of [
+  { testId: 'new-note-card', name: 'the New note card starts a note', path: '/new' },
+  { testId: 'example-card', name: 'the example card opens the example', path: '/new?example' },
+]) {
+  test(name, async ({ page }) => {
+    await recordPushes(page);
+    await page.goto('/');
+    const card = page.getByTestId(testId);
+    await card.hover({ position: await visiblePoint(page, testId), force: true });
+    await page.waitForTimeout(900); // the card lifts
+    await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
+    await card.click({ position: await visiblePoint(page, testId), force: true });
+    await expectNotePage(page);
+    expect(await pushes(page)).toEqual([path]);
+  });
+}
+
+test('See the example opens the example', async ({ page }) => {
+  await recordPushes(page);
   await page.goto('/');
-  await page.getByRole('link', { name: 'Open a new note' }).click();
+  await page.getByRole('button', { name: 'See the example' }).click();
   await expectNotePage(page);
+  expect(await pushes(page)).toEqual(['/new?example']);
 });
 
-test('See the example and the example card open the example', async ({ page }) => {
+test('the footer links open a note in place, or a tab with a modifier', async ({ page }) => {
+  await recordPushes(page);
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Open the example' })).toHaveAttribute(
+  const footer = page.getByRole('navigation', { name: 'Product' });
+  await expect(footer.getByRole('link', { name: 'Example' })).toHaveAttribute(
     'href',
     '/new?example',
   );
-  await page.getByRole('button', { name: 'See the example' }).click();
+  await footer.getByRole('link', { name: 'New note' }).click();
   await expectNotePage(page);
+  expect(await pushes(page)).toEqual(['/new']);
 });
 
 test('the feature tabs advance every 3 s and stop when one is chosen', async ({ page }) => {

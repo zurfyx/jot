@@ -97,8 +97,9 @@ depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
   `/new?example`) starts a fresh note: it resolves to a new `/n/<id>`.
 - The landing page and the note page are separate chunks: the editor, Lexical and Yjs load
   only on a note page (`loadNote.ts`). The landing page prefetches that chunk when a person
-  points at or focuses a start action.
-- The landing page opens a note inside `document.startViewTransition`: the clicked card
+  points at or focuses a start action, or holds ⌘ or Ctrl.
+- The landing page loads the editor chunk, then opens the note inside
+  `document.startViewTransition`, so a cold start never freezes the page: the clicked card
   carries `view-transition-name: jot-note` in the old state and `#root` carries it in the
   new one, so the card grows into the note page. Under reduced motion the pages cross-fade
   in 150ms; browsers without the API switch pages directly.

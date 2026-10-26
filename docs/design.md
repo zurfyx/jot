@@ -103,7 +103,11 @@ them off and shows the final state.
 - **The landing page** has slow, continuous motion on the hero: the fan's sway (7 s), the
   drifting glow (20 s), the blinking carets and the example typing. The underline wipes in
   once. Below the hero, the two windows loop every 7.6 s and the tabs advance every 3 s.
+  The hero's loops and the two windows hold still while off screen or in a hidden tab.
   Under reduced motion the example shows its finished text, the windows their last step,
   and the tabs stay put.
-- **Opening a note** from the landing page is a view transition: the card grows into the
-  note page in 550ms. Under reduced motion it is a 150ms cross-fade.
+- **Opening a note** from the landing page loads the editor chunk first, then runs a view
+  transition: the card grows into the note page in 550ms. Under reduced motion it is a
+  150ms cross-fade.
+- Hover and focus states (links, the paste line, the tabs) change at once, without a
+  colour transition.

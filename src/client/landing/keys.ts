@@ -37,8 +37,8 @@ export function landingKeyAction(input: KeyInput): KeyAction {
   if (!isPrintableKey(input) || input.target === 'field') {
     return null;
   }
-  // Space activates the focused button or link; leave it to the browser.
-  if (input.key === ' ' && input.target === 'control') {
+  // Space (and Shift+Space) scroll the page or press the focused control.
+  if (input.key === ' ') {
     return null;
   }
   return 'start';

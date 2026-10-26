@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { By, Caret, LinkIcon } from './bits';
-import { useReducedMotion } from './motion';
+import { useOnScreen, useReducedMotion } from './motion';
 
 /**
  * The story, as phases: 0 a note starts in window one; 1 its link appears;
@@ -17,22 +17,27 @@ export function stepOfPhase(phase: number): number {
   return phase === 0 ? 0 : phase < FINAL_PHASE ? 1 : 2;
 }
 
-function usePhase(reduced: boolean): number {
+/** The story's phase: it restarts when it comes back on screen, and rests on the end under reduced motion. */
+function usePhase(reduced: boolean, running: boolean): number {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !running) {
       return;
     }
-    const timers: number[] = [];
-    const run = () => {
-      PHASE_STARTS.forEach((start, index) => {
-        timers.push(window.setTimeout(() => setPhase(index), start));
-      });
-      timers.push(window.setTimeout(run, LOOP_MS));
+    // One timer at a time: each phase schedules the next, the last the loop.
+    let timer = 0;
+    const enter = (index: number) => {
+      setPhase(index);
+      const next = PHASE_STARTS[index + 1];
+      const here = PHASE_STARTS[index] ?? 0;
+      timer = window.setTimeout(
+        () => enter(next === undefined ? 0 : index + 1),
+        (next ?? LOOP_MS) - here,
+      );
     };
-    run();
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [reduced]);
+    enter(0);
+    return () => window.clearTimeout(timer);
+  }, [reduced, running]);
   return reduced ? FINAL_PHASE : phase;
 }
 
@@ -52,13 +57,14 @@ const STEPS = [
 
 /** "Try it in two windows": two small browser windows sharing one note. */
 export function TwoWindows() {
-  const phase = usePhase(useReducedMotion());
+  const section = useRef<HTMLElement>(null);
+  const phase = usePhase(useReducedMotion(), useOnScreen(section));
   const step = stepOfPhase(phase);
   const opened = phase >= 3;
   const together = phase >= FINAL_PHASE;
 
   return (
-    <section className="section how" aria-labelledby="how-title">
+    <section ref={section} className="section how" aria-labelledby="how-title">
       <p className="eyebrow">Try it in two windows</p>
       <h2 id="how-title">Start a note. Share it. Type together.</h2>
 
