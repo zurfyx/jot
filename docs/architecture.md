@@ -139,7 +139,7 @@ Work offline, edits waiting and "merged".
 - `features.ts`: the extension points for features. A `NoteFeature` can add a dock item
   before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯ (`menuTop`),
   a banner above the text (`banner`) and a layer over the note surface (`surface`);
-  `session.onReconnect` reports merges. Blame is the first, the example the second.
+  `session.onReconnect` reports merges. Ask AI, blame and the example use them.
 - `blame/` (D19), all in the browser:
   - `registry.ts`: the `jot-people` root. `trackLocalPerson` writes this tab's entry
     (person id, name, colour, kind, last seen) on its first local edit, an insert or a
@@ -188,7 +188,7 @@ Work offline, edits waiting and "merged".
   relay sent for the page's lost socket, and `dispose()` removes its presence everywhere
   while its writes stay. A live peer mirrors every change to the note, keystrokes
   included, into its own document and editor, so callers dispose idle ones. The example's
-  demo collaborators use it; jot AI will too.
+  demo collaborators and jot AI use it.
 - `example/` (D20): `content.ts` writes the offsite plan and finds its parts again by text
   in any editor's state (never by node key); `script.ts` is the demo, about 20 s, every
   step skipped when its part was edited away, all at once under reduced motion, stopped by
@@ -205,6 +205,30 @@ Work offline, edits waiting and "merged".
   ⋯ → Replay demo and the surface hook that stops everything when the page unmounts (a
   layout effect, so the collaborators' departure is sent before the page closes its
   socket).
+- `ai/` (D21), all in the browser:
+  - `prompt-api.ts`: Chrome's Prompt API, typed locally (`LanguageModel.availability()`,
+    `create({ expectedInputs, expectedOutputs, initialPrompts, monitor, signal })`,
+    `prompt(text, { signal })`, `destroy()`), and `checkAvailability()`, which never
+    throws.
+  - `markdown.ts`: the target (the top-level blocks between two points, tables refused),
+    its Markdown (`$convertSelectionToMarkdownString` over whole blocks, with the
+    editor's transformers), the prompt, the reply cleaned of a wrapping fence, and
+    `$replaceBlocks` (`$generateNodesFromMarkdownString`, inserted before the first target,
+    then the targets removed).
+  - `controller.ts`: `aiState(session)`. Opening the field captures the page binding's
+    `getCursor()` as the target. Ask exports the target from the page's editor, has jot AI
+    join as an in-tab peer (kind `ai`, `askedBy`, one per asker) with its caret at the
+    target, creates the model and prompts it under one `AbortController`, then, inside
+    jot AI's editor, resolves the same cursor, checks the target's Markdown is still what
+    was sent, and replaces it. jot AI follows the peer rules: a fresh client id each time
+    it joins, its registry entry with its first change (moving its caret writes nothing),
+    and nothing written unless the note takes edits (the session's `writable()`); the
+    asker gets an entry when jot AI writes, so "asked by" can name them. One request at
+    a time; `cancel()` aborts it; jot AI leaves a minute after its last request, or with
+    the page.
+  - `AskAI.tsx`: the dock item and its panel (`dockStart`), and the surface hook that tints
+    the target with a `Highlight`, makes Esc cancel a running request, and stops jot AI
+    when the page unmounts.
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the
