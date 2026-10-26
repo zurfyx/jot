@@ -8,13 +8,11 @@ describe('parseNoteInput', () => {
   it.each([
     [ID, ID],
     [`  ${ID}\n`, ID],
-    ['public', 'public'],
     [`https://jot.rovira.sh/n/${ID}`, ID],
     [`https://jot.rovira.sh/n/${ID}/`, ID],
     [`https://jot.rovira.sh/n/${ID}?ref=chat#top`, ID],
     [`jot.rovira.sh/n/${ID}`, ID],
     [`http://localhost:5173/n/${ID}`, ID],
-    ['https://jot.rovira.sh/n/public', 'public'],
   ])('reads %j', (input, expected) => {
     expect(parseNoteInput(input)).toBe(expected);
   });
@@ -29,6 +27,8 @@ describe('parseNoteInput', () => {
     `https://jot.rovira.sh/x/${ID}`,
     `https://jot.rovira.sh/n/${ID}/extra`,
     'https://jot.rovira.sh/n/not-an-id',
+    'public',
+    'https://jot.rovira.sh/n/public',
     `javascript:alert(1)//jot.rovira.sh/n/${ID}`,
     `ftp://jot.rovira.sh/n/${ID}`,
   ])('rejects %j', (input) => {

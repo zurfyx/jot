@@ -11,7 +11,6 @@ version of the engine.
 - **Share it.** The note's link is the whole access model. Share copies it.
 - **Join one.** Paste a jot link or just its code on the landing page. The field says which
   note it opens, or that the text isn't a note link or code.
-- **Open the public note,** `/n/public`, which everyone shares and which never expires.
 - **Write together.** Rich text with headings, bold, italic, inline code, links, bulleted,
   numbered and checklists, quotes and tables. Markdown shortcuts while typing, a selection
   toolbar, and a ⌘K menu (New note, Copy link, Toggle theme, Insert table, Go home).
@@ -23,8 +22,9 @@ version of the engine.
 
 - **The link is the key.** Ids are 128 random bits; there are no accounts and no listing.
   Anyone with a link can read and edit that note (D02).
-- **Notes expire.** A note is deleted 90 days after its last visit. The public note never
-  expires (D06).
+- **Notes expire.** A note is deleted 90 days after its last visit (D06).
+- **Notes stay out of search engines.** Note pages and the API are marked `noindex,
+nofollow` and disallowed in `robots.txt`; only the landing page is indexable (D17).
 - **Notes are small.** A note holds up to 2 MB of Yjs state. At 1.6 MB the page says
   "This note is almost full"; when an edit no longer fits, the page goes read only and says
   "This note is full. Start a new note to keep writing." (D05).

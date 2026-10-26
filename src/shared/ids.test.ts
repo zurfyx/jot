@@ -6,7 +6,6 @@ import {
   isNoteId,
   notePath,
   noteSocketPath,
-  PUBLIC_NOTE_ID,
   shortNoteId,
 } from './ids';
 
@@ -39,13 +38,9 @@ describe('encodeBase64Url', () => {
 });
 
 describe('isNoteId', () => {
-  it('accepts the public note', () => {
-    expect(isNoteId(PUBLIC_NOTE_ID)).toBe(true);
-  });
-
   it.each([
     '',
-    'public ',
+    'public', // there is no public note
     'Public',
     'AAAAAAAAAAAAAAAAAAAAA', // 21
     'AAAAAAAAAAAAAAAAAAAAAAA', // 23
@@ -68,12 +63,12 @@ describe('isNoteId', () => {
 
 describe('paths', () => {
   it('builds note and socket paths', () => {
-    expect(notePath('public')).toBe('/n/public');
-    expect(noteSocketPath('public')).toBe('/api/n/public/ws');
+    const id = 'k3Jd9xQ2vL8a-_k3Jd9xQw';
+    expect(notePath(id)).toBe(`/n/${id}`);
+    expect(noteSocketPath(id)).toBe(`/api/n/${id}/ws`);
   });
 
   it('shortens ids for prose', () => {
     expect(shortNoteId('k3Jd9xQ2vL8a-_k3Jd9xQw')).toBe('k3Jd9x…');
-    expect(shortNoteId('public')).toBe('public');
   });
 });

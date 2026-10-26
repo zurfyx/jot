@@ -10,6 +10,7 @@ note, relaying Yjs 14 (`@y/y`) updates and storing each note as a single SQLite 
 
 - No accounts. A note's link is its key: anyone with it can read and edit.
 - Notes are deleted after 90 days without a visit. Don't paste anything private.
+- Notes stay out of search engines; only the landing page is indexable.
 - A note holds up to 2 MB of Yjs state.
 
 ## Quick start

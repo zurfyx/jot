@@ -4,9 +4,6 @@
  * top 2 bits of the 22nd, so the last character is always one of A, Q, g, w.
  */
 
-/** The one note with a fixed id. It never expires (D06). */
-export const PUBLIC_NOTE_ID = 'public';
-
 const ID_BYTES = 16;
 const ID_PATTERN = /^[A-Za-z0-9_-]{21}[AQgw]$/;
 
@@ -25,9 +22,9 @@ export function generateNoteId(): string {
   return encodeBase64Url(bytes);
 }
 
-/** True for a well-formed note id: a generated one, or the public note. */
+/** True for a well-formed note id. */
 export function isNoteId(value: string): boolean {
-  return value === PUBLIC_NOTE_ID || ID_PATTERN.test(value);
+  return ID_PATTERN.test(value);
 }
 
 /** The path of a note's page. */
@@ -45,5 +42,5 @@ export function noteSocketPath(id: string): string {
 
 /** A short form of an id for prose: "k3Jd9x…". */
 export function shortNoteId(id: string): string {
-  return id === PUBLIC_NOTE_ID ? id : `${id.slice(0, 6)}…`;
+  return `${id.slice(0, 6)}…`;
 }
