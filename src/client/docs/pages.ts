@@ -74,7 +74,7 @@ export const DOCS_PAGES: readonly DocsPageInfo[] = [
     title: 'Size and limits',
     group: 'Features',
     tint: 'you',
-    blurb: 'The 2 MB cap, compaction and the 90-day expiry.',
+    blurb: 'The 2 MB cap, images, compaction and the 90-day expiry.',
   },
   {
     slug: 'relay',

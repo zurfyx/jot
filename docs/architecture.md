@@ -6,8 +6,13 @@ browser                                   Cloudflare
 │ React chrome             │ ─────────▶ │ Worker       │ ────────▶ │ NoteRoom (one per    │
 │ Lexical + YCollabExt.    │ /api/n/    │ routes,      │ idFromName│ note): Yjs 14 relay, │
 │ @y/websocket provider    │ <id>/ws    │ id checks,   │           │ SQLite row, alarm    │
-│ Y.Doc (@y/y)             │            │ static assets│           │ (Hibernation API)    │
-└──────────────────────────┘            └──────────────┘           └──────────────────────┘
+│ Y.Doc (@y/y)             │ /images    │ static assets│           │ (Hibernation API)    │
+└──────────────────────────┘            └──────┬───────┘           └──────────┬───────────┘
+                                               │ GET image                    │ put, delete
+                                               ▼                              ▼
+                                        ┌──────────────────────────────────────────────┐
+                                        │ R2 bucket IMAGES: <note id>/<key>            │
+                                        └──────────────────────────────────────────────┘
 ```
 
 ## Worker (`src/worker/index.ts`)
@@ -15,16 +20,29 @@ browser                                   Cloudflare
 One Worker with static assets (D01). `wrangler.jsonc` runs the Worker first for `/api/*` and
 `/n/*`; everything else is an asset, with unknown paths falling back to `index.html`.
 
-| Route               | Behaviour                                                         |
-| ------------------- | ----------------------------------------------------------------- |
-| `GET /n/:id`        | Valid id: the SPA (`index.html`). Otherwise 400.                  |
-| `GET /api/n/:id/ws` | Valid id and a WebSocket upgrade: forwarded to the note's object. |
-|                     | Invalid id: 400. No upgrade: 426.                                 |
-| `/api/*` otherwise  | 404                                                               |
-| anything else       | static assets                                                     |
+| Route                        | Behaviour                                                         |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `GET /n/:id`                 | Valid id: the SPA (`index.html`). Otherwise 400.                  |
+| `GET /api/n/:id/ws`          | Valid id and a WebSocket upgrade: forwarded to the note's object. |
+|                              | Invalid id: 400. No upgrade: 426.                                 |
+| `POST /api/n/:id/images`     | An image upload, forwarded to the note's object (D26). Invalid    |
+|                              | id: 400. Another method: 405.                                     |
+| `GET /api/n/:id/images/:key` | The image, from R2 (`HEAD` too). Invalid id or key: 400. Unknown: |
+|                              | 404. Another method: 405.                                         |
+| `/api/*` otherwise           | 404                                                               |
+| anything else                | static assets                                                     |
 
 A valid id is 22 base64url characters encoding 128 bits, and nothing else: there are no
-fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note` header.
+fixed ids (D02, D15). An image key has the same shape. The Worker passes the id to the
+object in the `x-jot-note` header.
+
+`images.ts` serves an image from R2 at `<note id>/<key>` with its stored type,
+`Cache-Control: public, max-age=31536000, immutable`, `X-Content-Type-Options: nosniff`,
+`Content-Disposition: inline; filename="image.<ext>"`, `Content-Security-Policy:
+default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: same-origin` and its ETag (a
+matching `If-None-Match` gets 304). It also reads uploads for the object: the declared
+`Content-Type` must be PNG, JPEG, WebP or GIF and match the magic bytes
+(`sniffImageType`), and the body is read up to 1.5 MB and no further.
 
 Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade included,
 carries `X-Robots-Tag: noindex, nofollow`, and `public/robots.txt` disallows `/n/` and
@@ -45,7 +63,8 @@ clients (D03).
   sockets stay open; the next message runs the constructor again, which reloads the
   document. Each socket's awareness client ids and clocks ride in its attachment, so a
   departure can be announced after a wake.
-- **Storage.** One row, `note(id = 0, name, state, saved_at)`. A save writes
+- **Storage.** One row, `note(id = 0, name, state, saved_at)`, and one row per stored
+  image, `images(object, bytes, type, created_at)`, where `object` is its R2 key. A save writes
   `encodeStateAsUpdate(doc)` two seconds after the first unsaved change, and at once when
   the last socket leaves. Because the document is gc-on, every save is also a compaction:
   deleted content never accumulates in storage (D05).
@@ -53,8 +72,19 @@ clients (D03).
   upper bound (`size + pending + update + 64`); only near the cap does the object measure
   `mergeUpdates([state, update])` exactly. An update that would pass the cap is not applied,
   and its sender gets a note-status message with the rejected flag.
-- **Expiry.** Each connection sets the alarm to now + 90 days. When it fires with nobody
-  connected, the object deletes all storage; with someone connected it reschedules (D06).
+- **Images** (D26). An upload is refused when the note's text has no room for an image node
+  (`fitsUnderCap(size + pending, 1024)` fails: the note is full), when the note has 20
+  images, or when its images would pass 10 MB. Otherwise the object inserts the row with a
+  fresh random key, in the same synchronous step as the checks, sets the alarm (an upload
+  is a visit), writes the file to R2 with its type, cache and disposition metadata, and
+  answers `201 { key, src }`; if R2 fails, it deletes the row and answers 502. Refusals
+  are JSON `{ error }`: 415 `type`, 413 `too-large`, 409 `too-many`, `no-room` or
+  `note-full`.
+- **Expiry.** Each connection and each upload sets the alarm to now + 90 days. When it
+  fires with nobody connected, the object, inside `blockConcurrencyWhile`, deletes every R2
+  object under `<note id>/` (listed by prefix, for the note's id and every id in
+  `images`), then all storage; if R2 fails the alarm throws and is retried. With someone
+  connected it reschedules (D06).
 - **Robustness.** Any malformed frame (text, unknown type, truncated varint, bad awareness
   JSON, undecodable update) closes that socket with 1007 and leaves the others alone.
   Clients reconnect with backoff and re-sync with the sync steps.
@@ -73,7 +103,8 @@ jot's own. Every frame starts with a varuint message type.
 
 A note's Y.Doc has two roots: `lexical-y`, the editor's content in `@lexical/y`'s layout,
 and `jot-people` (`PEOPLE_ROOT`), the people registry blame reads (D19). The relay treats
-both as opaque Yjs content.
+both as opaque Yjs content. Images are never in the document: an image node stores a path
+to them (D26).
 
 On connect the server sends sync step 1, the current awareness states and a note status.
 The client answers step 1 and sends its own; the server's step 2 marks the client synced.
@@ -147,13 +178,14 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
 - `NotePage.tsx`: top right `Avatars`, `StatusPill` and `ShareButton`; the note surface; the
   `Dock`; the ⌘K `CommandMenu`; ⌘⇧C copies the link.
 - `Dock.tsx`: Aa (`FormatMenu.tsx`, block types and inline formats through Lexical
-  commands and `$setBlocksType`; disabled, and closed, while the note is not editable, and
-  every action checks editability first), ⋯ (`MoreMenu`) and `NoteInfo.tsx`. `menu.tsx` has the
+  commands and `$setBlocksType`, and Image, disabled with a hint while offline or in Work
+  offline; Aa is disabled, and closed, while the note is not editable, and every action
+  checks editability first), ⋯ (`MoreMenu`) and `NoteInfo.tsx`. `menu.tsx` has the
   popover behaviour (Escape, outside press, arrow keys) and the menu item primitives.
 - `features.ts`: the extension points for features. A `NoteFeature` can add a dock item
   before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯ (`menuTop`),
   a banner above the text (`banner`) and a layer over the note surface (`surface`);
-  `session.onReconnect` reports merges. Ask AI, blame and the example use them.
+  `session.onReconnect` reports merges. Ask AI, blame, the example and images use them.
 - `blame/` (D19), all in the browser:
   - `registry.ts`: the `jot-people` root. `trackLocalPerson` writes this tab's entry
     (person id, name, colour, kind, last seen) on its first local edit, an insert or a
@@ -226,7 +258,7 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
     `create({ expectedInputs, expectedOutputs, initialPrompts, monitor, signal })`,
     `measureInputUsage()` and `inputQuota` where offered, `prompt(text, { signal })`,
     `destroy()`), and `checkAvailability()`, which never throws.
-  - `markdown.ts`: the target (the top-level blocks between two points, tables refused),
+  - `markdown.ts`: the target (the top-level blocks between two points, tables and images refused),
     its Markdown (`$convertSelectionToMarkdownString` over whole blocks, text points only
     on text nodes, so blocks that start or end with a line break export too), its lossless
     snapshot (every node's JSON), the prompt, the reply cleaned of an unambiguous
@@ -251,12 +283,44 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   - `AskAI.tsx`: the dock item and its panel (`dockStart`), and the surface hook that tints
     the target with a `Highlight`, makes Esc cancel a running request, and stops jot AI
     when the page unmounts.
+- `images/` (D26):
+  - `states.ts`, `ImageNode.ts`: the `jot-image` decorator node. Its NodeState (`src`,
+    `alt`, `width`, `height`, `upload`, `started`) is parsed as untrusted input: `src` keeps
+    only a jot image path (`parseImagePath`), `alt` at most 300 characters, sizes positive
+    integers. `@lexical/y` stores it as a node of its own (`b:jot-image`, kind `nested`).
+    `decorate()` returns an `ImageView`.
+  - `extension.ts`: `ImageExtension` (the node; a click on an image makes a
+    `NodeSelection`, so Backspace and Delete remove it) and `shouldHandlePasteAsFiles`,
+    which `RichTextExtension` takes so a copied image pastes as a file even beside the
+    clipboard's HTML. Pasted HTML `<img>` tags import nothing.
+  - `shrink.ts`: `prepareImage` decodes with `createImageBitmap`, scales to 1600 px on the
+    long side (`scaledSize`) on an `OffscreenCanvas`, and encodes WebP (JPEG where WebP
+    encoding isn't offered) at 0.85, 0.7 and 0.5 until it fits 1.5 MB; `planFor` keeps a
+    GIF under 1.5 MB as it is and refuses an animated one over it; `chooseUpload` keeps a
+    small original that fits and beats every encoding.
+  - `upload.ts`: one `XMLHttpRequest` per image (for upload progress) to
+    `/api/n/<id>/images`; `readUploadResponse` accepts a 201 only for a path of this note.
+  - `controller.ts`: per session, the uploads this tab runs (preview URL and progress) and
+    the notice. `insertImageFiles` checks `imageBlockReason` (full, read only, Work offline,
+    not connected), prepares each file, inserts a placeholder node (alt from the file name,
+    size, an upload id and start time) at the selection with `$insertNodeToNearestRoot`,
+    uploads, then sets `src` and clears `upload`, or removes the placeholder and says why.
+    `pickImageFiles` is Aa → Image's file picker.
+  - `ImageView.tsx`, `Images.tsx`: the view renders the uploading tab's preview with a
+    progress bar; someone else's upload as a placeholder, unfinished after two minutes; the
+    image (`loading="lazy"`, its size, `max-width: 100%`) only when `src` is this note's
+    (`isOwnImagePath`), and otherwise a notice, requesting nothing; and, when the image is
+    selected, an alt text field whose native listeners keep its events from the editor.
+    `ImageSurface` renders the editor's decorators into their elements with React portals
+    under `ImageHostContext` (what `@lexical/react` would do, D14) and handles
+    `DRAG_DROP_PASTE`; `ImageNoticeBanner` shows the notice.
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the
   avatars and Note info.
 - `extensions.ts`: rich text, lists and checklists, links, code blocks
-  (`@lexical/code-core`, no highlighting), tables, tab indentation and markdown shortcuts.
+  (`@lexical/code-core`, no highlighting), tables, images, tab indentation and markdown
+  shortcuts.
 
 **The landing page** and the note page are separate chunks: the editor, Lexical and Yjs load
 only on a note page (`loadNote.ts`). The landing page prefetches that chunk when
@@ -293,5 +357,6 @@ until the socket reconnects (D13).
 repository, deploys every push to `main` to jot.rovira.sh (`wrangler deploy`) and every
 other branch as a Worker Preview at `<preview-name>-jot.rovira.workers.dev`
 (`wrangler preview`), with its own Durable Object namespace, where Cloudflare marks every
-response noindex (D10, D24). GitHub Actions runs CI only: the
+response noindex (D10, D24). Production binds the R2 bucket `jot-images` as `IMAGES`;
+every Preview binds `jot-images-preview` instead (D26). GitHub Actions runs CI only: the
 required checks gate merges, and no Cloudflare credential lives in GitHub.

@@ -30,8 +30,10 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 
 import { normalizeLinkUrl } from '../../shared/links';
 import { Icon, type IconName, isIconName } from './icons';
+import { imageBlockReason, pickImageFiles } from './images/controller';
 import { keepEditorFocus, moveMenuFocus, useFocusFirstItem } from './menu';
 import type { NoteSession } from './session';
+import { useSignal } from './useSignal';
 
 export type BlockType =
   'paragraph' | 'h1' | 'h2' | 'h3' | 'bullet' | 'number' | 'check' | 'quote' | 'code';
@@ -145,6 +147,11 @@ export function FormatMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const saved = useRef<BaseSelection | null>(null);
+  // Images need the network (D26): re-read whenever the connection changes.
+  const connection = useSignal(session.connection);
+  const workOffline = useSignal(session.workOffline);
+  const imageBlocked =
+    connection === 'connected' && !workOffline ? null : imageBlockReason(session);
 
   useFocusFirstItem(menuRef, viaKeyboard);
 
@@ -325,6 +332,27 @@ export function FormatMenu({
               }}
             >
               <Icon name="link" />
+            </button>
+          </div>
+          <div className="menu-group insert-group" role="group" aria-label="Insert">
+            <button
+              type="button"
+              role="menuitem"
+              className="menu-item"
+              tabIndex={-1}
+              disabled={imageBlocked !== null}
+              title={imageBlocked ?? 'Add an image from this device'}
+              onClick={() => {
+                const selection = saved.current;
+                close();
+                pickImageFiles(session, selection);
+              }}
+            >
+              <Icon name="image" />
+              <span className="menu-label">Image</span>
+              {imageBlocked !== null && (
+                <span className="menu-hint">{workOffline ? 'Working offline' : 'Offline'}</span>
+              )}
             </button>
           </div>
         </>

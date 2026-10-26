@@ -25,6 +25,7 @@ import {
 
 import { normalizeLinkUrl } from '../../../shared/links';
 import { MARKDOWN_TRANSFORMERS } from '../extensions';
+import { IMAGE_NODE_TYPE } from '../images/states';
 
 /**
  * A hard ceiling on the passage, in characters. The real limit is the model's
@@ -68,7 +69,7 @@ export function cleanReply(reply: string): string {
   return text.slice(0, MAX_REPLY);
 }
 
-export type TargetProblem = 'none' | 'table';
+export type TargetProblem = 'none' | 'table' | 'image';
 
 export interface Target {
   /** Top-level blocks, in order. A caret in a list item takes the whole list. */
@@ -110,8 +111,10 @@ export function $targetBetween(anchor: PointType, focus: PointType): Target | nu
   }
   const picked = children.slice(Math.min(i, j), Math.max(i, j) + 1);
   const blocks = picked.filter($isElementNode);
-  const problem: TargetProblem =
-    blocks.length !== picked.length || blocks.some((block) => $isTableNode(block))
+  // Markdown can't carry an image node (D26): rewriting it would drop it.
+  const problem: TargetProblem = picked.some((node) => node.getType() === IMAGE_NODE_TYPE)
+    ? 'image'
+    : blocks.length !== picked.length || blocks.some((block) => $isTableNode(block))
       ? 'table'
       : 'none';
   return { blocks, problem };

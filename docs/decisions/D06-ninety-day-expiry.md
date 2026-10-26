@@ -5,8 +5,10 @@ Status: `DECIDED`
 ## Decision
 
 - Every WebSocket connection to a note resets its Durable Object alarm to now + 90 days.
-- When the alarm fires and nobody is connected, the object deletes all its storage. If
-  someone is connected, that counts as a visit and the alarm is rescheduled.
+- An image upload counts as a visit too (D26).
+- When the alarm fires and nobody is connected, the object deletes the note's images from
+  R2 and then all its storage. If someone is connected, that counts as a visit and the
+  alarm is rescheduled.
 - Every note expires this way; there are no exceptions.
 
 ## Consequences

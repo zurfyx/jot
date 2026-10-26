@@ -129,6 +129,29 @@ const PATHS = {
       strokeLinecap="round"
     />
   ),
+  image: (
+    <>
+      <rect
+        x="2"
+        y="2.5"
+        width="12"
+        height="11"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <circle cx="5.8" cy="6.2" r="1.2" fill="currentColor" />
+      <path
+        d="M2.6 11.6L6 8.6l2.4 2 2.2-2.2 2.8 2.8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </>
+  ),
   codeblock: (
     <>
       <rect

@@ -21,17 +21,22 @@
   "durable_objects": {
     "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
   },
+  // Image files, under their note's id (D26). Never a public bucket: the Worker
+  // serves them. Previews use their own bucket (below).
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "jot-images" }],
   // Migrations stay at the top level; every Preview runs them into its own namespace.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
   "observability": { "enabled": true },
   // Preview settings (D24). Previews inherit none of the above except assets,
-  // compatibility, migrations and observability, so the binding is repeated
+  // compatibility, migrations and observability, so the bindings are repeated
   // here. Each Preview gets its own Durable Object namespace: never add
-  // a `script_name`, which would reach production's notes. No routes or crons:
+  // a `script_name`, which would reach production's notes. Previews share one
+  // images bucket of their own, never production's (D26). No routes or crons:
   // those always target production.
   "previews": {
     "durable_objects": {
       "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
     },
+    "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "jot-images-preview" }],
   },
 }

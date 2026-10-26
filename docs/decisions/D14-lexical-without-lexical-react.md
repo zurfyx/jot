@@ -5,8 +5,9 @@ Status: `DECIDED`
 ## Decision
 
 The note editor is built with `buildEditorFromExtensions` and mounted on a
-`contenteditable` element React renders; React only draws the chrome. jot does not depend
-on `@lexical/react`.
+`contenteditable` element React renders. React draws the chrome, and the editor's decorator
+nodes (images, D26) through portals into the elements Lexical creates for them, as
+`@lexical/react` would. jot does not depend on `@lexical/react`.
 
 ## Why
 

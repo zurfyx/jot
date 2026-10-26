@@ -25,7 +25,9 @@ Status: `DECIDED`
   `"preview_urls": true` turns on Preview URLs there; Cloudflare sets the two separately.
 - **The `previews` block.** Previews inherit nothing but assets, compatibility settings,
   migrations and observability. The block repeats the `NOTES` Durable Object binding (the
-  Worker reads `env.NOTES`; without it a Preview fails with error 1101). Migrations stay at
+  Worker reads `env.NOTES`; without it a Preview fails with error 1101), and binds `IMAGES`
+  to the R2 bucket `jot-images-preview`, which every Preview shares and production never
+  touches (D26). Migrations stay at
   the top level; each Preview runs them into its own new namespace. No `script_name`, ever:
   it would point a Preview at production's notes. No routes or crons in the block: those
   always target production.

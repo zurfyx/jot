@@ -9,6 +9,9 @@ export function describeTarget(info: TargetInfo | null): string {
   if (info.problem === 'table') {
     return MESSAGES.table;
   }
+  if (info.problem === 'image') {
+    return MESSAGES.image;
+  }
   if (info.empty) {
     return 'Writes into the empty line';
   }

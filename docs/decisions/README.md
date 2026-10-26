@@ -49,6 +49,7 @@ How expensive is this to get wrong?
 | [D19](D19-blame-from-yjs-attributions.md)        | Blame from Yjs 14 attributions in the browser, with a people registry   | MED    | `DECIDED` |
 | [D20](D20-example-note-with-in-tab-peers.md)     | The example is a real shared note, edited by in-tab Yjs peers           | MED    | `DECIDED` |
 | [D21](D21-ask-ai-with-chromes-built-in-model.md) | Ask AI runs Chrome's built-in model; jot AI writes as an in-tab peer    | MED    | `DECIDED` |
+| [D26](D26-images-in-r2.md)                       | Images in R2 through the Worker, shrunk in the browser, capped per note | MED    | `DECIDED` |
 | [D12](D12-presence-through-awareness.md)         | Presence: names, colours and carets through awareness                   | LOW    | `DECIDED` |
 | [D14](D14-lexical-without-lexical-react.md)      | The editor is built with the extension API, without `@lexical/react`    | LOW    | `DECIDED` |
 | [D07](D07-design-direction.md)                   | Design: editor direction A, the fan landing page, Geist                 | LOW    | `DECIDED` |

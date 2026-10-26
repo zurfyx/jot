@@ -25,6 +25,8 @@ import { RichTextExtension } from '@lexical/rich-text';
 import { TableExtension } from '@lexical/table';
 import { configExtension, defineExtension, type EditorThemeClasses } from 'lexical';
 
+import { ImageExtension, shouldHandlePasteAsFiles } from './images/extension';
+
 /** Markdown shortcuts while typing: `# `, `- `, `[] `, `> `, ```` ``` ````, `**b**`, `` `c` ``, links. */
 export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   CHECK_LIST,
@@ -80,13 +82,17 @@ export const editorTheme: EditorThemeClasses = {
   tableScrollableWrapper: 'jot-table-wrap',
 };
 
-/** What a jot note can hold. The collaboration binding is added per note. */
+/**
+ * What a jot note can hold. The collaboration binding is added per note; so
+ * is inserting images, which needs the note (images/Images.tsx).
+ */
 export const jotEditorExtension = defineExtension({
   name: 'jot/editor',
   namespace: 'jot',
   theme: editorTheme,
   dependencies: [
-    RichTextExtension,
+    // Image files on the clipboard are pasted as images, even beside HTML (D26).
+    configExtension(RichTextExtension, { shouldHandlePasteAsFiles }),
     ListExtension,
     CheckListExtension,
     CodeExtension,
@@ -95,6 +101,7 @@ export const jotEditorExtension = defineExtension({
     configExtension(TableExtension, { hasCellMerge: false, hasCellBackgroundColor: false }),
     configExtension(TabIndentationExtension, { maxIndent: 6 }),
     MarkdownShortcutsExtension,
+    ImageExtension,
   ],
   onError: (error) => {
     console.error(error);

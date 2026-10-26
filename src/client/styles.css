@@ -518,6 +518,20 @@ button {
   color: var(--muted);
 }
 
+.image-notice .text-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.image-notice .text-button:hover {
+  text-decoration: underline;
+}
+
 .note-surface {
   position: relative;
 }
@@ -590,6 +604,112 @@ button {
   padding-left: 14px;
   border-left: 3px solid var(--rule-strong);
   color: var(--body);
+}
+
+.jot-image-block {
+  margin: 6px 0 14px;
+}
+
+.jot-image {
+  margin: 0;
+  max-width: 100%;
+}
+
+.jot-image-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.jot-image.is-selected .jot-image-img,
+.jot-image.is-selected .jot-image-frame {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.jot-image-frame {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.jot-image-frame.is-uploading .jot-image-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+
+.jot-image-frame.is-empty {
+  display: flex;
+  min-height: 96px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border: 1px dashed var(--rule-strong);
+  background: var(--hover);
+}
+
+.jot-image-message {
+  color: var(--muted);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.jot-image-progress {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--rule);
+}
+
+.jot-image-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--enter) var(--ease);
+}
+
+.jot-image-caption {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.jot-image-alt {
+  display: flex;
+  max-width: 480px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.jot-image-alt-label {
+  flex: none;
+  color: var(--muted);
+}
+
+.jot-image-alt-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.jot-image-alt-input:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .jot-codeblock {
@@ -984,6 +1104,12 @@ button {
   gap: 2px;
   margin-top: 6px;
   padding: 6px 2px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.insert-group {
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid var(--rule);
 }
 

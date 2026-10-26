@@ -89,6 +89,20 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations (`/new` and the example's route), the two-windows
   phases and steps, and the feature tabs.
+- images (D26): PNG, JPEG, GIF and WebP told by their magic bytes, and SVG, HTML, WAV,
+  BMP, AVIF and truncated headers refused; GIF frames counted, malformed GIFs never
+  throwing; image keys random and well formed; image paths parsed strictly (no URLs, hosts,
+  queries, `..`, `data:` or `javascript:`), and an image counted as a note's own only under
+  its id; scaling to 1600 px keeps the ratio and never scales up; a small GIF is kept, an
+  animated one over 1.5 MB refused, a still one re-encoded; the smallest encoding under the
+  limit wins, and a small original that fits and beats it is kept; alt text from file
+  names; the server's answer read only for a path of this note, its reasons mapped and
+  anything else read as the network; every message names its file, with no em dashes;
+  SVG never taken. With two real bindings: `describeStorage` says `nested` for
+  `jot-image`; an image reaches the other client with its path, alt text and size in a
+  few hundred bytes; a peer's URL, `data:` or `javascript:` in `s:src` reads as no src;
+  out-of-range alt, sizes, upload ids and times read as defaults; and jot AI refuses a
+  target holding an image;
 - the docs: routes, the page order and Previous and Next, and that every landing page link
   names a docs page; the highlighter keeps every character; excerpts cut whole
   declarations and fail on a missing one; the inspector's rows for headings, lists, bold,
@@ -120,7 +134,19 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
   deletions of its own;
 - malformed ids, `public` included, get 400 on both routes;
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
-  `X-Robots-Tag: noindex, nofollow`.
+  `X-Robots-Tag: noindex, nofollow`;
+- images (D26, `images.test.ts`, with the R2 binding simulated by workerd): each of PNG,
+  JPEG, WebP and GIF is stored under `<note id>/<key>` with its type and served back byte
+  for byte; keys are random and never from the file name; served images carry the
+  immutable cache, `nosniff`, `noindex`, a fixed inline file name, the sandbox CSP,
+  `same-origin`, an ETag (304 when it matches) and answer `HEAD`; text, SVG, a mismatched
+  or cross-site-form type, a truncated header and an empty body are refused with 415; a
+  file over 1.5 MB with 413 and one at the limit taken; the 21st image and an image past
+  10 MB with 409 (another note unaffected, a smaller one still fitting); a note whose text
+  is full with 409 `note-full`; an upload sets the expiry alarm; expiry deletes the note's
+  objects from R2 (not while someone is connected, never another note's, also when no
+  text was ever saved) and its counts; malformed ids and keys get 400, other methods 405,
+  unknown images 404, and an image is served only under its own note.
 
 ## End to end (`pnpm e2e`)
 
@@ -202,6 +228,17 @@ Durable Objects, over real WebSockets.
   note, asking before typing shows "asked by You" in the asker's blame and "asked by
   <name>" in the writer's; the target tint goes when a request settles (cancelled or
   failed) after the field closed;
+- images (D26): Aa → Image uploads a picked PNG, which shows with its alt text from the
+  file name and `loading="lazy"`, reaches a second browser with the same path, loads, and
+  survives a reload; a pasted 3000×2000 screenshot is uploaded once, as WebP, at 1600×1067;
+  a dropped image lands; a held upload shows its placeholder with a progress bar, then the
+  image; a refused upload (`too-many`) says why, leaves no placeholder, and its notice can
+  be dismissed; an SVG is refused with a message; in Work offline, Image is disabled with
+  its hint and reason, and a paste only says why; alt text edits (Backspace in the field
+  edits text, not the image) reach the other browser, and Backspace on a selected image
+  removes it for both; a peer writing a foreign URL or another note's path into the stored
+  node gets "Image not shown", with no `<img>` and no request for it, before and after a
+  reload;
 - the ⌘K menu toggles the theme;
 - a note in a newer layout opens read only with its banner.
 - the docs: every page renders with no em dashes; code blocks have their file name, a

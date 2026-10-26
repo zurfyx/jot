@@ -78,9 +78,10 @@ export function Relay() {
       <h2>Routing</h2>
       <p>
         The Worker checks the note id (22 base64url characters, 128 random bits: the link is the
-        key), then hands the WebSocket upgrade to the note's object. Everything else is static
-        assets, and unknown paths fall back to the app (
-        <Source path="src/worker/index.ts">src/worker/index.ts</Source>).
+        key), then hands the WebSocket upgrade to the note's object. Image uploads go to the same
+        object, which counts the note's images and stores the file in R2; the Worker serves images
+        back from R2 itself. Everything else is static assets, and unknown paths fall back to the
+        app (<Source path="src/worker/index.ts">src/worker/index.ts</Source>).
       </p>
       <h2>The room</h2>
       <p>

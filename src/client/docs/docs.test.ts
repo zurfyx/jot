@@ -82,6 +82,8 @@ describe('the code blocks', () => {
     expect(SNIPPETS.roomUpdate.code).toMatch(/^\/\*\*[\s\S]*private receiveUpdate\([\s\S]*\n}$/);
     expect(SNIPPETS.roomFetch.code).toContain('acceptWebSocket');
     expect(SNIPPETS.fitsUnderCap.code).toContain('UPDATE_OVERHEAD_BYTES');
+    expect(SNIPPETS.imageSrcState.code).toContain('parseImagePath');
+    expect(SNIPPETS.sniffImageType.code).toContain("'image/webp'");
     expect(SNIPPETS.contentMap.code).toContain('createContentAttribute');
     expect(SNIPPETS.computeBlame.code).toContain('createAttributionsRenderer');
     expect(SNIPPETS.roomUpdate.href).toMatch(/room\.ts#L\d+-L\d+$/);

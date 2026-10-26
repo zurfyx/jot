@@ -5,6 +5,16 @@ import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
 import { isNoteId } from '../shared/ids';
+import {
+  generateImageKey,
+  IMAGE_NODE_BYTES,
+  imageObjectKey,
+  imageObjectPrefix,
+  imagePath,
+  type ImageUploadResult,
+  NOTE_MAX_IMAGE_BYTES,
+  NOTE_MAX_IMAGES,
+} from '../shared/images';
 import { fitsUnderCap, NOTE_EXPIRY_MS, NOTE_MAX_BYTES, SAVE_DEBOUNCE_MS } from '../shared/limits';
 import {
   CLOSE_MALFORMED,
@@ -23,6 +33,7 @@ import {
   decodeAwarenessUpdate,
   encodeAwarenessUpdate,
 } from './awareness';
+import { imageHttpMetadata, readUpload, uploadError } from './images';
 
 /** Header the Worker uses to tell a note's Durable Object its id. */
 export const NOTE_ID_HEADER = 'x-jot-note';
@@ -67,6 +78,16 @@ export class NoteRoom extends DurableObject<Env> {
         name TEXT NOT NULL,
         state BLOB NOT NULL,
         saved_at INTEGER NOT NULL
+      )`,
+    );
+    // The note's stored images (D26): the R2 object of each, for its caps and
+    // its cleanup at expiry.
+    this.ctx.storage.sql.exec(
+      `CREATE TABLE IF NOT EXISTS images (
+        object TEXT PRIMARY KEY,
+        bytes INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        created_at INTEGER NOT NULL
       )`,
     );
   }
@@ -163,14 +184,107 @@ export class NoteRoom extends DurableObject<Env> {
       await this.ctx.storage.setAlarm(Date.now() + NOTE_EXPIRY_MS);
       return;
     }
-    if (this.saveTimer !== null) {
-      clearTimeout(this.saveTimer);
-      this.saveTimer = null;
-    }
-    this.dirty = false;
-    await this.ctx.storage.deleteAll();
-    this.resetDoc();
+    // Nothing else runs until the note is gone, so an upload can't land
+    // between deleting its images and deleting its rows.
+    await this.ctx.blockConcurrencyWhile(async () => {
+      if (this.saveTimer !== null) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+      }
+      this.dirty = false;
+      // Images first: if R2 fails, the alarm throws and is retried with the
+      // note's rows still there to say what to delete.
+      await this.deleteImages();
+      await this.ctx.storage.deleteAll();
+      this.resetDoc();
+      this.ensureSchema();
+    });
+  }
+
+  /** Deletes every R2 object under the note's id (D26). */
+  private async deleteImages(): Promise<void> {
     this.ensureSchema();
+    const prefixes = new Set<string>();
+    if (this.noteId !== null) {
+      prefixes.add(imageObjectPrefix(this.noteId));
+    }
+    // The note row may never have been written (images but no text yet).
+    for (const { object } of this.ctx.storage.sql
+      .exec<{ object: string }>('SELECT object FROM images')
+      .toArray()) {
+      prefixes.add(`${object.split('/')[0]}/`);
+    }
+    for (const prefix of prefixes) {
+      let cursor: string | undefined;
+      do {
+        const listed = await this.env.IMAGES.list({ prefix, cursor });
+        if (listed.objects.length > 0) {
+          await this.env.IMAGES.delete(listed.objects.map((object) => object.key));
+        }
+        cursor = listed.truncated ? listed.cursor : undefined;
+      } while (cursor !== undefined);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Images (D26)
+
+  /** The note's stored images: how many, and their bytes together. */
+  imageUsage(): { count: number; bytes: number } {
+    this.ensureSchema();
+    const row = this.ctx.storage.sql
+      .exec<{ count: number; bytes: number | null }>(
+        'SELECT COUNT(*) AS count, SUM(bytes) AS bytes FROM images',
+      )
+      .one();
+    return { count: row.count, bytes: row.bytes ?? 0 };
+  }
+
+  /**
+   * Stores an uploaded image in R2 under the note's id, with a random key,
+   * unless the note is full or its images are at their caps.
+   */
+  private async upload(request: Request, id: string): Promise<Response> {
+    const upload = await readUpload(request);
+    if (upload instanceof Response) {
+      return upload;
+    }
+    // A note whose text is at the cap couldn't hold the image node: it is
+    // read only for everyone (D05).
+    if (!fitsUnderCap(this.size + this.pending, IMAGE_NODE_BYTES)) {
+      return uploadError('note-full');
+    }
+    const usage = this.imageUsage();
+    if (usage.count >= NOTE_MAX_IMAGES) {
+      return uploadError('too-many');
+    }
+    if (usage.bytes + upload.bytes.byteLength > NOTE_MAX_IMAGE_BYTES) {
+      return uploadError('no-room');
+    }
+    const key = generateImageKey();
+    const object = imageObjectKey(id, key);
+    // Reserved before the write, in the same synchronous step as the checks,
+    // so two uploads at once can't both take the last place.
+    this.ctx.storage.sql.exec(
+      'INSERT INTO images (object, bytes, type, created_at) VALUES (?, ?, ?, ?)',
+      object,
+      upload.bytes.byteLength,
+      upload.type,
+      Date.now(),
+    );
+    // An upload is a visit: the note and its images expire together.
+    this.touch();
+    try {
+      await this.env.IMAGES.put(object, upload.bytes, {
+        httpMetadata: imageHttpMetadata(upload.type),
+      });
+    } catch (error) {
+      console.warn(`[note ${id}] image upload failed:`, String(error));
+      this.ctx.storage.sql.exec('DELETE FROM images WHERE object = ?', object);
+      return new Response('Could not store the image.', { status: 502 });
+    }
+    const result: ImageUploadResult = { key, src: imagePath(id, key) };
+    return Response.json(result, { status: 201 });
   }
 
   // ---------------------------------------------------------------------------
@@ -181,10 +295,13 @@ export class NoteRoom extends DurableObject<Env> {
     if (id === null || !isNoteId(id)) {
       return new Response('Not a note id.', { status: 400 });
     }
+    this.noteId = id;
+    if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/images')) {
+      return this.upload(request, id);
+    }
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('Expected a WebSocket upgrade.', { status: 426 });
     }
-    this.noteId = id;
     this.touch();
 
     const { 0: client, 1: server } = new WebSocketPair();

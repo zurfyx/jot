@@ -63,6 +63,7 @@ export const MESSAGES = {
   noTarget:
     'Click in the note first: jot AI works on the selected blocks, or the one with the caret.',
   table: "jot AI can't rewrite tables yet. Select text outside the table.",
+  image: "jot AI can't rewrite images. Select text without an image.",
   tooLong: 'That is more text than the on-device model can take. Select fewer blocks.',
   readOnly: "This note can't be edited right now.",
   full: 'This note is too full for what jot AI wrote.',
@@ -430,7 +431,7 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         return fail(MESSAGES.noTarget);
       }
       if (early.problem !== 'none') {
-        return fail(MESSAGES.table);
+        return fail(early.problem === 'image' ? MESSAGES.image : MESSAGES.table);
       }
       if (early.markdown.length > MAX_PASSAGE) {
         return fail(MESSAGES.tooLong);

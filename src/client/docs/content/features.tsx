@@ -257,10 +257,28 @@ export function Size() {
         typed and erased all day stays small.
       </p>
       <Code source={SNIPPETS.roomSave} />
+      <h2>Images</h2>
+      <p>
+        Image files don't count towards the 2 MB, because their bytes are never in the document. An
+        image is a decorator node whose NodeState holds its path on jot, its alt text and its size,
+        a few hundred bytes of Yjs; the file lives in Cloudflare R2 under the note's id. Every value
+        is parsed as untrusted input, since any peer can write any attribute: the path must be a jot
+        image path, and the page shows it only when it names this note.
+      </p>
+      <Code source={SNIPPETS.imageSrcState} />
+      <p>
+        Before uploading, the page scales an image to 1600 px on the long side and encodes WebP; a
+        GIF under 1.5 MB stays as it is, animation included. The server takes PNG, JPEG, WebP and
+        GIF, told by their first bytes rather than the declared type, at most 1.5 MB each, and per
+        note at most 20 images and 10 MB in all, counted by the note's Durable Object. Uploads need
+        the network, so adding an image is off while offline.
+      </p>
+      <Code source={SNIPPETS.sniffImageType} />
       <h2>Expiry</h2>
       <p>
         Every visit sets the note's alarm to 90 days out. If it fires while someone is connected, it
-        reschedules; otherwise the note's storage is deleted.
+        reschedules; otherwise the note's images are deleted from R2, then its storage. An image
+        removed from the text stays until then.
       </p>
     </>
   );

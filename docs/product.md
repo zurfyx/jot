@@ -30,10 +30,20 @@ version of the engine.
   note link to join it." line. It says which note it opens, or that the text isn't a note
   link or code.
 - **Write together.** Rich text with headings, bold, italic, underline, strikethrough,
-  inline code, links, bulleted, numbered and todo lists, quotes, code blocks and tables.
+  inline code, links, bulleted, numbered and todo lists, quotes, code blocks, tables and
+  images.
   Markdown shortcuts while typing; **Aa** in the bottom dock for block types and formats;
   a ⌘K menu (New note, Copy link, Toggle theme, Insert table, Go home). Collaborators'
   carets show their name and colour, and their avatars sit top right.
+- **Add images.** Paste a screenshot, drop an image file on the note, or choose Aa → Image.
+  The browser shrinks it (1600 px on the long side, WebP) and uploads it; a placeholder
+  shows its progress, then the image appears for everyone on the note. Others see
+  "Someone is uploading an image…" meanwhile. A click selects an image, shows its alt text
+  (the file name until someone writes one) for editing, and Backspace removes it. PNG,
+  JPEG, WebP and GIF; a small GIF stays animated. Uploads need the network: while offline
+  or in Work offline, Image is disabled and a paste says why. A refused file says why too
+  ("a note holds at most 20 images") and leaves nothing behind. A note shows only its own
+  images (D26).
 - **See who wrote what.** ⋯ → Show blame underlines each person's text in their colour and
   puts a bar with their name beside each run of lines they wrote most of. A "Blame" chip
   in the dock opens the legend: each person's share in characters; a click on a name
@@ -71,7 +81,9 @@ version of the engine.
 nofollow` and disallowed in `robots.txt`; only the landing page is indexable (D17).
 - **Notes are small.** A note holds up to 2 MB of Yjs state. At 1.6 MB the page says
   "This note is almost full"; when an edit no longer fits, the page goes read only and says
-  "This note is full. Start a new note to keep writing." (D05).
+  "This note is full. Start a new note to keep writing." (D05). Images are stored beside
+  the note, not in it: at most 1.5 MB each after shrinking, 20 per note and 10 MB in all,
+  deleted with the note. Removing an image from the text doesn't free its place (D26).
 - **Newer notes open read only.** A note written in a document layout this version of the
   binding can't write opens read only rather than being misread.
 

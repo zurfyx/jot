@@ -44,7 +44,8 @@ export function ContentInYjs() {
             <code>b:&lt;type&gt;</code> nodes
           </b>{' '}
           hold blocks that aren't lines, such as a table, its rows and its cells, each with lines of
-          its own. Try typing <code>- </code> or <code>## </code> at the start of a line.
+          its own, or an image, whose path, alt text and size are attributes of its node. Try typing{' '}
+          <code>- </code> or <code>## </code> at the start of a line.
         </li>
       </ul>
       <h2>Why lines, not nodes</h2>

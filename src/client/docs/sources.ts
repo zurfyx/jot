@@ -17,6 +17,8 @@ import underline from '../../docs/snippets/underline.ts?raw';
 import workOffline from '../../docs/snippets/work-offline.ts?raw';
 import aiMarkdownSource from '../editor/ai/markdown.ts?raw';
 import attributionSource from '../editor/blame/attribution.ts?raw';
+import imageStatesSource from '../editor/images/states.ts?raw';
+import imagesSource from '../../shared/images.ts?raw';
 import limitsSource from '../../shared/limits.ts?raw';
 import roomSource from '../../worker/room.ts?raw';
 import pkg from '../../../package.json';
@@ -120,4 +122,10 @@ export const SNIPPETS = {
     'export function $snapshotBlocks(',
   ),
   fitsUnderCap: from('src/shared/limits.ts', limitsSource, 'export function fitsUnderCap('),
+  imageSrcState: from(
+    'src/client/editor/images/states.ts',
+    imageStatesSource,
+    'export const srcState',
+  ),
+  sniffImageType: from('src/shared/images.ts', imagesSource, 'export function sniffImageType('),
 } satisfies Record<string, CodeSource>;
