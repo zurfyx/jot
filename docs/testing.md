@@ -155,6 +155,9 @@ Durable Objects, over real WebSockets.
 - Share copies the link, and so does ⌘⇧C;
 - replacing a 450 KB passage five times leaves the note "Synced" at about one passage's
   size, not "Full";
+- the page's height: an empty note doesn't scroll at 1440 and 390px, in light and dark,
+  nor does an emptied example note with its banner, while a note taller than the window
+  does;
 - markdown shortcuts, and Aa's Bold and Link (no toolbar appears over a selection);
 - the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items (Show blame first),
   Escape, the Dark theme switch, and arrow keys in ⋯;
