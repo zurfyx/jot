@@ -1236,6 +1236,57 @@ button {
   }
 }
 
+/* The example note's banner, above the title (D20). */
+
+.example-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 18px;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 6px 18px var(--shadow-soft);
+  font-size: 13px;
+  line-height: 1.4;
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.example-banner b {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.example-banner-text {
+  color: var(--muted);
+}
+
+.example-banner-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.example-banner-button {
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--hover);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.example-banner-button:hover {
+  background: var(--rule);
+}
+
 /* ⌘K command menu. */
 
 .command-scrim {

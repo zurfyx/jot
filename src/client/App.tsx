@@ -2,16 +2,18 @@ import { lazy, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
 import { useDraftPage } from './drafts';
+import { useExampleId } from './examples';
 import { Landing } from './landing/Landing';
 import { loadNotePage } from './loadNote';
-import { matchRoute, redirect, usePathname } from './router';
+import { matchRoute, redirect, useLocationPath } from './router';
 
 // The editor, Lexical and Yjs load only on a note page, so the landing page stays light.
 const NotePage = lazy(loadNotePage);
 
 export function App() {
-  const route = matchRoute(usePathname());
+  const route = matchRoute(useLocationPath());
   const draft = useDraftPage();
+  const exampleId = useExampleId();
   const invalid = route.name === 'missing' || (route.name === 'note' && !isNoteId(route.id));
 
   useEffect(() => {
@@ -27,6 +29,15 @@ export function App() {
     return (
       <Suspense fallback={null}>
         <NotePage key={draft.key} id={null} />
+      </Suspense>
+    );
+  }
+  // The example is a shared note from the start (D20). Its page keeps the
+  // same key, so the same editor, when it moves to /n/<id>.
+  if (route.name === 'example' && exampleId !== null) {
+    return (
+      <Suspense fallback={null}>
+        <NotePage key={exampleId} id={exampleId} />
       </Suspense>
     );
   }

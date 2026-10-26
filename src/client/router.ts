@@ -1,10 +1,13 @@
 import { useSyncExternalStore } from 'react';
 
-/** A small router: `/`, `/new` (a local draft) and `/n/<id>`. History API only, no library. */
+/**
+ * A small router: `/`, `/new` (a local draft), `/new?example` (the example
+ * note) and `/n/<id>`. History API only, no library.
+ */
 
 const NAVIGATE_EVENT = 'jot:navigate';
 
-function subscribe(onChange: () => void): () => void {
+export function subscribeLocation(onChange: () => void): () => void {
   window.addEventListener('popstate', onChange);
   window.addEventListener(NAVIGATE_EVENT, onChange);
   return () => {
@@ -13,12 +16,17 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
-export function usePathname(): string {
-  return useSyncExternalStore(subscribe, () => window.location.pathname);
+function currentPath(): string {
+  return window.location.pathname + window.location.search;
+}
+
+/** The current path and query, e.g. `/new?example`. */
+export function useLocationPath(): string {
+  return useSyncExternalStore(subscribeLocation, currentPath);
 }
 
 export function navigate(path: string): void {
-  if (path === window.location.pathname) {
+  if (path === currentPath()) {
     return;
   }
   window.history.pushState(null, '', path);
@@ -33,15 +41,22 @@ export function redirect(path: string): void {
 }
 
 export type Route =
-  { name: 'landing' } | { name: 'new' } | { name: 'note'; id: string } | { name: 'missing' };
+  | { name: 'landing' }
+  | { name: 'new' }
+  | { name: 'example' }
+  | { name: 'note'; id: string }
+  | { name: 'missing' };
 
-export function matchRoute(pathname: string): Route {
+/** The route of a path, with or without its query (`/new?example`). */
+export function matchRoute(path: string): Route {
+  const query = path.indexOf('?');
+  const pathname = query < 0 ? path : path.slice(0, query);
+  const search = new URLSearchParams(query < 0 ? '' : path.slice(query));
   if (pathname === '/') {
     return { name: 'landing' };
   }
   if (pathname === '/new' || pathname === '/new/') {
-    // `/new?example` is the same route; the query is the page's business.
-    return { name: 'new' };
+    return search.has('example') ? { name: 'example' } : { name: 'new' };
   }
   const note = /^\/n\/([^/]+)\/?$/.exec(pathname);
   if (note !== null) {

@@ -11,8 +11,18 @@ version of the engine.
   typed on the page outside a field, or the New note card opens `/new`: a draft that lives
   only in this browser until it is shared. A refresh keeps it; ⋯ → New note starts an empty
   one (D18).
-- **See the example.** "See the example" and the example card open `/new?example`. Until the
-  example note exists, it opens the draft like `/new`.
+- **See the example.** "See the example" and the example card open `/new?example`, which
+  creates a real shared note at once, fills it with an offsite plan and moves to its link,
+  `/n/<id>`. Two demo collaborators, "Ana (demo)" and "jot AI (demo)", edit it live for
+  about 20 s: Ana adds a to-do and a table row, then jot AI turns the agenda sentence into a
+  bulleted list while "you" type in it. Blame is on, so three authors show. They run in
+  the visitor's own tab as real Yjs peers, so a second window on the link sees their edits
+  and carets through the relay. A banner above the title says "Example note · Ana and jot
+  AI are demos in your browser", with Copy link and Start blank (`/new`); ⋯ → Replay demo
+  runs it again. Only the tab that created the example runs them (a duplicate of that tab
+  waits, and takes over if the original closes); leaving the page stops them, and a reload
+  brings them back idle. They stop writing as soon as the note is full or read only.
+  Examples expire like any note (D20).
 - **Share it.** Share gives a draft its link, `/n/<id>`, puts its content on the server and
   copies the link. On a shared note it copies the link. The link is the whole access model.
 - **Join one.** Paste a jot link or just its code into the landing page's quiet "Or paste a

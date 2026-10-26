@@ -6,11 +6,11 @@ import { EXAMPLE_PATH, NEW_NOTE_PATH } from './open';
 import { LOOP_MS, PHASE_STARTS, stepOfPhase } from './TwoWindows';
 
 describe("the landing page's destinations", () => {
-  it('start and example both resolve to the new-note route', () => {
-    const path = (href: string) => new URL(href, 'https://jot.rovira.sh').pathname;
-    expect(matchRoute(path(NEW_NOTE_PATH))).toEqual({ name: 'new' });
-    expect(matchRoute(path(EXAMPLE_PATH))).toEqual({ name: 'new' });
-    expect(new URL(EXAMPLE_PATH, 'https://jot.rovira.sh').searchParams.has('example')).toBe(true);
+  it('start opens the draft, and the example its own route', () => {
+    expect(matchRoute(NEW_NOTE_PATH)).toEqual({ name: 'new' });
+    expect(matchRoute(EXAMPLE_PATH)).toEqual({ name: 'example' });
+    expect(matchRoute('/new/?example')).toEqual({ name: 'example' });
+    expect(matchRoute('/new?other')).toEqual({ name: 'new' });
   });
 });
 

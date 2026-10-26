@@ -46,6 +46,7 @@ How expensive is this to get wrong?
 | [D10](D10-ci-topology-and-deploy-on-green.md) | CI topology and deploy-on-green; no PR previews                         | MED    | `DECIDED` |
 | [D18](D18-local-drafts.md)                    | An unshared note lives only in this browser; Share gives it a link      | MED    | `DECIDED` |
 | [D19](D19-blame-from-yjs-attributions.md)     | Blame from Yjs 14 attributions in the browser, with a people registry   | MED    | `DECIDED` |
+| [D20](D20-example-note-with-in-tab-peers.md)  | The example is a real shared note, edited by in-tab Yjs peers           | MED    | `DECIDED` |
 | [D12](D12-presence-through-awareness.md)      | Presence: names, colours and carets through awareness                   | LOW    | `DECIDED` |
 | [D14](D14-lexical-without-lexical-react.md)   | The editor is built with the extension API, without `@lexical/react`    | LOW    | `DECIDED` |
 | [D07](D07-design-direction.md)                | Design: editor direction A, the fan landing page, Geist                 | LOW    | `DECIDED` |

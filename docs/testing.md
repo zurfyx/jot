@@ -37,10 +37,31 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   first edit or deletion (not on remote updates) and refreshes it at most every ten
   minutes; blame's flash after a reconnect, a choice made during it keeps the snapshot
   and focus, and a restarted flash;
+- in-tab peers (D20): a peer starts from the note and syncs both ways without echoing,
+  writes under its own client id with its registry entry (kind and `askedBy`), relays its
+  presence and caret (resolvable by the page's binding) into the note's awareness, comes
+  back after the provider drops remote states on disconnect, stays visible to another
+  client after the relay's removal of the page's states, writes nothing while the note is
+  read only or full (or its host says no), writes its registry entry on its first change and refreshes it at most every ten
+  minutes, gets a new client id every time it is re-created (only showing its caret writes
+  nothing), removes its presence and its listener on dispose while its
+  writes stay, and never throws from an edit;
+- the example's controller: an empty note is seeded once, marked played, adopted and
+  played; a note with content is never seeded; a played example brings the collaborators
+  back idle under new client ids, writing nothing to the note; it waits for the first
+  sync and a writable note, checked again when the queued join runs; the script stops
+  when the note turns full or read only, and Replay then does nothing; a duplicated tab
+  stays out while the original holds the lock and takes over, idle, when it closes; a
+  Strict Mode remount still starts it; two creators that both saw an empty note make
+  one plan;
+- the example's script: Ana seeds the offsite plan; the demo (all at once) ends with Ana's
+  to-do and row, jot AI's list and "your" words, three authors in blame; `resetDemo` puts
+  the seed back and a replay reaches the same end; steps whose part was edited away are
+  skipped; an abort stops it;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
-- the landing page's destinations resolve to `/new`, the two-windows phases and steps, and
-  the feature tabs.
+- the landing page's destinations resolve to the draft and the example, the two-windows
+  phases and steps, and the feature tabs.
 
 ## Durable Object (`pnpm test`, project `workers`)
 
@@ -69,7 +90,8 @@ Durable Objects, over real WebSockets.
   "Start a new note" (with its `aria-keyshortcuts`), ⌘↵ (Ctrl+Enter) and a printable key
   outside the paste field each open a note, while space only scrolls; hovering the New note
   card and the example card lifts them and shows Open, and clicking each opens `/new` or
-  `/new?example`, as do "See the example" and the footer links; the feature tabs advance
+  `/new?example` (which lands on `/n/<id>` with the example banner), as do "See the
+  example" and the footer links; the feature tabs advance
   every 3 s, stop when one is chosen, and follow the arrow keys; under reduced motion
   nothing animates and the final states show; and it loads without the editor chunk;
 - the paste field validates in place and opens links and bare codes;
@@ -116,6 +138,15 @@ Durable Objects, over real WebSockets.
   focuses that person, Hide blame clears it all; hovering text shows who wrote it; the
   registry on the server holds the writer's entry and none for a reader; reconnecting
   from Work offline shows blame for a few seconds;
+- the example (D20): `/new?example` lands on `/n/<id>` with the offsite plan and its
+  banner; both demo carets show in that tab and, through the relay, in a second browser
+  where the banner does not show; the script plays to the same content in both; blame is
+  on with three people (You, Ana (demo), jot AI (demo)), and the other window's blame
+  shows three too; under reduced motion it plays at once and Replay demo plays it once
+  more, not twice over; a reload brings the collaborators back idle under new client ids,
+  without seeding or playing again; Start blank goes to `/new`, the page sends their
+  removal itself before its socket closes, and the collaborators leave the note for the
+  other window while the content stays; Copy link copies the note's link;
 - the ⌘K menu toggles the theme;
 - a note in a newer layout opens read only with its banner.
 
