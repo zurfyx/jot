@@ -1,4 +1,5 @@
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
+import { writeRawNote } from './raw-client';
 
 // Two pages in one context: each page is its own Yjs client. (Chromium's
 // single-process mode, used in sandboxed shells, allows one context.)
@@ -88,6 +89,11 @@ test('markdown shortcuts and the selection toolbar format text', async ({ page }
   await expect(toolbar).toBeVisible();
   await toolbar.getByRole('button', { name: 'Bold' }).click();
   await expect(editor(page).locator('.jot-bold')).toHaveText('make me bold');
+
+  await toolbar.getByRole('button', { name: 'Link', exact: true }).click();
+  await page.getByLabel('Link address').fill('lexical.dev');
+  await page.getByLabel('Link address').press('Enter');
+  await expect(editor(page).locator('a')).toHaveAttribute('href', 'https://lexical.dev/');
 });
 
 test('the command menu toggles the theme', async ({ page }) => {
@@ -100,4 +106,56 @@ test('the command menu toggles the theme', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Commands' })).toBeHidden();
   const after = await page.evaluate(() => document.documentElement.dataset.theme);
   expect(after).not.toBe(before);
+});
+
+test('offline edits sync on reconnect', async ({ context }) => {
+  const id = freshNoteId();
+  const a = await context.newPage();
+  const b = await context.newPage();
+  // A's socket goes through Playwright, so the test can cut it.
+  let offline = false;
+  const sockets = new Set<{ close: () => Promise<void> }>();
+  await a.routeWebSocket(/\/api\/n\//, (ws) => {
+    if (offline) {
+      void ws.close();
+      return;
+    }
+    ws.connectToServer();
+    sockets.add(ws);
+    ws.onClose(() => sockets.delete(ws));
+  });
+  await openNote(a, id);
+  await openNote(b, id);
+  await editor(a).click();
+  await a.keyboard.type('Shared line');
+  await expect(editor(b)).toContainText('Shared line');
+
+  offline = true;
+  for (const ws of sockets) await ws.close();
+  await expect(a.getByTestId('status-pill')).toHaveText('Offline · will sync when you reconnect');
+  await a.keyboard.press('Enter');
+  await a.keyboard.type('Written offline');
+  await editor(b).click();
+  await b.keyboard.press('ControlOrMeta+End');
+  await b.keyboard.press('Enter');
+  await b.keyboard.type('Written online');
+  await expect(editor(b)).not.toContainText('Written offline');
+
+  offline = false;
+  await expect(a.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  await expect(editor(b)).toContainText('Written offline');
+  await expect(editor(a)).toContainText('Written online');
+});
+
+test('a note from a newer layout opens read only', async ({ page, baseURL }) => {
+  const id = freshNoteId();
+  await writeRawNote(baseURL!, id, (doc) => {
+    const root = doc.get('lexical-y');
+    root.setAttr('lexical-y', 99);
+    root.insert(0, 'From the future');
+  });
+  await page.goto(`/n/${id}`);
+  await expect(page.getByTestId('status-pill')).toHaveText('Read only');
+  await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
 });
