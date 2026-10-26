@@ -19,8 +19,10 @@ version of the engine.
   the visitor's own tab as real Yjs peers, so a second window on the link sees their edits
   and carets through the relay. A banner above the title says "Example note · Ana and jot
   AI are demos in your browser", with Copy link and Start blank (`/new`); ⋯ → Replay demo
-  runs it again. Only the tab that created the example runs them; leaving the page stops
-  them, and a reload brings them back idle. Examples expire like any note (D20).
+  runs it again. Only the tab that created the example runs them (a duplicate of that tab
+  waits, and takes over if the original closes); leaving the page stops them, and a reload
+  brings them back idle. They stop writing as soon as the note is full or read only.
+  Examples expire like any note (D20).
 - **Share it.** Share gives a draft its link, `/n/<id>`, puts its content on the server and
   copies the link. On a shared note it copies the link. The link is the whole access model.
 - **Join one.** Paste a jot link or just its code into the landing page's quiet "Or paste a

@@ -176,21 +176,36 @@ Work offline, edits waiting and "merged".
   applying the other's updates under an origin the other side skips, so nothing echoes. A
   headless Lexical editor (no root element) runs `YCollabExtension` on that doc
   (`synced: true`, no undo); `edit(fn)` runs a discrete update on it and publishes its
-  selection as its caret. It writes its registry entry (kind `demo` or `ai`, `askedBy` for
-  AI) under its own client id, so blame names it. Its own `Awareness` is relayed into the
-  note's (`applyAwarenessUpdate`), which the provider sends like any state; it announces
-  itself again when the note reconnects, and `dispose()` removes its presence everywhere
-  while its writes stay. The example's demo collaborators use it; jot AI will too.
+  selection as its caret, and writes nothing (returning false) unless the note takes edits:
+  the host's `writable()`, or its `status` `active` and `cap` not `full`, and the peer's own
+  binding active. It writes its registry entry (kind `demo` or `ai`, `askedBy` for AI) under
+  its own client id, so blame names it, and refreshes its last-seen time from edits at most
+  every ten minutes. A caller may pass the client id the peer had before on this note (a
+  reload), set after the copy so its clocks continue, so the registry keeps one entry. Its
+  own `Awareness`, with clocks starting at the time so a reused id is never refused as old,
+  is relayed into the note's (`applyAwarenessUpdate`), which the provider sends like any
+  state; when the note reconnects it announces itself two clocks on, past the removal the
+  relay sent for the page's lost socket, and `dispose()` removes its presence everywhere
+  while its writes stay. A live peer mirrors every change to the note, keystrokes
+  included, into its own document and editor, so callers dispose idle ones. The example's
+  demo collaborators use it; jot AI will too.
 - `example/` (D20): `content.ts` writes the offsite plan and finds its parts again by text
   in any editor's state (never by node key); `script.ts` is the demo, about 20 s, every
   step skipped when its part was edited away, all at once under reduced motion, stopped by
   an `AbortSignal`, and `resetDemo` puts its parts back for Replay; `controller.ts` starts
-  it on the creating tab after the first sync and status `active`: Ana and jot AI join,
-  Ana seeds an empty note, blame turns on, the address moves to `/n/<id>`, and the script
-  plays (a reload of that tab brings them back idle). "You" type through the page's own
+  it on the creating tab while it holds the Web Lock `jot-example:<id>` (a duplicated tab
+  copies the sessionStorage flag, so it waits, and takes over when the original closes),
+  after the first sync and while the note takes edits, checked again when the queued join
+  runs: Ana and jot AI join (with this tab's earlier client ids for the note, from
+  sessionStorage), Ana seeds the note if her own copy of it is empty, blame turns on, the
+  address moves to `/n/<id>`, and the script plays (a reload of that tab brings them back
+  idle). A note that turns read only or full stops the script, and Replay demo is disabled
+  until it takes edits again. "You" type through the page's own
   editor at the end of the first agenda item; the caret follows only if it is there, or
   if the person has not edited yet and the page has focus. `Example.tsx` has the banner,
-  ⋯ → Replay demo and the surface hook that stops everything when the page unmounts.
+  ⋯ → Replay demo and the surface hook that stops everything when the page unmounts (a
+  layout effect, so the collaborators' departure is sent before the page closes its
+  socket).
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the

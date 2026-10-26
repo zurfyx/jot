@@ -34,8 +34,15 @@ a way to write into a note as its own author.
   text, so a step whose part someone edited away is skipped. Under reduced motion it lands
   at once. ⋯ → Replay demo puts its parts back and runs it again.
 - **Only the tab that created the example runs them,** marked in sessionStorage
-  (`jot:example:<id>`). Other windows see their edits and carets through the relay. A reload
-  of that tab brings them back idle; leaving the page stops them and removes their presence.
+  (`jot:example:<id>`), and only while it holds the Web Lock `jot-example:<id>`: a duplicated
+  tab copies sessionStorage, so it waits for the lock and takes over, idle, when the original
+  closes. Ana checks the note is empty on her own copy, in the update that writes the plan,
+  so a plan is never doubled. Other windows see their edits and carets through the relay. A
+  reload of that tab brings them back idle under the same client ids (kept in sessionStorage),
+  so the registry does not grow per reload; leaving the page stops them and removes their
+  presence.
+- **Peers write only while the note takes edits:** binding active and not full. A note that
+  turns read only or full stops the script, and Replay demo waits until it takes edits.
 - **Blame is on** when the example opens, since several authors are the point; the banner
   says "Example note · Ana and jot AI are demos in your browser" so nobody takes them for
   strangers.

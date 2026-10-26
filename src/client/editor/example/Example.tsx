@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect } from 'react';
+import { type MouseEvent, useLayoutEffect } from 'react';
 
 import { navigate } from '../../router';
 import { copyNoteLink, linkCopied } from '../actions';
@@ -7,9 +7,14 @@ import type { NoteSession } from '../session';
 import { useSignal } from '../useSignal';
 import { exampleState } from './controller';
 
-/** Starts the example's demo collaborators on the page that created it, and stops them on leaving. */
+/**
+ * Starts the example's demo collaborators on the page that created it, and
+ * stops them on leaving. A layout effect, so on unmount it stops them before
+ * the page's own (passive) cleanup closes the socket: their departure is
+ * relayed to everyone first.
+ */
 export function ExampleSurface({ session }: { session: NoteSession }) {
-  useEffect(() => exampleState(session).start(), [session]);
+  useLayoutEffect(() => exampleState(session).start(), [session]);
   return null;
 }
 
@@ -54,6 +59,7 @@ export function ExampleBanner({ session }: { session: NoteSession }) {
 export function ReplayDemoItem({ session, close }: { session: NoteSession; close: () => void }) {
   const state = exampleState(session);
   const active = useSignal(state.active);
+  const writable = useSignal(state.writable);
   if (!active) {
     return null;
   }
@@ -62,6 +68,7 @@ export function ReplayDemoItem({ session, close }: { session: NoteSession; close
       icon="replay"
       label="Replay demo"
       testId="replay-demo"
+      disabled={!writable}
       onSelect={() => {
         close();
         state.replay();

@@ -1,5 +1,7 @@
 import type { Page } from '@playwright/test';
+import * as decoding from 'lib0/decoding';
 
+import { MESSAGE_AWARENESS } from '../src/shared/protocol';
 import { editor, expect, test } from './helpers';
 
 /** The example: the offsite plan, then the demo's edits (D20). */
@@ -27,6 +29,40 @@ async function expectPlayed(page: Page, timeout = SCRIPT_MS) {
   for (const text of PLAYED) {
     await expect(editor(page)).toContainText(text, { timeout });
   }
+}
+
+interface SentState {
+  clientID: number;
+  clock: number;
+  name: string | null;
+  removed: boolean;
+}
+
+/** Every awareness state the page sends to the relay, decoded. */
+function recordSentAwareness(page: Page): SentState[] {
+  const sent: SentState[] = [];
+  page.on('websocket', (socket) => {
+    socket.on('framesent', ({ payload }) => {
+      if (typeof payload === 'string') {
+        return;
+      }
+      const decoder = decoding.createDecoder(new Uint8Array(payload));
+      if (decoding.readVarUint(decoder) !== MESSAGE_AWARENESS) {
+        return;
+      }
+      const update = decoding.createDecoder(decoding.readVarUint8Array(decoder));
+      const count = decoding.readVarUint(update);
+      for (let i = 0; i < count; i++) {
+        const clientID = decoding.readVarUint(update);
+        const clock = decoding.readVarUint(update);
+        const state = JSON.parse(decoding.readVarString(update)) as {
+          user?: { name?: string };
+        } | null;
+        sent.push({ clientID, clock, name: state?.user?.name ?? null, removed: state === null });
+      }
+    });
+  });
+  return sent;
 }
 
 async function caretNames(page: Page): Promise<string[]> {
@@ -104,6 +140,7 @@ test('a reload keeps the demo collaborators, idle; Start blank leaves them', asy
   otherContext,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  const sent = recordSentAwareness(page);
   await openExample(page);
   await expectPlayed(page, 5_000);
   const url = page.url();
@@ -122,9 +159,20 @@ test('a reload keeps the demo collaborators, idle; Start blank leaves them', asy
     .poll(async () => (await caretNames(other)).filter((name) => name.endsWith('(demo)')))
     .toEqual(['Ana (demo)', 'jot AI (demo)']);
 
-  // Leaving the page stops the demo: its collaborators leave the note.
+  // The reload kept the collaborators' client ids (one registry entry each).
+  const demoIds = (name: string) =>
+    new Set(sent.filter((state) => state.name === name).map((state) => state.clientID));
+  expect(demoIds('Ana (demo)').size).toBe(1);
+  expect(demoIds('jot AI (demo)').size).toBe(1);
+
+  // Leaving the page stops the demo: its collaborators leave the note. They
+  // say so themselves, before the page's socket closes.
   await page.getByTestId('example-banner').getByRole('link', { name: 'Start blank' }).click();
   await expect(page).toHaveURL(/\/new$/);
+  for (const name of ['Ana (demo)', 'jot AI (demo)']) {
+    const [clientID] = demoIds(name);
+    expect(sent.some((state) => state.clientID === clientID && state.removed)).toBe(true);
+  }
   await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
   await expect
     .poll(async () => (await caretNames(other)).filter((name) => name.endsWith('(demo)')))

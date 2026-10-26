@@ -4,12 +4,19 @@ import {
   signal,
 } from '@lexical/extension';
 import { YCollabExtension } from '@lexical/y';
-import { Awareness } from '@y/protocols/awareness';
+import {
+  applyAwarenessUpdate,
+  Awareness,
+  encodeAwarenessUpdate as encodeStates,
+  removeAwarenessStates,
+} from '@y/protocols/awareness';
 import * as Y from '@y/y';
 import { $createParagraphNode, $getRoot, configExtension, defineExtension } from 'lexical';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { readRegistry } from '../blame/registry';
+import { encodeAwarenessUpdate } from '../../../worker/awareness';
+
+import { readRegistry, SEEN_REFRESH_MS } from '../blame/registry';
 import { jotEditorExtension } from '../extensions';
 import { createInTabPeer, type InTabPeer, type PeerPerson } from './peer';
 
@@ -34,9 +41,11 @@ function createHost() {
   const { binding } = getExtensionDependencyFromEditor(editor, YCollabExtension).output;
   const awareness = new Awareness(doc);
   const connection = signal('connected');
+  const status = signal('active');
+  const cap = signal('ok');
   // A page's editor holds an empty paragraph once it has a root element.
   editor.update(() => $getRoot().clear().append($createParagraphNode()), { discrete: true });
-  return { doc, editor, binding, awareness, connection };
+  return { doc, editor, binding, awareness, connection, status, cap };
 }
 
 const cleanups: (() => void)[] = [];
@@ -49,8 +58,8 @@ afterEach(() => {
 function setup() {
   const host = createHost();
   const peers: InTabPeer[] = [];
-  const join = (person: PeerPerson) => {
-    const peer = createInTabPeer(host, person);
+  const join = (person: PeerPerson, clientID?: number) => {
+    const peer = createInTabPeer(host, person, { clientID });
     peers.push(peer);
     return peer;
   };
@@ -132,20 +141,136 @@ describe('in-tab peers', () => {
       .read(() => host.binding.$resolveCursor(cursor as never)?.focus.offset);
     expect(offset).toBe(4);
 
+    const listeners = () =>
+      (host.doc as unknown as { _observers: Map<string, Set<unknown>> })._observers.get('update')
+        ?.size ?? 0;
+    const before = listeners();
     ana.dispose();
     expect(state()).toBeUndefined();
-    // Its writes stay.
+    // Its writes stay, and it no longer follows the note.
     expect(hostText(host)).toBe('Plan');
+    expect(listeners()).toBe(before - 1);
+    host.editor.update(() => $getRoot().getFirstChildOrThrow().selectEnd().insertText('!'), {
+      discrete: true,
+    });
   });
 
-  it('announce themselves again when the note reconnects', () => {
+  it('come back after the page drops remote presence on disconnect', () => {
     const { host, join } = setup();
     const ana = join(ANA);
-    const clock = () => host.awareness.meta.get(ana.doc.clientID)?.clock ?? -1;
-    const before = clock();
+    // What the provider does when its socket closes.
+    removeAwarenessStates(host.awareness, [ana.doc.clientID], 'provider');
+    expect(host.awareness.getStates().has(ana.doc.clientID)).toBe(false);
     host.connection.value = 'offline';
     host.connection.value = 'connected';
-    expect(clock()).toBeGreaterThan(before);
+    expect(host.awareness.getStates().get(ana.doc.clientID)).toMatchObject({
+      user: { name: 'Ana (demo)' },
+    });
+  });
+
+  it("stay visible to other clients after the relay announced the page's departure", () => {
+    const { host, join } = setup();
+    const ana = join(ANA);
+    // Another client on the note, fed what the page's provider sends.
+    const other = new Awareness(new Y.Doc());
+    cleanups.push(() => other.destroy());
+    const forward = ({ added, updated, removed }: Record<string, number[]>) => {
+      const changed = [...added!, ...updated!, ...removed!];
+      applyAwarenessUpdate(other, encodeStates(host.awareness, changed), 'relay');
+    };
+    host.awareness.on('update', forward);
+    ana.edit(() => {
+      $getRoot().getFirstChildOrThrow().selectEnd().insertText('Hi');
+    });
+    expect(other.getStates().get(ana.doc.clientID)).toBeDefined();
+
+    // The socket closes: the relay removes the page's states one clock past
+    // the last it saw, and every other client keeps that clock.
+    const seen = host.awareness.meta.get(ana.doc.clientID)!.clock;
+    applyAwarenessUpdate(
+      other,
+      encodeAwarenessUpdate([{ clientID: ana.doc.clientID, clock: seen + 1, state: 'null' }]),
+      'relay',
+    );
+    removeAwarenessStates(host.awareness, [ana.doc.clientID], 'provider');
+    expect(other.getStates().has(ana.doc.clientID)).toBe(false);
+
+    host.connection.value = 'offline';
+    host.connection.value = 'connected';
+    expect(other.getStates().get(ana.doc.clientID)).toMatchObject({
+      user: { name: 'Ana (demo)' },
+    });
+    host.awareness.off('update', forward);
+  });
+
+  it('write only while the note takes edits', () => {
+    const { host, join } = setup();
+    const ana = join(ANA);
+    const write = (text: string) =>
+      ana.edit(() => {
+        $getRoot().getFirstChildOrThrow().selectEnd().insertText(text);
+      });
+    expect(write('a')).toBe(true);
+    host.status.value = 'readonly';
+    expect(ana.writable()).toBe(false);
+    expect(write('b')).toBe(false);
+    host.status.value = 'active';
+    host.cap.value = 'full';
+    expect(write('c')).toBe(false);
+    host.cap.value = 'warn';
+    expect(write('d')).toBe(true);
+    expect(hostText(host)).toBe('ad');
+
+    // An explicit check wins over status and cap.
+    const gated = createInTabPeer({ ...host, writable: () => false }, AI);
+    cleanups.push(() => gated.dispose());
+    expect(gated.edit(() => $getRoot().clear())).toBe(false);
+    expect(hostText(host)).toBe('ad');
+  });
+
+  it('refresh their last-seen time while editing, at most every ten minutes', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    cleanups.push(() => vi.useRealTimers());
+    vi.setSystemTime(1_000_000_000_000);
+    const { host, join } = setup();
+    const ana = join(ANA);
+    const seen = () => readRegistry(host.doc).people.get('demo-ana')?.seen;
+    const start = seen();
+    const write = () =>
+      ana.edit(() => {
+        $getRoot().getFirstChildOrThrow().selectEnd().insertText('x');
+      });
+    vi.setSystemTime(1_000_000_000_000 + 60_000);
+    write();
+    expect(seen()).toBe(start);
+    vi.setSystemTime(1_000_000_000_000 + SEEN_REFRESH_MS + 1000);
+    write();
+    expect(seen()).toBe(start! + Math.floor((SEEN_REFRESH_MS + 1000) / 1000));
+  });
+
+  it('can keep their client id across a reload: one registry entry, clocks continued', () => {
+    const { host, join } = setup();
+    const first = join(ANA);
+    const id = first.doc.clientID;
+    first.edit(() => {
+      $getRoot().getFirstChildOrThrow().selectEnd().insertText('one');
+    });
+    first.dispose();
+    const again = join(ANA, id);
+    expect(again.doc.clientID).toBe(id);
+    again.edit(() => {
+      $getRoot().getFirstChildOrThrow().selectEnd().insertText(' two');
+    });
+    expect(hostText(host)).toBe('one two');
+    const { clients } = readRegistry(host.doc);
+    expect([...clients.values()].filter((person) => person === 'demo-ana')).toHaveLength(1);
+    // A fresh document built from the note agrees: nothing was overwritten.
+    const copy = new Y.Doc();
+    Y.applyUpdate(copy, Y.encodeStateAsUpdate(host.doc));
+    expect(Y.encodeStateVector(copy)).toEqual(Y.encodeStateVector(host.doc));
+    // The page's own id is never taken.
+    const clash = join(AI, host.doc.clientID);
+    expect(clash.doc.clientID).not.toBe(host.doc.clientID);
   });
 
   it('never throw from an edit', () => {
