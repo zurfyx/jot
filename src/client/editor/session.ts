@@ -23,6 +23,7 @@ import { excludeServerState, type Unconfirmed } from './confirm';
 import { REGISTRY_ORIGIN } from './blame/registry';
 import { jotEditorExtension } from './extensions';
 import { localUser } from './presence';
+import { compactedSize } from './size';
 
 /** The note's socket. */
 export type Connection = 'connecting' | 'connected' | 'offline';
@@ -123,7 +124,7 @@ export function createNoteSession(id: string): NoteSession {
     cap.value = rejected.value ? 'full' : capState(bytes.value);
   };
   const measure = () => {
-    localBytes.value = Y.encodeStateAsUpdate(doc).byteLength;
+    localBytes.value = compactedSize(doc);
     updateCap();
   };
 

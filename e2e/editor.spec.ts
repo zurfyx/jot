@@ -174,3 +174,50 @@ test('a note from a newer layout opens read only', async ({ page, baseURL }) => 
   await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
   await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
 });
+
+test('replacing a large passage again and again does not make the note look full', async ({
+  page,
+}) => {
+  await openNote(page, freshNoteId());
+  // About 450 KB, five times over: the page's undo stack keeps every replaced
+  // copy, the stored note holds one.
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate((i) => {
+      const element = document.querySelector('[data-lexical-editor]') as HTMLElement & {
+        __lexicalEditor: {
+          parseEditorState(json: string): unknown;
+          setEditorState(state: unknown): void;
+        };
+      };
+      const editor = element.__lexicalEditor;
+      const text = `passage ${i} `.repeat(40_000);
+      const paragraph = {
+        type: 'paragraph',
+        version: 1,
+        direction: null,
+        format: '',
+        indent: 0,
+        textFormat: 0,
+        textStyle: '',
+        children: [
+          { type: 'text', version: 1, detail: 0, format: 0, mode: 'normal', style: '', text },
+        ],
+      };
+      const root = {
+        type: 'root',
+        version: 1,
+        direction: null,
+        format: '',
+        indent: 0,
+        children: [paragraph],
+      };
+      editor.setEditorState(editor.parseEditorState(JSON.stringify({ root })));
+    }, i);
+    await expect(page.getByTestId('status-pill')).toHaveText(/^Synced · /, { timeout: 15_000 });
+  }
+  await page.waitForTimeout(3000);
+  const pill = await page.getByTestId('status-pill').innerText();
+  expect(pill).toMatch(/^Synced · \d+ KB$/);
+  expect(Number(/(\d+) KB/.exec(pill)![1])).toBeLessThan(700);
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'true');
+});

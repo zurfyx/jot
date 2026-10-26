@@ -11,7 +11,8 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   character must be one of A, Q, g, w; no fixed words such as `public`);
 - link and code parsing for the paste field, including hosts that only look like jot's;
 - link normalisation for Aa's link field (no `javascript:` links);
-- cap logic: the warn and full thresholds and the update bound;
+- cap logic: the warn and full thresholds and the update bound; the page's size estimate
+  is what the relay would store, not the deleted content an undo stack keeps alive;
 - size and copy formatting for the pill and Note info ("238 KB", "1.72 MB", "2 MB", edits
   waiting, the kept-until date);
 - the migration from local drafts (D23): a leftover draft moves to the new note's pending
@@ -152,6 +153,8 @@ Durable Objects, over real WebSockets.
   other page shows a remote caret;
 - a reload keeps the note;
 - Share copies the link, and so does ⌘⇧C;
+- replacing a 450 KB passage five times leaves the note "Synced" at about one passage's
+  size, not "Full";
 - markdown shortcuts, and Aa's Bold and Link (no toolbar appears over a selection);
 - the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items (Show blame first),
   Escape, the Dark theme switch, and arrow keys in ⋯;
