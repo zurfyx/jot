@@ -1,9 +1,10 @@
 # Design
 
-jot follows Gerard's product UI rules: a white canvas, theme tokens only, one accent, few
-boxes, motion only when state changes, and text lines near 70 characters. The editor is
-direction A ("Pure page") and the landing page direction 2 ("Split with action panel") of
-the design mocks (D07).
+The editor follows Gerard's product UI rules: a white canvas, theme tokens only, one accent,
+few boxes, motion only when state changes, and text lines near 70 characters. It is
+direction A ("Pure page") of the design mocks. The landing page is a public playground page,
+so it is allowed more colour and motion: "the fan" hero, Clean in light and Night in dark,
+and card-free sections below it (D07).
 
 ## Tokens
 
@@ -22,6 +23,20 @@ and remembers it.
 | `--btn`, `--btn-ink`         | the primary button and the selection toolbar              |
 | `--ok`, `--warn`, `--bad`    | status only, always beside a word                         |
 | `--peer-0` … `--peer-7`      | collaborators' identity colours, with `--peer-ink` labels |
+
+The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
+to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
+same names.
+
+| Token                                 | Use                                                  |
+| ------------------------------------- | ---------------------------------------------------- |
+| `--landing-bg`                        | the landing page and the body behind it              |
+| `--you`, `--ana`, `--ai`              | the example people: green, orange and violet (peers) |
+| `--card`, `--card-rule`               | the fan's notes and the mini windows                 |
+| `--card-highlight`, `--card-shadow-*` | their top highlight and layered shadows              |
+| `--button-shadow`                     | the primary button's drop shadow                     |
+| `--glow-opacity`                      | the glow behind the fan (0.5 Clean, 0.75 Night)      |
+| `--code-bg`, `--code-ink`, `--code-*` | the dark code block and its keywords and strings     |
 
 ## Type
 
@@ -48,13 +63,47 @@ Geist (`@fontsource-variable/geist`) for everything; Geist Mono only for codes a
 
 ## Landing page
 
-A header with the brand and GitHub; a split hero with the headline, lede and a still
-preview of a note with a remote caret on the left, and the one framed panel, "Start or
-join", on the right. Below a hairline, three columns (what it is, how it works, try this),
-then the footer. Two framed boxes in total: the preview and the panel where you act.
+`src/client/landing/`, with its styles in `landing.css` (tokens only). Content stops at
+1040px with 40px gutters (20px under 760px); there are no boxed card grids.
+
+- **Top bar:** the "jot" wordmark with a blinking violet caret, then Docs and GitHub.
+- **Hero, left:** the chip "Live · Lexical + Yjs 14 playground" with a static green dot; the
+  headline "Just start typing." with a hand-drawn violet underline under "typing."; the
+  lede; "Start a new note" with its `⌘↵` (or `Ctrl ↵`) hint and "See the example" with a
+  sparkle; under them, the paste field as one quiet line.
+- **Hero, right: the fan.** Three notes of one size, back to front: a recipe (static), the
+  example ("Example · live", which types on its own with avatars and named carets) and a new
+  note ("this device", "Untitled" with a caret, "Press any key to start"). A soft glow in
+  the three author colours drifts behind them. The fan sways at rest, spreads on hover, and
+  the hovered note lifts and shows "Open ↗". The new note and the example are links; the
+  recipe is decoration.
+- **"Try it in two windows":** two mini browser windows play the flow (a note starts, its
+  link pill slides across, the second window opens it, both type with each other's carets)
+  over a three-step line that fills as it plays.
+- **"The engine, made visible":** four tabs (Live cursors, Blame, Offline, then merge, AI as
+  a collaborator) beside one big illustrative note on a grey band that bleeds to the
+  window's edge, with a state pill. The tabs advance every 3 s with a progress line;
+  choosing one stops them.
+- **"For Lexical developers":** links to four docs pages, "Read the docs →", and the dark
+  quick-start code block.
+- **"Questions":** four, separated by hairlines.
+- **The ending:** "Try it, then see how it works." with "Start a new note" and "Read the
+  docs →", no box; then the footer (jot and the licence, Product, Learn, Built on).
+
+The copy is a playground's, never a hosted service's: no sign-up or retention reassurance.
 
 ## Motion
 
-Only on state change: the pill label and Share's "Link copied" fade in, the toolbar and
-menu enter in 180 to 220ms with `cubic-bezier(0.2, 0, 0, 1)`, carets glide between
-positions. Nothing loops. `prefers-reduced-motion` turns all of it off.
+Animations use transform and opacity only, and `prefers-reduced-motion` turns every one of
+them off and shows the final state.
+
+- **The editor** moves only on state change: the pill label and Share's "Link copied" fade
+  in, the toolbar and menu enter in 180 to 220ms with `cubic-bezier(0.2, 0, 0, 1)`, carets
+  glide between positions. Nothing loops.
+- **The landing page** has slow, continuous motion on the hero: the fan's sway (7 s), the
+  drifting glow (20 s), the blinking carets and the example typing. The underline wipes in
+  once. Below the hero, the two windows loop every 7.6 s and the tabs advance every 3 s.
+  Under reduced motion the example shows its finished text, the windows their last step,
+  and the tabs stay put.
+- **Opening a note** from the landing page is a view transition: the card grows into the
+  note page in 550ms. Under reduced motion it is a 150ms cross-fade.
