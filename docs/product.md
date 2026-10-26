@@ -56,6 +56,10 @@ version of the engine.
   Reconnect; blame then shows for four seconds, so the merge is visible. Losing the network
   behaves the same way. Edits made offline stay in the page
   until it reconnects; closing a shared note's tab while offline loses them (D13).
+- **Read how it works.** `/docs` is a short guide for Lexical developers: a quick start,
+  how a note is stored in Yjs (with a live inspector: type, and watch the Yjs tree change),
+  presence, offline merging, blame, the AI peer, size limits, the relay and server-side
+  editing. Every code block is a real, compiling file from the repo.
 
 ## Promises
 

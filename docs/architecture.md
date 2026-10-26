@@ -85,11 +85,11 @@ Vite, React and TypeScript. React draws the chrome; the editor is Lexical built 
 depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
 
 **Routes** (`router.ts`, History API only): `/` the landing page, `/new` the local draft,
-`/new?example` a new example note, `/n/<id>` a note. The Worker serves the SPA for
-`/n/<id>`; `/new` falls back to it as an asset. `drafts.ts` and `examples.ts` (no Lexical or
-Yjs, so the landing page can import them) hold the page side of drafts and examples: when a
-draft is shared, or an example is seeded, its editor stays mounted under the same React key
-while the address becomes `/n/<id>`. `examples.ts` gives `/new?example` a fresh id and marks
+`/new?example` a new example note, `/n/<id>` a note, `/docs` and `/docs/<slug>` the docs.
+The Worker serves the SPA for `/n/<id>`; `/new` and `/docs` fall back to it as assets.
+`drafts.ts` and `examples.ts` (no Lexical or Yjs, so the landing page can import them) hold
+the page side of drafts and examples: when a draft is shared, or an example is seeded, its
+editor stays mounted under the same React key while the address becomes `/n/<id>`. `examples.ts` gives `/new?example` a fresh id and marks
 it in sessionStorage (`jot:example:<id>`, `new` then `played`), so only the tab that created
 an example runs its demo.
 
@@ -250,6 +250,14 @@ a cold start never freezes the page. The clicked card carries
 `view-transition-name: jot-note` in the old state and `#root` carries it in the new one, so
 the card grows into the note's page (the example card opens `/new?example`). Under reduced motion the pages cross-fade in 150ms;
 browsers without the API switch pages directly.
+
+**The docs** (`docs/`, D22) are a third chunk: a table of contents (`pages.ts`), one
+component per page under `docs/content/`, and code blocks from real files imported with
+`?raw` (`sources.ts`): snippets in `src/docs/snippets/`, which `pnpm typecheck` checks with
+the app, and declarations cut out of jot's own source by `excerpt.ts`, linked to their
+lines on GitHub. The live inspector (`Inspector.tsx`) is a lazy chunk of its own: a jot
+editor on a local `Y.Doc` beside the `lexical-y` root as rows (`yjsTree.ts`), whose lines
+pair in document order with the editor's line elements (`lines.ts`).
 
 There is no Yjs 14 IndexedDB provider yet, so a shared note's offline edits live in memory
 until the socket reconnects (D13).

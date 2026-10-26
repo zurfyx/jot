@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * A small router: `/`, `/new` (a local draft), `/new?example` (the example
- * note) and `/n/<id>`. History API only, no library.
+ * note), `/n/<id>` and `/docs/<slug>`. History API only, no library.
  */
 
 const NAVIGATE_EVENT = 'jot:navigate';
@@ -45,6 +45,8 @@ export type Route =
   | { name: 'new' }
   | { name: 'example' }
   | { name: 'note'; id: string }
+  /** `slug` is '' for the docs home; the docs page checks it against its pages. */
+  | { name: 'docs'; slug: string }
   | { name: 'missing' };
 
 /** The route of a path, with or without its query (`/new?example`). */
@@ -61,6 +63,10 @@ export function matchRoute(path: string): Route {
   const note = /^\/n\/([^/]+)\/?$/.exec(pathname);
   if (note !== null) {
     return { name: 'note', id: note[1] ?? '' };
+  }
+  const docs = /^\/docs(?:\/([^/]+))?\/?$/.exec(pathname);
+  if (docs !== null) {
+    return { name: 'docs', slug: docs[1] ?? '' };
   }
   return { name: 'missing' };
 }

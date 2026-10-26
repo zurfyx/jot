@@ -128,6 +128,35 @@
   --code-bg: #080a16;
 }
 
+/*
+ * The docs (/docs): the base tokens, plus the example people's colours for
+ * the nav and the diagrams, light code blocks and the inspector's highlight.
+ */
+.docs {
+  --you: var(--peer-0);
+  --ana: var(--peer-1);
+  --ai: var(--peer-2);
+  --docs-tint-you: color-mix(in srgb, var(--you) 13%, var(--bg));
+  --docs-tint-ana: color-mix(in srgb, var(--ana) 12%, var(--bg));
+  --docs-tint-ai: color-mix(in srgb, var(--ai) 14%, var(--bg));
+  --docs-hl: color-mix(in srgb, var(--ai) 15%, transparent);
+  --docs-callout-bg: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  --docs-callout-rule: color-mix(in srgb, var(--accent) 22%, var(--rule));
+  --docs-warn-bg: color-mix(in srgb, var(--warn) 10%, var(--bg));
+  --docs-warn-rule: color-mix(in srgb, var(--warn) 40%, var(--rule));
+  --docs-code-bg: #f8f9fa;
+  --docs-code-keyword: #8b3fd9;
+  --docs-code-string: #1a7f37;
+  --docs-code-number: #0e7490;
+}
+
+[data-theme='dark'] .docs {
+  --docs-code-bg: #17191d;
+  --docs-code-keyword: #c4a1ff;
+  --docs-code-string: #5fd07d;
+  --docs-code-number: #22d3ee;
+}
+
 :root {
   --sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
