@@ -38,22 +38,23 @@ How expensive is this to get wrong?
 
 ## Tier 2: moderate
 
-| ID                                            | Decision                                                                | Radius | Status    |
-| --------------------------------------------- | ----------------------------------------------------------------------- | ------ | --------- |
-| [D04](D04-lexical-from-pkg-pr-new.md)         | Lexical from pkg.pr.new at a pinned PR commit; single copy; bump script | MED    | `DECIDED` |
-| [D06](D06-ninety-day-expiry.md)               | 90-day expiry without visits                                            | MED    | `DECIDED` |
-| [D08](D08-pr-workflow.md)                     | PR workflow: protected main, required checks, squash merge              | MED    | `DECIDED` |
-| [D10](D10-ci-topology-and-deploy-on-green.md) | CI topology and deploy-on-green; no PR previews                         | MED    | `DECIDED` |
-| [D18](D18-local-drafts.md)                    | An unshared note lives only in this browser; Share gives it a link      | MED    | `DECIDED` |
-| [D19](D19-blame-from-yjs-attributions.md)     | Blame from Yjs 14 attributions in the browser, with a people registry   | MED    | `DECIDED` |
-| [D20](D20-example-note-with-in-tab-peers.md)  | The example is a real shared note, edited by in-tab Yjs peers           | MED    | `DECIDED` |
-| [D12](D12-presence-through-awareness.md)      | Presence: names, colours and carets through awareness                   | LOW    | `DECIDED` |
-| [D14](D14-lexical-without-lexical-react.md)   | The editor is built with the extension API, without `@lexical/react`    | LOW    | `DECIDED` |
-| [D07](D07-design-direction.md)                | Design: editor direction A, the fan landing page, Geist                 | LOW    | `DECIDED` |
-| [D09](D09-docs-are-rewritten.md)              | Docs are rewritten, never amended                                       | LOW    | `DECIDED` |
-| [D11](D11-workers-tests-on-vitest-plugin.md)  | Durable Object tests on `@cloudflare/vitest-plugin`                     | LOW    | `DECIDED` |
-| [D15](D15-no-public-note.md)                  | No public note: abuse on a personal domain, and anyone can fill it      | LOW    | `DECIDED` |
-| [D17](D17-notes-out-of-search-engines.md)     | Notes and the API are `noindex, nofollow` and disallowed in robots.txt  | LOW    | `DECIDED` |
+| ID                                               | Decision                                                                | Radius | Status    |
+| ------------------------------------------------ | ----------------------------------------------------------------------- | ------ | --------- |
+| [D04](D04-lexical-from-pkg-pr-new.md)            | Lexical from pkg.pr.new at a pinned PR commit; single copy; bump script | MED    | `DECIDED` |
+| [D06](D06-ninety-day-expiry.md)                  | 90-day expiry without visits                                            | MED    | `DECIDED` |
+| [D08](D08-pr-workflow.md)                        | PR workflow: protected main, required checks, squash merge              | MED    | `DECIDED` |
+| [D10](D10-ci-topology-and-deploy-on-green.md)    | CI topology and deploy-on-green; no PR previews                         | MED    | `DECIDED` |
+| [D18](D18-local-drafts.md)                       | An unshared note lives only in this browser; Share gives it a link      | MED    | `DECIDED` |
+| [D19](D19-blame-from-yjs-attributions.md)        | Blame from Yjs 14 attributions in the browser, with a people registry   | MED    | `DECIDED` |
+| [D20](D20-example-note-with-in-tab-peers.md)     | The example is a real shared note, edited by in-tab Yjs peers           | MED    | `DECIDED` |
+| [D21](D21-ask-ai-with-chromes-built-in-model.md) | Ask AI runs Chrome's built-in model; jot AI writes as an in-tab peer    | MED    | `DECIDED` |
+| [D12](D12-presence-through-awareness.md)         | Presence: names, colours and carets through awareness                   | LOW    | `DECIDED` |
+| [D14](D14-lexical-without-lexical-react.md)      | The editor is built with the extension API, without `@lexical/react`    | LOW    | `DECIDED` |
+| [D07](D07-design-direction.md)                   | Design: editor direction A, the fan landing page, Geist                 | LOW    | `DECIDED` |
+| [D09](D09-docs-are-rewritten.md)                 | Docs are rewritten, never amended                                       | LOW    | `DECIDED` |
+| [D11](D11-workers-tests-on-vitest-plugin.md)     | Durable Object tests on `@cloudflare/vitest-plugin`                     | LOW    | `DECIDED` |
+| [D15](D15-no-public-note.md)                     | No public note: abuse on a personal domain, and anyone can fill it      | LOW    | `DECIDED` |
+| [D17](D17-notes-out-of-search-engines.md)        | Notes and the API are `noindex, nofollow` and disallowed in robots.txt  | LOW    | `DECIDED` |
 
 ## Tier 3: open, or deferred until something forces it
 

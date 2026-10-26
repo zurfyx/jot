@@ -1,10 +1,10 @@
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
 import { writeRawNote } from './raw-client';
 
-test('the dock holds Aa and ⋯, and their menus act', async ({ page }) => {
+test('the dock holds Aa, Ask AI and ⋯, and their menus act', async ({ page }) => {
   await openNote(page, freshNoteId());
   const dock = page.getByTestId('dock');
-  await expect(dock.getByRole('button')).toHaveText(['Aa', '']);
+  await expect(dock.getByRole('button')).toHaveText(['Aa', 'Ask AI…', '']);
 
   await editor(page).click();
   await page.keyboard.type('Title');

@@ -38,6 +38,15 @@ version of the engine.
   in the dock opens the legend: each person's share in characters; a click on a name
   fades everyone else; Hide blame. Hovering text says who wrote it and when they were
   last active (for jot AI, who asked). Deleted text is not shown (D19).
+- **Ask AI.** "✦ Ask AI…" in the dock opens a field for an instruction ("Make it a list",
+  "Shorter", or anything). It applies to the selected blocks, or the block with the caret,
+  tinted while the field is open; nothing is sent until the person presses Ask. Chrome's
+  built-in model (Gemini Nano) does the work on the device, downloading once on the first
+  Ask with its progress shown; elsewhere the field only says "Needs Chrome's built-in AI
+  (Gemini Nano). Open jot in Chrome on desktop." The answer is written by **jot AI**, a
+  collaborator of its own in violet with a named caret, so everyone on the note sees the
+  edit arrive and blame credits jot AI with what it changed, asked by the person. One
+  request at a time; Esc or Stop cancels it (D21).
 - **See the note's state.** The status pill says "Synced · 238 KB" (the note's Yjs size),
   "Connecting…", "Offline · 3 edits waiting", "Syncing · 3 edits waiting", "Back online ·
   merged" or, for a draft, "Only on this device". ⋯ → Note info shows the size against the 2 MB cap, who is here, and

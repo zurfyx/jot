@@ -25,6 +25,7 @@ Toggle theme flip and remember it.
 | `--peer-0` … `--peer-7`                  | collaborators' identity colours, with `--peer-ink` labels |
 | `--shadow`, `--shadow-soft`              | popovers and menus; the dock's lighter lift               |
 | `--blame-faded`, `--blame-faded-opacity` | how much of their colour people out of blame's focus keep |
+| `--ai`, `--ai-tint`                      | jot AI's violet (`--peer-2`); the tint on Ask AI's target |
 
 The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
 to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
@@ -69,9 +70,9 @@ playground needs: no toolbar is always there.
 
 - **Share** is quiet on a shared note and dark on a draft, where it is the one action that
   creates the link. Both confirm with "Link copied".
-- **The dock,** one floating row centred at the bottom: **Aa** and **⋯**, with a slot between
-  them for Ask AI, and the blame chip right before ⋯ while blame shows. Aa is disabled
-  while the note is read only.
+- **The dock,** one floating row centred at the bottom: **Aa**, **✦ Ask AI…** and **⋯**, with
+  the blame chip right before ⋯ while blame shows. Aa and Ask AI are disabled while the
+  note is read only.
   - **Aa** opens block types (Text, Heading 1 to 3, Bulleted, Numbered and Todo lists,
     Quote, Code, each with its markdown shortcut as a hint) and a row of inline formats
     (bold, italic, underline, strikethrough, inline code, link). Pointer presses keep the
@@ -81,6 +82,18 @@ playground needs: no toolbar is always there.
     theme (a switch).
   - **Note info:** the Yjs size as "238 KB of 2 MB" with a meter, "Here now" (colour, name,
     editing or idle), and "Kept until <date> · 90 days after the last visit".
+  - **Ask AI** (D21) looks like a field: a violet spark and "Ask AI…" in `--muted` on
+    `--hover`, about 190px wide (narrower on a phone); while jot AI works it reads "jot AI
+    is writing…" in violet. It opens a panel above the dock: an input with a 1px `--ai`
+    border, the spark and a dark Ask button (Stop while a request runs); suggestion chips
+    that only fill the input; and a quiet line saying what happens ("Rewrites this block ·
+    runs on this device", "Rewrites the whole list", "Rewrites 3 blocks", "Writes into the
+    empty line", the download
+    with a violet meter, "jot AI is writing… Esc to cancel", or an error in `--bad`).
+    The target blocks carry `--ai-tint` (`::highlight(jot-ai-target)`) while the panel is
+    open or a request runs. Without the model, the panel holds only "Needs Chrome's
+    built-in AI (Gemini Nano). Open jot in Chrome on desktop." jot AI is "jot AI" in
+    violet (`--peer-2`) on its caret, in blame and in Note info.
   - Menus open above the dock, move with the arrow keys and close on Escape or a press
     outside.
 - **Blame** (D19), drawn over the page without changing it:

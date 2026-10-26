@@ -233,6 +233,9 @@ const PATHS = {
       <path d="M7 6.2v3.6L10 8z" fill="currentColor" />
     </>
   ),
+  spark: (
+    <path d="M8 1.5l1.6 4.9 4.9 1.6-4.9 1.6L8 14.5l-1.6-4.9L1.5 8l4.9-1.6z" fill="currentColor" />
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

@@ -230,6 +230,28 @@ export function readRegistry(
 }
 
 /**
+ * Writes this session's own entry (kind `person`) and remembers its client id
+ * as this browser's, so readers here always take it for "you". Every write
+ * of a person's own entry goes through here: the tracker below, and Ask AI
+ * registering the asker before jot AI's edit names them.
+ */
+export function writeLocalEntry(
+  doc: Y.Doc,
+  personId: string,
+  user: PeerUser,
+  now: number = Date.now(),
+): void {
+  rememberClientId(doc.clientID);
+  writeEntry(doc, doc.clientID, {
+    personId,
+    name: user.name,
+    color: user.color,
+    kind: 'person',
+    seen: Math.floor(now / 1000),
+  });
+}
+
+/**
  * Keeps this session's entry: written on its first edit (an insert or a
  * deletion), and `seen` refreshed at most every ten minutes while editing.
  * Viewing alone writes nothing, so a visit does not grow the note. The check
@@ -249,20 +271,10 @@ export function trackLocalPerson(
     if (stopped) {
       return;
     }
-    const { name, color } = user();
-    if (writtenFor !== doc.clientID) {
-      rememberClientId(doc.clientID);
-    }
     writtenFor = doc.clientID;
     writtenAt = Date.now();
     try {
-      writeEntry(doc, doc.clientID, {
-        personId,
-        name,
-        color,
-        kind: 'person',
-        seen: Math.floor(writtenAt / 1000),
-      });
+      writeLocalEntry(doc, personId, user(), writtenAt);
     } catch {
       // Never let blame break editing.
     }

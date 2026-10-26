@@ -54,6 +54,27 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   stays out while the original holds the lock and takes over, idle, when it closes; a
   Strict Mode remount still starts it; two creators that both saw an empty note make
   one plan;
+- Ask AI (D21): the Prompt API is found only with both methods, availability is asked
+  with the options `create` gets and never throws, download progress reads as a
+  fraction; a heading, bold text and a list export as Markdown, and so do blocks that
+  start or end with a line break and code blocks with blank first and last lines; a caret
+  in a list targets the list (and the field says "the whole list") and a selection every
+  block it touches, tables are refused; a reply replaces its blocks (an empty one changes
+  nothing), code blocks round-trip, only http, https and mailto links survive, and only
+  an unambiguous `markdown` fence is unwrapped (single and multiple code blocks keep
+  theirs); the snapshot sees underline and alignment that Markdown drops. With a fake
+  model on a real binding: nothing is sent before Ask; jot AI joins only once the model
+  is ready, writes the reply under its own client id with its registry entry (kind `ai`,
+  `askedBy`) and its caret, and is credited only with the characters it changed; on
+  someone else's note, an asker who has typed nothing is recorded as this browser's own
+  and named by `askedBy`; it writes into an empty block, shows the download, runs one
+  request at a time, and a cancelled request never resets a newer one; it writes nothing
+  (registry included) when cancelled, when the target changed meanwhile (underline
+  included), when the note turned read only, has no room or the passage is over the
+  context window; a request that settles after the field closed forgets its target; it
+  refuses without a target, on a read-only note and with an empty reply, and leaves the
+  note a while after writing or when the page closes, coming back under a new client id
+  as the same person in blame;
 - the example's script: Ana seeds the offsite plan; the demo (all at once) ends with Ana's
   to-do and row, jot AI's list and "your" words, three authors in blame; `resetDemo` puts
   the seed back and a replay reaches the same end; steps whose part was edited away are
@@ -147,6 +168,16 @@ Durable Objects, over real WebSockets.
   without seeding or playing again; Start blank goes to `/new`, the page sends their
   removal itself before its socket closes, and the collaborators leave the note for the
   other window while the content stays; Copy link copies the note's link;
+- Ask AI, with a fake `window.LanguageModel` from `addInitScript`: opening the field and
+  choosing a suggestion sends nothing; the target is tinted; Ask sends the instruction and
+  that block alone; jot AI's list appears with its caret, in a second browser too; blame
+  names jot AI and You, its highlight covers the list, and its hover card says "asked by
+  You"; without `LanguageModel` (and when it is unavailable) the panel only explains what
+  it needs and nothing is created; Esc cancels a running request and nothing is written;
+  on a draft, a downloadable model shows its download, then writes; on someone else's
+  note, asking before typing shows "asked by You" in the asker's blame and "asked by
+  <name>" in the writer's; the target tint goes when a request settles (cancelled or
+  failed) after the field closed;
 - the ⌘K menu toggles the theme;
 - a note in a newer layout opens read only with its banner.
 

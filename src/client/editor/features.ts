@@ -1,12 +1,13 @@
 import type { ComponentType, RefObject } from 'react';
 
+import { AskAIDockItem, AskAISurface } from './ai/AskAI';
 import { BlameChip, BlameMenuToggle, BlameSurface } from './blame/Blame';
 import { ExampleBanner, ExampleSurface, ReplayDemoItem } from './example/Example';
 import type { NoteSession } from './session';
 
 /**
  * Extension points for features that add to the editor's chrome without
- * editing it: PR "ai" puts Ask AI in `dockStart`; PR "blame" puts its chip in
+ * editing it: Ask AI sits in `dockStart` and tints its target from `surface`; blame puts its chip in
  * `dockEnd`, Show blame in `menuTop`, its margin in `surface`, and flashes
  * blame from `session.onReconnect`; the example note puts its banner in
  * `banner`, Replay demo in `menuTop` and runs its demo from `surface`.
@@ -30,6 +31,7 @@ export interface NoteFeature {
 
 /** The features mounted on every note page, in order. */
 export const NOTE_FEATURES: readonly NoteFeature[] = [
+  { id: 'ai', dockStart: AskAIDockItem, surface: AskAISurface },
   { id: 'blame', dockEnd: BlameChip, menuTop: BlameMenuToggle, surface: BlameSurface },
   { id: 'example', banner: ExampleBanner, menuTop: ReplayDemoItem, surface: ExampleSurface },
 ];

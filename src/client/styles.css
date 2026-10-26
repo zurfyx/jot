@@ -34,6 +34,9 @@
   --peer-5: #a16207;
   --peer-6: #2563eb;
   --peer-7: #4d7c0f;
+  /* jot AI is violet everywhere; its tint marks the blocks Ask AI will rewrite. */
+  --ai: var(--peer-2);
+  --ai-tint: color-mix(in srgb, var(--peer-2) 12%, transparent);
   /* Blame: how much of a colour people out of focus keep. */
   --blame-faded: 28%;
   --blame-faded-opacity: 0.32;
@@ -67,6 +70,7 @@
   --peer-5: #facc15;
   --peer-6: #7cb0fb;
   --peer-7: #a3e635;
+  --ai-tint: color-mix(in srgb, var(--peer-2) 18%, transparent);
 }
 
 /*
@@ -1083,6 +1087,141 @@ button {
 
 .note-info-people .note-info-muted {
   margin-left: auto;
+}
+
+/* Ask AI: the dock's field, and its panel above the dock (D21). */
+
+.dock-button.ask-button {
+  min-width: 190px;
+  justify-content: flex-start;
+  background: var(--hover);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.dock-button.ask-button .icon {
+  color: var(--ai);
+}
+
+.dock-button.ask-button:not(:disabled):hover,
+.dock-button.ask-button[aria-expanded='true'] {
+  background: var(--rule);
+  color: var(--ink);
+}
+
+.dock-button.ask-button.is-busy {
+  color: var(--ai);
+}
+
+.ask-panel {
+  width: min(420px, calc(100vw - 24px));
+  padding: 8px;
+}
+
+.ask-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--ai);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.ask-box .icon {
+  color: var(--ai);
+}
+
+.ask-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+.ask-input::placeholder {
+  color: var(--muted);
+}
+
+.ask-go {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: var(--btn);
+  color: var(--btn-ink);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1;
+  transition: opacity 120ms ease-out;
+}
+
+.ask-go:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ask-chip {
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--body);
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+
+.ask-chip:hover,
+.ask-chip:focus-visible {
+  border-color: var(--rule-strong);
+  background: var(--hover);
+  outline: none;
+}
+
+.ask-meta {
+  margin: 8px 4px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ask-meta.is-error {
+  color: var(--bad);
+}
+
+.ask-meter {
+  margin: 6px 4px 2px;
+}
+
+.ask-meter span {
+  background: var(--ai);
+}
+
+.ask-unavailable {
+  margin: 6px 8px;
+  color: var(--body);
+  line-height: 1.45;
+}
+
+::highlight(jot-ai-target) {
+  background-color: var(--ai-tint);
+}
+
+@media (max-width: 480px) {
+  .dock-button.ask-button {
+    min-width: 0;
+  }
 }
 
 /* Blame: underlines are ::highlight(jot-blame-N) rules (blame/highlights.ts). */
