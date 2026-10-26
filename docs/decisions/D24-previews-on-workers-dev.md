@@ -14,7 +14,7 @@ Status: `DECIDED`
   The preview name is the branch name, slugified (`ci/workers-builds` becomes
   `ci-workers-builds`).
 - Production has no workers.dev URL: it answers only on jot.rovira.sh.
-- Every Preview response carries `X-Robots-Tag: noindex`.
+- Every Preview response carries `X-Robots-Tag: noindex`, set by Cloudflare.
 
 ## How
 
@@ -25,16 +25,16 @@ Status: `DECIDED`
   `"preview_urls": true` turns on Preview URLs there; Cloudflare sets the two separately.
 - **The `previews` block.** Previews inherit nothing but assets, compatibility settings,
   migrations and observability. The block repeats the `NOTES` Durable Object binding (the
-  Worker reads `env.NOTES`; without it a Preview fails with error 1101) and sets
-  `vars.JOT_ENV` to `preview`, against `production` at the top level. Migrations stay at
+  Worker reads `env.NOTES`; without it a Preview fails with error 1101). Migrations stay at
   the top level; each Preview runs them into its own new namespace. No `script_name`, ever:
   it would point a Preview at production's notes. No routes or crons in the block: those
   always target production.
 - **Noindex.** Cloudflare sets `X-Robots-Tag: noindex` on every workers.dev Preview
-  response, replacing any value the Worker sent. The Worker still marks every response it
-  serves `noindex, nofollow` when `JOT_ENV` is `preview`, so the rule holds if a Preview is
-  ever served from a custom domain, which Cloudflare does not mark (D17 covers notes and the
-  API in production).
+  response, static assets included, replacing any value the Worker sent. jot adds nothing
+  of its own: the Worker runs first only for `/n/*` and `/api/*`, which are already
+  `noindex, nofollow` everywhere (D17), and never sees the landing page or the assets. A
+  Preview on a custom domain would not get Cloudflare's header; it would need a host rule
+  in `public/_headers` for the assets.
 
 ## Why
 
@@ -42,7 +42,7 @@ Status: `DECIDED`
   script: Durable Objects in a Preview get a namespace of their own, deleted with the
   Preview.
 - workers.dev needs no DNS record, certificate or production deploy per hostname, and
-  Cloudflare marks it noindex. A custom-domain alternative was ruled out for now:
+  Cloudflare marks every response noindex. A custom-domain alternative was ruled out for now:
   `<preview-name>.previews.rovira.sh` would work on the free plan (Cloudflare issues the
   `*.previews.rovira.sh` certificate with the domain; only hostnames a level deeper need
   Advanced Certificate Manager), but it is not noindex by default, and the domain applies

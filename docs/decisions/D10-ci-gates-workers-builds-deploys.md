@@ -40,9 +40,8 @@ Workflow hygiene, after the OWASP and GitHub hardening guides:
   (Settings > Actions > General).
 - Every action is pinned to a full commit sha with its version in a comment, and checkouts
   do not persist the token.
-- `.github/dependabot.yml` proposes action bumps and npm bumps weekly, each ecosystem as one
-  grouped PR, after a seven-day cooldown. Lexical, the Yjs 14 release candidates and
-  `@playwright/test` move by hand (D03, D04).
+- `.github/dependabot.yml` proposes GitHub Actions bumps weekly, as one grouped PR, after a
+  seven-day cooldown. npm dependencies are updated by hand (below).
 
 ## Seeing builds and deploys
 
@@ -62,17 +61,20 @@ Workflow hygiene, after the OWASP and GitHub hardening guides:
   account, User Details and Memberships read, and Workers Routes and SSL and Certificates
   edit on the `rovira.sh` zone only: enough to deploy the Worker and its custom domain.
 - **Same-repo branches are trusted.** Workers Builds builds every branch pushed to
-  `zurfyx/jot`, and a branch's build runs that branch's own `package.json` scripts with the
-  build token, which can deploy production. Only the owner, his agents and Dependabot push
-  branches here. Fork pull requests get CI only.
-- **Dependabot branches build before review.** A Dependabot PR is a same-repo branch, so its
-  Preview builds with the token as soon as it opens. pnpm runs install scripts only for the
-  packages `allowBuilds` names in `pnpm-workspace.yaml`, and the cooldown gives a
-  compromised release a week to be caught before Dependabot proposes it.
+  `zurfyx/jot`, and a branch's build installs that branch's dependencies and runs its own
+  `package.json` scripts with the build token, which can deploy production. Only the owner,
+  his agents and Dependabot push branches here. Fork pull requests get CI only.
+- **No automated npm updates.** A Dependabot npm PR would be a same-repo branch whose
+  Preview builds, with the token, as soon as it opens: a compromised release of any
+  dependency (wrangler, Vite, a plugin) would run with production-capable credentials
+  before anyone read the PR. So npm updates are made by hand, on a branch someone chose to
+  push. Dependabot proposes only GitHub Actions bumps: those change files under `.github/`,
+  run in GitHub with the read-only token, and leave what Workers Builds installs unchanged.
 
-Hardening, if more people ever push to the repository: turn off preview builds (Worker >
-Settings > Build > Branch control) so only `main` builds with the token, or move previews to
-a Worker in a second Cloudflare account with its own connection and token.
+Hardening, if more people ever push to the repository: keep branches out of preview builds
+with the preview trigger's `branch_excludes` (the Workers Builds API; the dashboard offers
+only on or off, under Worker > Settings > Build > Branch control), or move previews to a
+Worker in a second Cloudflare account with its own connection and token.
 
 ## Why
 

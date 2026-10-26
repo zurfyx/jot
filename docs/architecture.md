@@ -28,8 +28,8 @@ fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note`
 
 Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade included,
 carries `X-Robots-Tag: noindex, nofollow`, and `public/robots.txt` disallows `/n/` and
-`/api/` (D17). The landing page carries neither and stays indexable. A Preview
-(`JOT_ENV=preview`) marks every response it serves (D24).
+`/api/` (D17). The landing page carries neither and stays indexable. On a Preview,
+Cloudflare marks every response `noindex` (D24).
 
 ## NoteRoom (`src/worker/room.ts`)
 
@@ -284,6 +284,6 @@ until the socket reconnects (D13).
 `dist/jot`); `wrangler` reads the built config. Cloudflare Workers Builds, connected to the
 repository, deploys every push to `main` to jot.rovira.sh (`wrangler deploy`) and every
 other branch as a Worker Preview at `<preview-name>-jot.rovira.workers.dev`
-(`wrangler preview`), with its own Durable Object namespace and `JOT_ENV=preview`, which
-makes the Worker mark every response noindex (D10, D24). GitHub Actions runs CI only: the
+(`wrangler preview`), with its own Durable Object namespace, where Cloudflare marks every
+response noindex (D10, D24). GitHub Actions runs CI only: the
 required checks gate merges, and no Cloudflare credential lives in GitHub.

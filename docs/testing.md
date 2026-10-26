@@ -115,8 +115,7 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 - deleted content is compacted out of the stored row;
 - malformed ids, `public` included, get 400 on both routes;
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
-  `X-Robots-Tag: noindex, nofollow`, and in production nothing else does; with
-  `JOT_ENV=preview` (D24) every response does, the landing page included.
+  `X-Robots-Tag: noindex, nofollow`.
 
 ## End to end (`pnpm e2e`)
 

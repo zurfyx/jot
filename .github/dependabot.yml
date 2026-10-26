@@ -1,6 +1,8 @@
-# Dependabot proposes updates as pull requests; CI gates them like any other
-# (D08) and Workers Builds previews them. A cooldown leaves each release a week
-# to be yanked or flagged before it is proposed.
+# Dependabot proposes GitHub Actions bumps only; CI gates them like any other
+# pull request (D08). npm updates are made by hand: a Dependabot branch is a
+# same-repo branch, which Workers Builds builds with its production-capable
+# token before anyone reviews it (D10). A cooldown leaves each action release a
+# week to be yanked or flagged before it is proposed.
 version: 2
 updates:
   # The sha-pinned actions in .github/workflows (D10).
@@ -12,30 +14,6 @@ updates:
       default-days: 7
     groups:
       actions:
-        patterns: ['*']
-    commit-message:
-      prefix: Bump
-
-  # npm dependencies, grouped into one weekly PR. Dependabot leaves alone what
-  # moves by hand: Lexical, from one pkg.pr.new commit through
-  # scripts/bump-lexical.mjs (D04); the Yjs 14 release candidates, pinned to
-  # what @lexical/y expects (D03); and @playwright/test, which moves with the
-  # e2e image in ci.yml.
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 5
-    ignore:
-      - dependency-name: lexical
-      - dependency-name: '@lexical/*'
-      - dependency-name: '@y/*'
-      - dependency-name: lib0
-      - dependency-name: '@playwright/test'
-    groups:
-      npm:
         patterns: ['*']
     commit-message:
       prefix: Bump

@@ -24,17 +24,14 @@
   // Migrations stay at the top level; every Preview runs them into its own namespace.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
   "observability": { "enabled": true },
-  "vars": { "JOT_ENV": "production" },
-  // Preview settings (D10). Previews inherit none of the above except assets,
-  // compatibility, migrations and observability, so the binding and vars are
-  // repeated here. Each Preview gets its own Durable Object namespace: never add
+  // Preview settings (D24). Previews inherit none of the above except assets,
+  // compatibility, migrations and observability, so the binding is repeated
+  // here. Each Preview gets its own Durable Object namespace: never add
   // a `script_name`, which would reach production's notes. No routes or crons:
   // those always target production.
   "previews": {
     "durable_objects": {
       "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
     },
-    // The Worker marks every response noindex when it runs as a Preview.
-    "vars": { "JOT_ENV": "preview" },
   },
 }

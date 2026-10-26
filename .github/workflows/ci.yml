@@ -117,3 +117,5 @@ jobs:
         with:
           advanced-security: false
           persona: pedantic
+          # zizmor itself, pinned like the actions; bump it with the action.
+          version: 1.31.1

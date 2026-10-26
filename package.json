@@ -21,7 +21,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "deploy": "wrangler deploy",
-    "cf-typegen": "wrangler types --strict-vars=false src/worker/worker-configuration.d.ts",
+    "cf-typegen": "wrangler types src/worker/worker-configuration.d.ts",
     "bump-lexical": "node scripts/bump-lexical.mjs",
     "prepare": "husky"
   },
