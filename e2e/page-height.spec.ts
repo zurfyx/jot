@@ -10,6 +10,16 @@ function overflow(page: Page) {
   });
 }
 
+/** The bottom of the block holding the caret, in the window. */
+function caretLineBottom(page: Page) {
+  return page.evaluate(() => {
+    const node = window.getSelection()?.anchorNode ?? null;
+    const element = node instanceof Element ? node : (node?.parentElement ?? null);
+    const block = element?.closest('[data-testid="editor"] > *');
+    return block?.getBoundingClientRect().bottom ?? Number.NaN;
+  });
+}
+
 for (const viewport of [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
@@ -42,7 +52,9 @@ for (const viewport of [
       await expect.poll(() => overflow(page)).toBeLessThanOrEqual(0);
     });
 
-    test('a note taller than the window scrolls', async ({ page }) => {
+    test('a note taller than the window scrolls, and its last line clears the dock', async ({
+      page,
+    }) => {
       await openNote(page, freshNoteId());
       await editor(page).click();
       await page.keyboard.type('Long note');
@@ -51,6 +63,27 @@ for (const viewport of [
         await page.keyboard.type(`Line ${line}`);
       }
       await expect.poll(() => overflow(page)).toBeGreaterThan(0);
+      await page.evaluate(() => window.scrollTo(0, document.scrollingElement!.scrollHeight));
+      const last = await editor(page).locator(':scope > *').last().boundingBox();
+      const dock = await page.getByTestId('dock').boundingBox();
+      expect(last!.y + last!.height).toBeLessThan(dock!.y);
+    });
+
+    test('typing at the bottom of a long note keeps the caret line above the dock', async ({
+      page,
+    }) => {
+      await openNote(page, freshNoteId());
+      await editor(page).click();
+      await page.keyboard.type('Typing down the page');
+      const dock = await page.getByTestId('dock').boundingBox();
+      for (let line = 0; line < 40; line++) {
+        await page.keyboard.press('Enter');
+        await page.keyboard.type(`Line ${line}`);
+        const bottom = await caretLineBottom(page);
+        expect(bottom, `line ${line}`).toBeGreaterThan(0);
+        expect(bottom, `line ${line}`).toBeLessThan(dock!.y);
+      }
+      expect(await overflow(page)).toBeGreaterThan(0);
     });
   });
 }

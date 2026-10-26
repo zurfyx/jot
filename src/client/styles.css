@@ -502,6 +502,16 @@ button {
   max-width: 680px;
   margin: 0 auto;
   padding: 80px 32px 45vh;
+  padding-bottom: 45svh;
+}
+
+/*
+ * Typing at the bottom keeps the caret line above the dock: Lexical's
+ * scroll-into-view stops short of the root's scroll-padding. The dock sits
+ * max(18px, safe area) from the bottom and is 46px tall; 30px more clears it.
+ */
+:root:has(.dock-wrap) {
+  scroll-padding-bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px);
 }
 
 .note-banner,
@@ -1535,6 +1545,7 @@ button {
 @media (max-width: 640px) {
   .note-column {
     padding: 68px 20px 45vh;
+    padding-bottom: 45svh;
   }
 
   .jot-editor,
