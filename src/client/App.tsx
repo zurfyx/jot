@@ -9,6 +9,8 @@ import { matchRoute, redirect, useLocationPath } from './router';
 
 // The editor, Lexical and Yjs load only on a note page, so the landing page stays light.
 const NotePage = lazy(loadNotePage);
+// The docs are their own chunk too; their live inspector loads Lexical only on its page.
+const DocsPage = lazy(() => import('./docs/DocsPage'));
 
 export function App() {
   const route = matchRoute(useLocationPath());
@@ -45,6 +47,13 @@ export function App() {
     return (
       <Suspense fallback={null}>
         <NotePage key={route.id} id={route.id} />
+      </Suspense>
+    );
+  }
+  if (route.name === 'docs') {
+    return (
+      <Suspense fallback={null}>
+        <DocsPage slug={route.slug} />
       </Suspense>
     );
   }

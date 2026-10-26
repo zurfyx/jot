@@ -55,6 +55,7 @@ How expensive is this to get wrong?
 | [D11](D11-workers-tests-on-vitest-plugin.md)     | Durable Object tests on `@cloudflare/vitest-plugin`                     | LOW    | `DECIDED` |
 | [D15](D15-no-public-note.md)                     | No public note: abuse on a personal domain, and anyone can fill it      | LOW    | `DECIDED` |
 | [D17](D17-notes-out-of-search-engines.md)        | Notes and the API are `noindex, nofollow` and disallowed in robots.txt  | LOW    | `DECIDED` |
+| [D22](D22-docs-in-the-app.md)                    | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`   | LOW    | `DECIDED` |
 
 ## Tier 3: open, or deferred until something forces it
 

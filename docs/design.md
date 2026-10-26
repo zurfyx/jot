@@ -154,6 +154,29 @@ playground needs: no toolbar is always there.
 
 The copy is a playground's, never a hosted service's: no sign-up or retention reassurance.
 
+## Docs
+
+`src/client/docs/`, with its styles in `docs.css` (tokens only). The base tokens, light
+and dark, plus a `.docs` scope: the example people's colours (`--you`, `--ana`, `--ai`),
+their tints for the home's hero and the diagram (`--docs-tint-*`), the inspector's
+highlight (`--docs-hl`), callouts (`--docs-callout-*`, `--docs-warn-*`) and light code
+blocks (`--docs-code-*`).
+
+- **Header:** "jot docs", then Guides, API (lexical.dev) and GitHub. Under 860px the nav
+  folds behind a Pages button.
+- **Nav:** a left column grouped Start, Concepts, Features and Server, each page marked
+  with a person's colour; the current page has the hover fill.
+- **Pages:** a 720px column (prose capped near 68 characters), a breadcrumb, the title,
+  then short sections around one snippet each. Previous and Next close every page.
+- **Code blocks:** the file name (linked to the source on GitHub) and a Copy button over
+  the code, keywords and strings tinted.
+- **The inspector:** the editor on the left, the `lexical-y` rows on the right in mono
+  (stacked under 1080px). The active line and its row share a violet tint; the pointer or
+  the caret, whichever moved last, picks it.
+- **The relay diagram** is boxes and arrows in HTML, a row on desktop and a column on a
+  phone, so its text never shrinks.
+- No motion: hover fills change at once.
+
 ## Motion
 
 Animations use transform and opacity only, and `prefers-reduced-motion` turns every one of
