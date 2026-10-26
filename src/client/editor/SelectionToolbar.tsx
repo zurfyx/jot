@@ -12,6 +12,7 @@ import {
 } from 'lexical';
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 
+import { normalizeLinkUrl } from '../../shared/links';
 import type { NoteSession } from './session';
 
 interface ToolbarState {
@@ -27,21 +28,6 @@ interface ToolbarState {
 
 const TOOLBAR_HEIGHT = 40;
 const GAP = 8;
-
-/** Accepts "example.com" as https://example.com; rejects scripts and junk. */
-export function normalizeLinkUrl(input: string): string | null {
-  const value = input.trim();
-  if (value === '') {
-    return null;
-  }
-  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
-  try {
-    const url = new URL(withScheme);
-    return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? url.href : null;
-  } catch {
-    return null;
-  }
-}
 
 function isInLink(node: LexicalNode): boolean {
   return $findMatchingParent(node, $isLinkNode) !== null;

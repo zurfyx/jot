@@ -39,3 +39,21 @@ export function parseNoteInput(input: string, currentHost?: string): string | nu
   const id = match[1] ?? '';
   return isNoteId(id) ? id : null;
 }
+
+/**
+ * A link typed into the selection toolbar: "example.com" becomes
+ * https://example.com; only http, https and mailto links are accepted.
+ */
+export function normalizeLinkUrl(input: string): string | null {
+  const value = input.trim();
+  if (value === '') {
+    return null;
+  }
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+  try {
+    const url = new URL(withScheme);
+    return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
