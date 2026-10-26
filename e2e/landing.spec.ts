@@ -2,12 +2,11 @@ import type { Page } from '@playwright/test';
 
 import { expect, freshNoteId, test } from './helpers';
 
-const NOTE_URL = /\/(new|n\/[A-Za-z0-9_-]{21}[AQgw])$/;
-
-/** A note page is open: `/new` (a fresh note) or the `/n/<id>` it resolves to. */
+/** The landing page's start actions open the local draft at `/new` (D18). */
 async function expectNotePage(page: Page) {
   await expect(page.getByTestId('editor')).toBeVisible({ timeout: 15_000 });
-  await expect(page).toHaveURL(NOTE_URL);
+  await expect(page).toHaveURL(/\/new$/);
+  await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
 }
 
 test('the hero has its title, buttons and links', async ({ page }) => {

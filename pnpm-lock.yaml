@@ -203,6 +203,9 @@ importers:
       '@fontsource-variable/geist-mono':
         specifier: ^5.3.0
         version: 5.3.0
+      '@lexical/code-core':
+        specifier: https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382
+        version: https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)
       '@lexical/extension':
         specifier: https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382
         version: https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382(typescript@6.0.3)

@@ -1,3 +1,4 @@
+import { CodeExtension } from '@lexical/code-core';
 import { TabIndentationExtension } from '@lexical/extension';
 import { ClickableLinkExtension, LinkExtension } from '@lexical/link';
 import { CheckListExtension, ListExtension } from '@lexical/list';
@@ -7,6 +8,7 @@ import {
   BOLD_STAR,
   BOLD_UNDERSCORE,
   CHECK_LIST,
+  CODE,
   HEADING,
   INLINE_CODE,
   ITALIC_STAR,
@@ -23,11 +25,12 @@ import { RichTextExtension } from '@lexical/rich-text';
 import { TableExtension } from '@lexical/table';
 import { configExtension, defineExtension, type EditorThemeClasses } from 'lexical';
 
-/** Markdown shortcuts while typing: `# `, `- `, `[] `, `> `, `**b**`, `` `c` ``, links. */
+/** Markdown shortcuts while typing: `# `, `- `, `[] `, `> `, ```` ``` ````, `**b**`, `` `c` ``, links. */
 export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   CHECK_LIST,
   HEADING,
   QUOTE,
+  CODE,
   UNORDERED_LIST,
   ORDERED_LIST,
   INLINE_CODE,
@@ -50,6 +53,7 @@ const MarkdownShortcutsExtension = defineExtension({
 export const editorTheme: EditorThemeClasses = {
   paragraph: 'jot-p',
   quote: 'jot-quote',
+  code: 'jot-codeblock',
   heading: { h1: 'jot-h1', h2: 'jot-h2', h3: 'jot-h3', h4: 'jot-h3', h5: 'jot-h3', h6: 'jot-h3' },
   link: 'jot-link',
   list: {
@@ -85,6 +89,7 @@ export const jotEditorExtension = defineExtension({
     RichTextExtension,
     ListExtension,
     CheckListExtension,
+    CodeExtension,
     LinkExtension,
     configExtension(ClickableLinkExtension, { newTab: true }),
     configExtension(TableExtension, { hasCellMerge: false, hasCellBackgroundColor: false }),

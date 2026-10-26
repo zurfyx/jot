@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-/** A small router: `/`, `/new` and `/n/<id>`. History API only, no library. */
+/** A small router: `/`, `/new` (a local draft) and `/n/<id>`. History API only, no library. */
 
 const NAVIGATE_EVENT = 'jot:navigate';
 
@@ -40,6 +40,7 @@ export function matchRoute(pathname: string): Route {
     return { name: 'landing' };
   }
   if (pathname === '/new' || pathname === '/new/') {
+    // `/new?example` is the same route; the query is the page's business.
     return { name: 'new' };
   }
   const note = /^\/n\/([^/]+)\/?$/.exec(pathname);

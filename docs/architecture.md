@@ -80,32 +80,74 @@ Vite, React and TypeScript. React draws the chrome; the editor is Lexical built 
 `buildEditorFromExtensions` and mounted on a `contenteditable` element, so the app does not
 depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
 
-- `editor/session.ts` creates a note session: a `Y.Doc`, a `WebsocketProvider` (no
-  BroadcastChannel: the server is the one source of truth), the editor with
-  `YCollabExtension`, and signals for connection, sync, binding status and cap state. It
-  calls `binding.initialize()` after the first sync; the binding's content-hashed seed
-  keeps two clients opening an empty note at once from doubling it.
-- `editor/extensions.ts`: rich text, lists and checklists, links, tables, tab indentation
-  and markdown shortcuts.
-- `editor/RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative
-  positions) in awareness with its name and colour; peers resolve them with
-  `binding.$resolveCursor()` and draw carets and selections over the page.
-- The cap state comes from the server's note-status messages and a local estimate
-  (`encodeStateAsUpdate` length, measured a second after changes). A rejection makes the
-  note read only at once.
-- `router.ts` routes `/`, `/new` and `/n/<id>` with the History API. `/new` (also
-  `/new?example`) starts a fresh note: it resolves to a new `/n/<id>`.
-- The landing page and the note page are separate chunks: the editor, Lexical and Yjs load
-  only on a note page (`loadNote.ts`). The landing page prefetches that chunk when a person
-  points at or focuses a start action, or holds ⌘ or Ctrl.
-- The landing page loads the editor chunk, then opens the note inside
-  `document.startViewTransition`, so a cold start never freezes the page: the clicked card
-  carries `view-transition-name: jot-note` in the old state and `#root` carries it in the
-  new one, so the card grows into the note page. Under reduced motion the pages cross-fade
-  in 150ms; browsers without the API switch pages directly.
+**Routes** (`router.ts`, History API only): `/` the landing page, `/new` the local draft,
+`/n/<id>` a note. The Worker serves the SPA for `/n/<id>`; `/new` falls back to it as an
+asset. `drafts.ts` (no Lexical or Yjs, so the landing page can import it) holds the page
+side of drafts: when a draft is shared, its editor stays mounted under the same React key
+while the address becomes `/n/<id>`.
 
-There is no Yjs 14 IndexedDB provider yet, so offline edits live in memory until the
-socket reconnects (D13).
+**`editor/session.ts`** creates a note session: a `Y.Doc`, an `Awareness`, the editor with
+`YCollabExtension`, and signals for connection, sync, binding status, size, cap state,
+Work offline, edits waiting and "merged".
+
+- **A shared note** gets a `WebsocketProvider` (no BroadcastChannel: the server is the one
+  source of truth) that adopts the session's awareness. `binding.initialize()` runs after
+  the first sync; the binding's content-hashed seed keeps two clients opening an empty note
+  at once from doubling it.
+- **A draft** (D18) has no provider. Its stored state (`jot:draft` in localStorage, with a
+  draft id) is applied before the binding starts, and the binding initializes at once
+  (`synced: true`). Changes are written back 500 ms after the last one (a debounce) and on
+  `pagehide`. `share()` moves the draft to `jot:pending:<id>`, frees `jot:draft` if it still
+  holds this draft, and connects a provider with the same document; the draft's content is
+  pushed onto the provider's `unconfirmedUpdates`. The pending copy keeps being saved until
+  nothing is unconfirmed, then is removed. A shared note that finds a pending copy for its
+  id applies it before connecting and confirms it the same way.
+- **Confirmation.** A wrapped sync handler removes from `unconfirmedUpdates` what the server's
+  sync step 1 already covers (content another client wrote first under the same derived
+  client id never comes back as an echo); the provider removes what the relay echoes. The
+  session is `confirmed` once synced and every update that was unconfirmed at the sync has
+  been confirmed.
+- **Work offline** calls `provider.disconnect()` and keeps the editor editable; the
+  browser's `online` event no longer reconnects while it is on. Local transactions count
+  as edits waiting whenever a shared note is not confirmed (a shared draft that never
+  connected included), until it is. When an offline spell (chosen or not) is confirmed,
+  "merged" is true for four seconds and `onReconnect` listeners run, with whether the
+  spell was Work offline.
+- **Size and cap:** the size is the larger of the server's note-status figure and a local
+  `encodeStateAsUpdate` length (measured a second after changes, and on each sync). It
+  drives the pill, Note info and the cap state; a rejection makes the note read only at
+  once.
+
+**The chrome** (`editor/`):
+
+- `NotePage.tsx`: top right `Avatars`, `StatusPill` and `ShareButton`; the note surface; the
+  `Dock`; the ⌘K `CommandMenu`; ⌘⇧C copies the link (sharing a draft first).
+- `Dock.tsx`: Aa (`FormatMenu.tsx`, block types and inline formats through Lexical
+  commands and `$setBlocksType`; disabled, and closed, while the note is not editable, and
+  every action checks editability first), ⋯ (`MoreMenu`) and `NoteInfo.tsx`. `menu.tsx` has the
+  popover behaviour (Escape, outside press, arrow keys) and the menu item primitives.
+- `features.ts`: the extension points for later features. A `NoteFeature` can add a dock
+  item before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯
+  (`menuTop`), and a layer over the note surface (`surface`); `session.onReconnect` reports
+  merges.
+- `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
+  in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
+  and draw carets and selections over the page. `people.tsx` lists the same states for the
+  avatars and Note info.
+- `extensions.ts`: rich text, lists and checklists, links, code blocks
+  (`@lexical/code-core`, no highlighting), tables, tab indentation and markdown shortcuts.
+
+**The landing page** and the note page are separate chunks: the editor, Lexical and Yjs load
+only on a note page or a draft (`loadNote.ts`). The landing page prefetches that chunk when
+a person points at or focuses a start action, or holds ⌘ or Ctrl. Its start actions go to
+`/new`: it loads the editor chunk, then navigates inside `document.startViewTransition`, so
+a cold start never freezes the page. The clicked card carries
+`view-transition-name: jot-note` in the old state and `#root` carries it in the new one, so
+the card grows into the draft's page. Under reduced motion the pages cross-fade in 150ms;
+browsers without the API switch pages directly.
+
+There is no Yjs 14 IndexedDB provider yet, so a shared note's offline edits live in memory
+until the socket reconnects (D13).
 
 ## Build and deploy
 

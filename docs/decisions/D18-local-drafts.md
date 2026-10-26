@@ -1,0 +1,46 @@
+# D18: An unshared note lives only in this browser
+
+Status: `DECIDED`
+
+## Context
+
+Every "Start a new note" used to create a room on the server at once, so a visitor who
+typed one word and left still made a Durable Object and a stored row. A note is only worth
+a link once someone wants to share it.
+
+## Decision
+
+- **`/new` is a local draft.** It has a `Y.Doc` and the bound editor but no provider. The
+  binding initializes at once (`YCollabExtension` with `synced: true`): there is nothing to
+  wait for.
+- **Persistence:** the draft's `Y.encodeStateAsUpdate(doc)`, base64, with a random draft id,
+  in `localStorage` under `jot:draft`. It is written 500 ms after the last change (a
+  debounce) and when the page hides. Opening `/new` again restores it, so a refresh loses
+  nothing. One draft per browser; ⋯ → New note replaces it with an empty one. The pill
+  says "Only on this device".
+- **Share** generates an id, moves the draft to `jot:pending:<id>`, frees `jot:draft` (only
+  if it still holds this draft: another tab may have stored its own), connects a provider
+  to `/api/n/<id>/ws` with the same document, replaces the address with `/n/<id>` (same
+  editor, no new history entry) and copies the link. The empty room receives the draft's
+  whole state in the sync handshake.
+- **Until the relay confirms,** the pending copy keeps being saved, edits after Share
+  included. It is removed only when the provider has no unconfirmed update left: the relay
+  echoes every update it applies, and the server's sync step 1 covers content another
+  client already wrote under the same derived client id. A page closed before that leaves
+  the copy behind, and the next page that opens `/n/<id>` applies it before connecting and
+  pushes it. ⋯ → New note during a Share frees the draft slot but keeps the pending copy.
+- **No double seeding.** The draft's binding is already initialized, so it writes nothing
+  on the first sync; a second window on the new link reads the server's content. If a
+  second window joins before the content arrives, it seeds an empty paragraph under the
+  binding's content-derived client id, the same items the draft wrote, so Yjs keeps one
+  copy.
+
+## Consequences
+
+- No server state exists until Share. The 2 MB cap (D05) applies to drafts through the
+  local estimate; a full draft can't be shared.
+- A draft is per browser profile: two tabs on `/new` share one draft and the last write
+  wins.
+- A pending copy whose link is never opened again stays in localStorage. Clearing site
+  data deletes drafts and pending copies. Shared notes still keep offline edits in memory
+  only (D13).

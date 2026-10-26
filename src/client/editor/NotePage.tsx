@@ -1,17 +1,20 @@
 import { $getRoot, $isElementNode } from 'lexical';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { generateNoteId, notePath } from '../../shared/ids';
-import { navigate } from '../router';
+import { releaseDraftPage } from '../drafts';
+import { copyNoteLink, startNewNote } from './actions';
 import { CommandMenu } from './CommandMenu';
+import { Dock, isMac } from './Dock';
+import { NOTE_FEATURES } from './features';
+import { Avatars } from './people';
 import { RemoteCarets } from './RemoteCarets';
-import { SelectionToolbar } from './SelectionToolbar';
 import { createNoteSession, type NoteSession } from './session';
 import { ShareButton } from './ShareButton';
 import { StatusPill } from './StatusPill';
-import { useSignal } from './useSignal';
+import { useEditable, useSignal } from './useSignal';
 
-export default function NotePage({ id }: { id: string }) {
+/** A note page: note `id`, or this browser's local draft when `id` is null (D18). */
+export default function NotePage({ id }: { id: string | null }) {
   const [session, setSession] = useState<NoteSession | null>(null);
 
   useEffect(() => {
@@ -23,16 +26,43 @@ export default function NotePage({ id }: { id: string }) {
     return () => {
       created.dispose();
       setSession(null);
+      if (id === null) {
+        releaseDraftPage();
+      }
     };
   }, [id]);
 
+  useEffect(() => {
+    if (session === null) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        (isMac ? event.metaKey : event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === 'c'
+      ) {
+        event.preventDefault();
+        void copyNoteLink(session);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [session]);
+
   return (
     <div className="note-page">
-      <div className="note-chrome">
-        {session && <StatusPill session={session} />}
-        <ShareButton />
-      </div>
+      <header className="note-chrome">
+        {session && (
+          <>
+            <Avatars session={session} />
+            <StatusPill session={session} />
+            <ShareButton session={session} />
+          </>
+        )}
+      </header>
       <main className="note-column">{session && <NoteBody session={session} />}</main>
+      {session && <Dock session={session} />}
       {session && <CommandMenu session={session} />}
     </div>
   );
@@ -43,8 +73,9 @@ function NoteBody({ session }: { session: NoteSession }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
+  const noteId = useSignal(session.noteId);
   const empty = useEmptyAndTitle(session);
-  const editable = useEditable(session);
+  const editable = useEditable(session.editor);
 
   useEffect(() => {
     const { editor } = session;
@@ -70,10 +101,10 @@ function NoteBody({ session }: { session: NoteSession }) {
         <p className="note-banner" role="status">
           This note is full.{' '}
           <a
-            href="/"
+            href="/new"
             onClick={(event) => {
               event.preventDefault();
-              navigate(notePath(generateNoteId()));
+              startNewNote(session);
             }}
           >
             Start a new note
@@ -90,7 +121,11 @@ function NoteBody({ session }: { session: NoteSession }) {
         {empty && status === 'active' && (
           <div className="note-placeholder" aria-hidden="true">
             <p className="note-placeholder-title">Untitled</p>
-            <p>Start writing. Anyone with this link can edit.</p>
+            <p>
+              {noteId === null
+                ? 'Start writing. It stays on this device until you press Share.'
+                : 'Start writing. Anyone with this link can edit.'}
+            </p>
           </div>
         )}
         <div
@@ -106,18 +141,12 @@ function NoteBody({ session }: { session: NoteSession }) {
           data-testid="editor"
         />
         <RemoteCarets session={session} surfaceRef={surfaceRef} />
+        {NOTE_FEATURES.map(
+          ({ id, surface: Surface }) =>
+            Surface && <Surface key={id} session={session} surfaceRef={surfaceRef} />,
+        )}
       </div>
-      <SelectionToolbar session={session} />
     </>
-  );
-}
-
-/** Lexical tracks editability; the root element's attribute follows it. */
-function useEditable(session: NoteSession): boolean {
-  const { editor } = session;
-  return useSyncExternalStore(
-    (onChange) => editor.registerEditableListener(onChange),
-    () => editor.isEditable(),
   );
 }
 

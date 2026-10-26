@@ -10,8 +10,8 @@ and card-free sections below it (D07).
 
 Every colour is a CSS custom property in `src/client/styles.css`, defined twice: light and
 dark. `<html data-theme>` picks the set; an inline script in `index.html` sets it before
-the first paint from the stored choice or `prefers-color-scheme`. ⌘K → Toggle theme flips
-and remembers it.
+the first paint from the stored choice or `prefers-color-scheme`. ⋯ → Dark theme and ⌘K →
+Toggle theme flip and remember it.
 
 | Token                        | Use                                                       |
 | ---------------------------- | --------------------------------------------------------- |
@@ -20,9 +20,10 @@ and remembers it.
 | `--rule`, `--rule-strong`    | hairlines, borders, checkbox outlines                     |
 | `--hover`, `--select`        | hover and selected rows, inline code, text selection      |
 | `--accent`                   | the one accent: links, focus, checked boxes, the caret    |
-| `--btn`, `--btn-ink`         | the primary button and the selection toolbar              |
+| `--btn`, `--btn-ink`         | the primary button, a draft's Share, Reconnect            |
 | `--ok`, `--warn`, `--bad`    | status only, always beside a word                         |
 | `--peer-0` … `--peer-7`      | collaborators' identity colours, with `--peer-ink` labels |
+| `--shadow`, `--shadow-soft`  | popovers and menus; the dock's lighter lift               |
 
 The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
 to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
@@ -45,17 +46,43 @@ Geist (`@fontsource-variable/geist`) for everything; Geist Mono only for codes a
 
 ## Editor page
 
-- The window is the document: a centred 680px column, 18px text, so lines stay near 70
-  characters.
-- The note's first line is its title (styled large, and shown in `document.title`). There
-  is no title field.
-- Chrome: a status pill and Share, floating top right on the page colour. The pill reads
-  "Connecting…", "Synced · N here", "Offline · will sync when you reconnect" or "Read
-  only", with a dot whose colour repeats the word.
+The editor follows direction A ("Pure page", D07), with the chrome cut to what the
+playground needs: no toolbar is always there.
+
+- **The page.** The window is the document: a centred 680px column, 18px text, so lines
+  stay near 70 characters. The note's first line is its title (styled large, and shown in
+  `document.title`). There is no title field.
+- **Top right,** floating on the page colour: the avatars of the people here (initials on
+  their `--peer-*` colour, up to four, then "+N"; hidden under 640px), the status pill, then
+  Share.
+- **The status pill** is a dot whose colour repeats the word, then the word:
+  - "Synced · 238 KB", the note's Yjs size (the larger of the server's figure and the local
+    estimate); amber near the cap, red as "Full · 2 MB";
+  - "Connecting…", "Offline · 3 edits waiting", "Syncing · 3 edits waiting" (connected,
+    and the server hasn't confirmed them yet), and "Back online · merged" for four seconds
+    once an offline spell's edits are confirmed;
+  - "Only on this device" for a draft; "Read only" for a newer layout.
+
+  On a shared note the pill is a button: a click toggles Work offline, and a dark
+  Reconnect button sits beside it while that is on.
+
+- **Share** is quiet on a shared note and dark on a draft, where it is the one action that
+  creates the link. Both confirm with "Link copied".
+- **The dock,** one floating row centred at the bottom: **Aa** and **⋯**, with slots between
+  them for Ask AI and the blame chip. Aa is disabled while the note is read only.
+  - **Aa** opens block types (Text, Heading 1 to 3, Bulleted, Numbered and Todo lists,
+    Quote, Code, each with its markdown shortcut as a hint) and a row of inline formats
+    (bold, italic, underline, strikethrough, inline code, link). Pointer presses keep the
+    editor's focus and selection.
+  - **⋯** opens Note info (with the size), Work offline (a switch), Copy link (⌘⇧C), New
+    note and Dark theme (a switch).
+  - **Note info:** the Yjs size as "238 KB of 2 MB" with a meter, "Here now" (colour, name,
+    editing or idle), and "Kept until <date> · 90 days after the last visit".
+  - Menus open above the dock, move with the arrow keys and close on Escape or a press
+    outside.
 - A new note shows the placeholder "Untitled" and "Start writing. Anyone with this link can
-  edit."
-- A selection toolbar (B, I, Link, Code, H) appears only over a non-empty selection. ⌘K
-  opens a command menu that performs actions.
+  edit." (a draft: "It stays on this device until you press Share."). ⌘K opens a command
+  menu that performs actions.
 - Read only and "This note is full" are banners that stay in view; "This note is almost
   full" is a quiet line.
 - Remote carets carry the collaborator's name, which fades to the bare caret after three
@@ -97,9 +124,10 @@ The copy is a playground's, never a hosted service's: no sign-up or retention re
 Animations use transform and opacity only, and `prefers-reduced-motion` turns every one of
 them off and shows the final state.
 
-- **The editor** moves only on state change: the pill label and Share's "Link copied" fade
-  in, the toolbar and menu enter in 180 to 220ms with `cubic-bezier(0.2, 0, 0, 1)`, carets
-  glide between positions. Nothing loops.
+- **The editor** moves only on state change: the pill label, the avatars and Share's
+  "Link copied" fade in; the dock's popovers and the ⌘K menu rise in over 180 to 220ms with
+  `cubic-bezier(0.2, 0, 0, 1)`; switches slide; the size meter scales; carets glide between
+  positions. Nothing loops.
 - **The landing page** has slow, continuous motion on the hero: the fan's sway (7 s), the
   drifting glow (20 s), the blinking carets and the example typing. The underline wipes in
   once. Below the hero, the two windows loop every 7.6 s and the tabs advance every 3 s.

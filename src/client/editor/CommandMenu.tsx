@@ -1,11 +1,11 @@
 import { INSERT_TABLE_COMMAND } from '@lexical/table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { generateNoteId, notePath } from '../../shared/ids';
 import { navigate } from '../router';
 import { toggleTheme } from '../theme';
+import { copyNoteLink, startNewNote } from './actions';
+import { isMac } from './Dock';
 import type { NoteSession } from './session';
-import { copyNoteLink } from './ShareButton';
 
 interface Command {
   id: string;
@@ -13,8 +13,6 @@ interface Command {
   hint?: string;
   run: () => void;
 }
-
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** ⌘K: a small menu that performs actions. */
 export function CommandMenu({ session }: { session: NoteSession }) {
@@ -25,8 +23,8 @@ export function CommandMenu({ session }: { session: NoteSession }) {
 
   const commands = useMemo<Command[]>(
     () => [
-      { id: 'new', label: 'New note', run: () => navigate(notePath(generateNoteId())) },
-      { id: 'copy', label: 'Copy link', run: () => void copyNoteLink() },
+      { id: 'new', label: 'New note', run: () => startNewNote(session) },
+      { id: 'copy', label: 'Copy link', run: () => void copyNoteLink(session) },
       { id: 'theme', label: 'Toggle theme', run: toggleTheme },
       {
         id: 'table',

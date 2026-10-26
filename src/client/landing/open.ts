@@ -4,7 +4,7 @@ import { flushSync } from 'react-dom';
 import { loadNotePage } from '../loadNote';
 import { navigate } from '../router';
 
-/** Where the landing page's actions go. `/new?example` behaves like `/new` for now. */
+/** Where the landing page's actions go: the local draft (D18). `/new?example` behaves like `/new` for now. */
 export const NEW_NOTE_PATH = '/new';
 export const EXAMPLE_PATH = '/new?example';
 
@@ -79,7 +79,7 @@ export async function openNote(path: string, card: HTMLElement | null = null): P
 
   const transition = document.startViewTransition(async () => {
     flushSync(go);
-    // `/new` resolves to a note and the (loaded) editor mounts a moment later.
+    // `/new` mounts the local draft's (loaded) editor a moment later.
     await until(() => root?.querySelector('.note-page') != null, 1500);
     if (shared) {
       root.style.viewTransitionName = NOTE_TRANSITION_NAME;

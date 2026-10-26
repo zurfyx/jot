@@ -28,6 +28,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
+    "@lexical/code-core": "https://pkg.pr.new/facebook/lexical/@lexical/code-core@4f04dcdd119d218fb54008f3d94cb208e5f48382",
     "@lexical/extension": "https://pkg.pr.new/facebook/lexical/@lexical/extension@4f04dcdd119d218fb54008f3d94cb208e5f48382",
     "@lexical/internal": "https://pkg.pr.new/facebook/lexical/@lexical/internal@4f04dcdd119d218fb54008f3d94cb208e5f48382",
     "@lexical/link": "https://pkg.pr.new/facebook/lexical/@lexical/link@4f04dcdd119d218fb54008f3d94cb208e5f48382",
