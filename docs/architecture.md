@@ -67,6 +67,10 @@ jot's own. Every frame starts with a varuint message type.
 | 3    | query awareness | to server | none; the server answers with every known state           |
 | 64   | note status     | to client | varuint stored bytes, varuint flags (1 = update rejected) |
 
+A note's Y.Doc has two roots: `lexical-y`, the editor's content in `@lexical/y`'s layout,
+and `jot-people` (`PEOPLE_ROOT`), the people registry blame reads (D19). The relay treats
+both as opaque Yjs content.
+
 On connect the server sends sync step 1, the current awareness states and a note status.
 The client answers step 1 and sends its own; the server's step 2 marks the client synced.
 The server broadcasts every applied update to every socket, the sender included:
@@ -129,10 +133,31 @@ Work offline, edits waiting and "merged".
   commands and `$setBlocksType`; disabled, and closed, while the note is not editable, and
   every action checks editability first), ⋯ (`MoreMenu`) and `NoteInfo.tsx`. `menu.tsx` has the
   popover behaviour (Escape, outside press, arrow keys) and the menu item primitives.
-- `features.ts`: the extension points for later features. A `NoteFeature` can add a dock
-  item before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯
-  (`menuTop`), and a layer over the note surface (`surface`); `session.onReconnect` reports
-  merges.
+- `features.ts`: the extension points for features. A `NoteFeature` can add a dock item
+  before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯ (`menuTop`),
+  and a layer over the note surface (`surface`); `session.onReconnect` reports merges. Blame
+  is the first.
+- `blame/` (D19), all in the browser:
+  - `registry.ts`: the `jot-people` root. `trackLocalPerson` writes this tab's entry
+    (person id, name, colour, kind, last seen) on its first local edit and refreshes it at
+    most once a minute; its transactions carry the `jot-people` origin, which the session
+    does not count as edits waiting. `readRegistry` parses entries as untrusted input.
+  - `attribution.ts`: builds a `ContentMap` from the doc's insert set, one
+    `createIdMapFromIdSet` per person, and renders `lexical-y` with
+    `toDelta({ deep: true, renderer: createAttributionsRenderer(map) })`.
+  - `lines.ts`: walks that delta into lines of runs `{ length, personId }` (shares, main
+    author per line), and pairs them with Lexical's lines, in order, then by text for moved
+    blocks. Unknown shapes mark a line unreadable; nothing throws.
+  - `lexical.ts`, `paint.ts`, `highlights.ts`: Lexical's lines (blocks with inline
+    children, by DFS), their elements by `getElementByKey`, run offsets mapped to `Range`s
+    over text nodes with a TreeWalker (a `<br>` counts as a line break), and one
+    `Highlight` per person, `jot-blame-N`, styled by a constructed style sheet. A line whose
+    text doesn't match its element is skipped.
+  - `Blame.tsx`: Show blame in ⋯, the chip and legend, and the surface layer: the margin
+    bars and names, and the hover card (`caretPositionFromPoint`, checked against the
+    character's box). It recomputes 150 ms after the last document update and relays out
+    on resize, only while blame shows; with blame off only the registry check runs per
+    transaction. After a Work offline spell is confirmed, it shows blame for four seconds.
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the

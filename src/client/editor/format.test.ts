@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { NOTE_MAX_BYTES } from '../../shared/limits';
-import { editsWaiting, formatBytes, keptUntil } from './format';
+import { ago, editsWaiting, formatBytes, keptUntil } from './format';
 
 describe('formatBytes', () => {
   it('uses bytes under a kilobyte', () => {
@@ -34,5 +34,18 @@ describe('editsWaiting', () => {
 describe('keptUntil', () => {
   it('is 90 days after the visit', () => {
     expect(keptUntil(Date.UTC(2026, 9, 26, 12))).toBe('Jan 24, 2027');
+  });
+});
+
+describe('ago', () => {
+  const now = 1_800_000_000_000;
+  const at = (secondsBefore: number) => Math.floor(now / 1000) - secondsBefore;
+
+  it('reads like a person would say it', () => {
+    expect(ago(at(20), now)).toBe('just now');
+    expect(ago(at(5 * 60), now)).toBe('5 min ago');
+    expect(ago(at(3 * 3600 + 60), now)).toBe('3 h ago');
+    expect(ago(at(86_400), now)).toBe('1 day ago');
+    expect(ago(at(3 * 86_400), now)).toBe('3 days ago');
   });
 });

@@ -34,6 +34,7 @@ import {
   restoreDraftState,
   writeDraft,
 } from './draft';
+import { REGISTRY_ORIGIN } from './blame/registry';
 import { jotEditorExtension } from './extensions';
 import { localUser } from './presence';
 
@@ -248,7 +249,8 @@ export function createNoteSession(id: string | null): NoteSession {
       // until the server confirms them.
       if (everSynced.peek() || hasLocalContent.peek()) {
         hasLocalContent.value = true;
-        if (!confirmed.peek()) {
+        // The people registry's own writes (blame) are not edits.
+        if (!confirmed.peek() && origin !== REGISTRY_ORIGIN) {
           pendingEdits.value++;
         }
       }

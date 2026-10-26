@@ -19,7 +19,15 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   and deletes and nothing when the document holds it; writes merge with the same draft,
   never another; a move keeps one copy when there is room for only one, and leaves the
   draft in place when the copy can't be stored; pending copies are kept per note;
-- confirmation: the server's state vector confirms inserts it covers, never deletes.
+- confirmation: the server's state vector confirms inserts it covers, never deletes;
+- blame: two peers' documents turn into lines of runs (a heading, bold text, a line break,
+  a list, typing inside someone else's line), matching Lexical's lines; shares in
+  characters; unregistered clients stay unattributed; two people with one colour are
+  kept apart; nested blocks and inline nodes in hand-built deltas; malformed deltas never
+  throw; line matching skips unknown lines and finds moved ones;
+- the people registry: entries parsed defensively, the newest entry names a person, a
+  tab writes its entry on its first edit (not on remote updates) and refreshes it at most
+  once a minute; blame's flash after a reconnect, and a choice made during it;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations resolve to `/new`, the two-windows phases and steps, and
@@ -66,8 +74,8 @@ Durable Objects, over real WebSockets.
 - a reload keeps the note;
 - Share copies the link, and so does ⌘⇧C;
 - markdown shortcuts, and Aa's Bold and Link (no toolbar appears over a selection);
-- the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items, Escape, the Dark
-  theme switch, and arrow keys in ⋯;
+- the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items (Show blame first),
+  Escape, the Dark theme switch, and arrow keys in ⋯;
 - Note info shows a size matching the pill, both people with "(you)" and "editing", and
   the 90-day line;
 - Work offline in two windows (from ⋯ and from the pill): edits wait on both sides, both
@@ -93,6 +101,12 @@ Durable Objects, over real WebSockets.
   retry", keeps the draft (still editable and saved), and works once there is room;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
+- blame, with two people in separate browser contexts: off, nothing is painted; on,
+  `CSS.highlights` holds one highlight per person over exactly the text each typed, the
+  margin names both ("You" for oneself), the legend shows character shares, a name
+  focuses that person, Hide blame clears it all; hovering text shows who wrote it; the
+  registry on the server holds the writer's entry and none for a reader; reconnecting
+  from Work offline shows blame for a few seconds;
 - the ⌘K menu toggles the theme;
 - a note in a newer layout opens read only with its banner.
 
