@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test';
 
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
-import { holdOutgoingContent } from './sockets';
+import { flakyLink, holdOutgoingContent } from './sockets';
 
 async function workOffline(page: Page) {
   await page.getByTestId('dock').getByRole('button', { name: 'More' }).click();
@@ -88,4 +88,30 @@ test('reconnecting is not "merged" until the server confirms the edits', async (
   socket.release();
   await expect(a.getByTestId('status-pill')).toHaveText('Back online · merged');
   await expect(editor(b)).toContainText('Held back');
+});
+
+test('edits a dead link swallowed count as waiting once the drop is noticed', async ({
+  context,
+}) => {
+  const id = freshNoteId();
+  const a = await context.newPage();
+  const b = await context.newPage();
+  const link = await flakyLink(a);
+  await openNote(a, id);
+  await openNote(b, id);
+
+  // The link dies silently: A still looks connected while it types.
+  link.goSilent();
+  await appendLine(a, 'Typed into a dead link');
+  await expect(a.getByTestId('status-pill')).toHaveText(/^Synced · /);
+  // Then the drop is noticed.
+  link.drop();
+  await expect(a.getByTestId('status-pill')).toHaveText(/^Offline · [1-9]\d* edits? waiting$/);
+  await expect(editor(b)).not.toContainText('Typed into a dead link');
+
+  link.restore();
+  await expect(a.getByTestId('status-pill')).toHaveText('Back online · merged', {
+    timeout: 15_000,
+  });
+  await expect(editor(b)).toContainText('Typed into a dead link');
 });

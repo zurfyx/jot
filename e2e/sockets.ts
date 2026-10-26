@@ -34,3 +34,47 @@ export async function holdOutgoingContent(page: Page) {
   });
   return control;
 }
+
+/**
+ * A link that can die: while `up`, everything passes. `goSilent()` stops
+ * delivering the page's content (as a dead link swallows it) while the socket
+ * still looks open; `drop()` then closes it and refuses new sockets until
+ * `restore()`.
+ */
+export async function flakyLink(page: Page) {
+  const sockets = new Set<{ close: () => void }>();
+  const control = {
+    silent: false,
+    down: false,
+    goSilent() {
+      control.silent = true;
+    },
+    drop() {
+      control.down = true;
+      for (const socket of sockets) {
+        socket.close();
+      }
+      sockets.clear();
+    },
+    restore() {
+      control.silent = false;
+      control.down = false;
+    },
+  };
+  await page.routeWebSocket(NOTE_SOCKET, (ws) => {
+    if (control.down) {
+      void ws.close({ code: 1001, reason: 'network down' });
+      return;
+    }
+    const server = ws.connectToServer();
+    const entry = { close: () => void ws.close({ code: 1001, reason: 'network down' }) };
+    sockets.add(entry);
+    ws.onClose(() => sockets.delete(entry));
+    ws.onMessage((message) => {
+      if (!control.silent) {
+        server.send(message);
+      }
+    });
+  });
+  return control;
+}
