@@ -138,7 +138,10 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   "merged" is true for four seconds and `onReconnect` listeners run, with whether the
   spell was Work offline.
 - **Size and cap:** the size is the larger of the server's note-status figure and a local
-  `encodeStateAsUpdate` length (measured a second after changes, and on each sync). It
+  estimate (measured a second after changes, and on each sync): the page's state
+  re-encoded from a gc-on document (`size.ts`), the way the room compacts it. The page's
+  own encoding would count content the binding's undo stack keeps alive, so replacing a
+  large passage a few times would look full long before the stored note is. It
   drives the pill, Note info and the cap state; a rejection makes the note read only at
   once.
 
