@@ -30,6 +30,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
       await page.getByRole('button', { name: 'More' }).click();
       expect(await scrollbar(page.getByRole('menu'))).toEqual(html);
+
+      // No ::-webkit-scrollbar rules: they would make macOS overlay scrollbars classic.
+      const webkitRules = await page.evaluate(
+        () =>
+          [...document.styleSheets]
+            .flatMap((sheet) => [...sheet.cssRules])
+            .flatMap((rule) => (rule instanceof CSSGroupingRule ? [...rule.cssRules] : [rule]))
+            .filter(
+              (rule) =>
+                rule instanceof CSSStyleRule && rule.selectorText.includes('-webkit-scrollbar'),
+            ).length,
+      );
+      expect(webkitRules).toBe(0);
     });
 
     test('the docs nav and code blocks scroll on a transparent track', async ({ page }) => {

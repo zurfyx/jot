@@ -26,7 +26,7 @@ Toggle theme flip and remember it.
 | `--shadow`, `--shadow-soft`              | popovers and menus; the dock's lighter lift               |
 | `--blame-faded`, `--blame-faded-opacity` | how much of their colour people out of blame's focus keep |
 | `--ai`, `--ai-tint`                      | jot AI's violet (`--peer-2`); the tint on Ask AI's target |
-| `--scrollbar`, `--scrollbar-hover`       | the scrollbar thumb, and under the pointer (Safari)       |
+| `--scrollbar`                            | the scrollbar thumb, on a transparent track               |
 
 The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
 to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
@@ -43,12 +43,12 @@ same names.
 | `--code-bg`, `--code-ink`, `--code-*` | the dark code block, its keywords, strings and thumb |
 
 Scrollbars follow Notion everywhere (the page, menus, the docs nav, code blocks): no track,
-a thin, rounded, translucent thumb in the theme's ink. Firefox and Chrome take
-`scrollbar-color: var(--scrollbar) transparent` with `scrollbar-width: thin`, which leaves
-macOS overlay scrollbars overlaid. Only a browser without `scrollbar-color` (older Safari)
-takes the `::-webkit-scrollbar` rules, since they turn overlay scrollbars into classic ones:
-a 6px thumb in a 10px gutter that darkens to `--scrollbar-hover` under the pointer. The landing page's code block is dark in both themes,
-so it points `--scrollbar` at the light `--code-scrollbar`.
+and a thin, translucent thumb in the theme's ink, from `scrollbar-color: var(--scrollbar)
+transparent` and `scrollbar-width: thin`. There are no `::-webkit-scrollbar` rules: in a
+Safari without `scrollbar-color` they would turn macOS overlay scrollbars into permanent
+classic ones that take width from the column, so such a Safari keeps its native scrollbars.
+The landing page's code block is dark in both themes, so it points `--scrollbar` at the
+light `--code-scrollbar`.
 
 ## Type
 
