@@ -28,7 +28,8 @@ fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note`
 
 Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade included,
 carries `X-Robots-Tag: noindex, nofollow`, and `public/robots.txt` disallows `/n/` and
-`/api/` (D17). The landing page carries neither and stays indexable.
+`/api/` (D17). The landing page carries neither and stays indexable. On a Preview,
+Cloudflare marks every response `noindex` (D24).
 
 ## NoteRoom (`src/worker/room.ts`)
 
@@ -280,7 +281,9 @@ until the socket reconnects (D13).
 ## Build and deploy
 
 `@cloudflare/vite-plugin` builds the client and the Worker together (`dist/client`,
-`dist/jot`); `wrangler deploy` reads the built config. CI deploys the green tip of `main` to
-jot.rovira.sh, and every same-repo pull request as its own Worker, `jot-pr-<number>` on
-workers.dev, deployed from a config `scripts/preview-config.mjs` writes: no routes and only
-its own Durable Object namespace, deleted when the PR closes (D10).
+`dist/jot`); `wrangler` reads the built config. Cloudflare Workers Builds, connected to the
+repository, deploys every push to `main` to jot.rovira.sh (`wrangler deploy`) and every
+other branch as a Worker Preview at `<preview-name>-jot.rovira.workers.dev`
+(`wrangler preview`), with its own Durable Object namespace, where Cloudflare marks every
+response noindex (D10, D24). GitHub Actions runs CI only: the
+required checks gate merges, and no Cloudflare credential lives in GitHub.

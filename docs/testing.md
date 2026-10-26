@@ -1,15 +1,12 @@
 # Testing
 
-Three layers, each run in CI as its own job (D10).
+Three layers, each run in CI as its own job (D10). A fourth CI job, `zizmor`, audits the
+workflows themselves.
 
 ## Unit (`pnpm test`, project `unit`)
 
-Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.ts`,
-`scripts/*.test.mjs`):
+Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.ts`):
 
-- the PR preview config (D10): a preview deploys only as `jot-pr-<number>`, with no routes
-  and only its own Durable Object namespace; a production build, routes, a `script_name`,
-  transferred, renamed or deleted classes, and any other binding or trigger are refused;
 - note ids: 22 base64url characters, 128 bits, no repeats, strict validation (the last
   character must be one of A, Q, g, w; no fixed words such as `public`);
 - link and code parsing for the paste field, including hosts that only look like jot's;

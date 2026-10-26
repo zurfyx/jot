@@ -1,5 +1,14 @@
 name: CI
 
+# The merge gate (D08, D10). static, test and e2e are the required status
+# checks on main; rename one only together with the branch protection rule.
+# Nothing here deploys and no job holds a Cloudflare credential: Cloudflare
+# Workers Builds deploys main and builds a Preview of every other branch.
+#
+# Every action is pinned to a full commit sha, with its version in a comment;
+# Dependabot (.github/dependabot.yml) proposes the bumps. zizmor audits this
+# directory on every run.
+
 on:
   push:
     branches: [main]
@@ -13,18 +22,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-# static, test and e2e are the required status checks on main (D08). Rename
-# one only together with the branch protection rule. deploy and preview are
-# not checks: deploy runs only on pushes to main, after the three pass;
-# preview runs only on same-repo pull requests, after static and test.
 jobs:
   static:
     name: static
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -42,10 +51,14 @@ jobs:
     # Separate from static so a formatting nit never masks a real failure.
     name: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -58,199 +71,51 @@ jobs:
     #
     # Runs in the official Playwright image, which already carries Chromium and
     # its system libraries, so the job skips the slow apt install. The tag must
-    # match the exact @playwright/test version in package.json; bump both
-    # together. --user 1001 matches the runner's uid, as the Playwright docs
-    # recommend, so the mounted workspace and caches stay writable.
+    # match the exact @playwright/test version in package.json, and the digest
+    # pins that tag's image; bump all three together. --user 1001 matches the
+    # runner's uid, as the Playwright docs recommend, so the mounted workspace
+    # and caches stay writable.
     name: e2e
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
       options: --user 1001
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
           name: playwright-traces
           path: test-results/
           retention-days: 7
 
-  deploy:
-    # Deploy-on-green (D10): production is "the latest green tip of main", not
-    # "every green commit". A push to main that passes the three checks above
-    # deploys that commit to Cloudflare, but only if it is still the tip of
-    # main: intermediate commits of a fast merge train, and re-runs of old
-    # green CI, are skipped, since deploying them would put OLDER code in
-    # production after newer code.
-    #
-    # Secrets: only this job and preview read them. This one never runs on
-    # pull_request; preview never runs for a fork's PR. The repository check
-    # keeps a fork's own Actions from attempting a deploy.
-    name: deploy
-    needs: [static, test, e2e]
-    if: >-
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      github.repository == 'zurfyx/jot'
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://jot.rovira.sh
-    concurrency:
-      group: deploy
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Check the commit is still the tip of main
-        id: tip
-        env:
-          SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          # Deploys happen only for the CURRENT tip of main. A re-run of an
-          # old green CI run, or an intermediate commit of a fast merge
-          # train, would otherwise deploy OLD code over newer code. Skipping
-          # here is deliberate policy: production is "latest green main",
-          # not "every green commit".
-          git fetch origin main
-          if [ "$(git rev-parse origin/main)" != "$SHA" ]; then
-            echo "sha $SHA is not the current tip of origin/main: skipping (stale re-run or superseded commit)."
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: pnpm/action-setup@v4
-        if: steps.tip.outputs.deploy == 'true'
-      - uses: actions/setup-node@v5
-        if: steps.tip.outputs.deploy == 'true'
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-        if: steps.tip.outputs.deploy == 'true'
-      # The Vite plugin builds the client and the Worker together; wrangler
-      # deploy then reads the built output.
-      - run: pnpm build
-        if: steps.tip.outputs.deploy == 'true'
-      - uses: cloudflare/wrangler-action@v3
-        if: steps.tip.outputs.deploy == 'true'
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
-          command: deploy
-
-  preview:
-    # PR previews (D10). Cloudflare's version preview URLs do not support
-    # Workers with Durable Objects, so each pull request deploys as its own
-    # Worker, jot-pr-<number>, on workers.dev. scripts/preview-config.mjs
-    # writes the exact config deployed: no routes, so it never touches
-    # jot.rovira.sh, and only its own Durable Object namespace, so preview
-    # notes never reach production. preview-cleanup.yml deletes it when the
-    # PR closes.
-    #
-    # Only pull requests from this repository: a fork's PR never gets a
-    # preview, and GitHub withholds the secrets from it anyway.
-    name: preview
-    needs: [static, test]
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == 'zurfyx/jot'
+  zizmor:
+    # Static analysis of the workflows and dependabot.yml (template injection,
+    # unpinned actions, excessive permissions, credential persistence). Findings
+    # fail the job and print in its log; nothing is uploaded, so the job needs
+    # no security-events permission.
+    name: zizmor
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # Only for the sticky preview comment.
-      pull-requests: write
-    # Shared with preview-cleanup.yml, which cancels a deploy in flight. Never
-    # cancelled from here, so a deploy cannot cancel the cleanup; superseded
-    # runs are already cancelled by the workflow's own concurrency.
-    concurrency:
-      group: preview-${{ github.event.pull_request.number }}
-      cancel-in-progress: false
-    env:
-      PR: ${{ github.event.pull_request.number }}
-      WORKER: jot-pr-${{ github.event.pull_request.number }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Check the run is for the PR's current head
-        id: current
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          # A run that finishes after the PR closed would redeploy a Worker the
-          # cleanup already deleted, and a re-run of an older commit would
-          # overwrite the preview of a newer one. Both skip.
-          read -r state head < <(gh pr view "$PR" --json state,headRefOid --jq '"\(.state) \(.headRefOid)"')
-          if [ "$state" != OPEN ]; then
-            echo "PR #$PR is $state: skipping."
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-          elif [ "$head" != "$HEAD_SHA" ]; then
-            echo "PR #$PR is now at $head, not $HEAD_SHA: skipping."
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/checkout@v5
-        if: steps.current.outputs.deploy == 'true'
-      - uses: pnpm/action-setup@v4
-        if: steps.current.outputs.deploy == 'true'
-      - uses: actions/setup-node@v5
-        if: steps.current.outputs.deploy == 'true'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-        if: steps.current.outputs.deploy == 'true'
-      # The Vite plugin resolves the wrangler environment at build time and
-      # writes it into dist/jot/wrangler.json.
-      - run: pnpm build
-        if: steps.current.outputs.deploy == 'true'
-        env:
-          CLOUDFLARE_ENV: preview
-      # Rebuilds the deployed config from constants and refuses any binding,
-      # route or migration a preview must not have (D10).
-      - run: node scripts/preview-config.mjs dist/jot/wrangler.json "$WORKER"
-        if: steps.current.outputs.deploy == 'true'
-      - uses: cloudflare/wrangler-action@v3
-        id: deploy
-        if: steps.current.outputs.deploy == 'true'
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
-          command: deploy --config dist/jot/wrangler.preview.json --name ${{ env.WORKER }}
-      - name: Comment the preview URL
-        if: steps.current.outputs.deploy == 'true'
-        env:
-          URL: ${{ steps.deploy.outputs.deployment-url }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          if [ -z "$URL" ]; then
-            echo "wrangler printed no deployment URL." >&2
-            exit 1
-          fi
-          body="<!-- jot-preview -->
-          **Preview:** $URL
-
-          Worker \`$WORKER\`, built from $HEAD_SHA merged into \`main\`. Its notes live in their own Durable Object namespace, apart from production. Deleted when this PR closes."
-          id=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- jot-preview -->"))) | .id' | head -n1)
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$GH_REPO/issues/comments/$id" -f body="$body" > /dev/null
-          else
-            gh pr comment "$PR" --body "$body"
-          fi
-          echo "Preview: $URL" >> "$GITHUB_STEP_SUMMARY"
+          advanced-security: false
+          persona: pedantic
+          # zizmor itself, pinned like the actions; bump it with the action.
+          version: 1.31.1
