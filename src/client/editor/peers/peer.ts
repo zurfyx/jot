@@ -24,7 +24,7 @@ import { applyAwarenessUpdate, Awareness, encodeAwarenessUpdate } from '@y/proto
 import * as Y from '@y/y';
 import { configExtension, defineExtension, type LexicalEditorWithDispose } from 'lexical';
 
-import { type PersonKind, SEEN_REFRESH_MS, writeEntry } from '../blame/registry';
+import { type PersonKind, REGISTRY_ORIGIN, SEEN_REFRESH_MS, writeEntry } from '../blame/registry';
 import { jotEditorExtension } from '../extensions';
 
 /** Who a peer is: its registry entry and its presence. */
@@ -61,17 +61,6 @@ export interface PeerHost {
   writable?: () => boolean;
 }
 
-export interface InTabPeerOptions {
-  /**
-   * The Yjs client id to write as, instead of a new one: the id this peer had
-   * on this note before (a reload), so the registry keeps one entry for it.
-   * Only safe when no other live document uses it, and when the note already
-   * holds everything that id wrote (it does after the first sync: the peer
-   * continues that id's clocks from the copy).
-   */
-  clientID?: number;
-}
-
 export interface InTabPeer {
   readonly person: PeerPerson;
   readonly doc: Y.Doc;
@@ -90,7 +79,11 @@ export interface InTabPeer {
   edit(fn: () => void): boolean;
   /** Publishes the peer's current selection as its caret (null hides it). */
   publishCursor(): void;
-  /** Refreshes the registry entry's last-seen time (edits do, at most every ten minutes). */
+  /**
+   * Writes the registry entry now. Edits write it on the first change and
+   * refresh it at most every ten minutes, so a peer that only shows its caret
+   * adds nothing to the note.
+   */
   touch(): void;
   /** Leaves: its presence is removed everywhere, its writes stay. */
   dispose(): void;
@@ -101,13 +94,12 @@ const FROM_HOST = Symbol('jot-peer-from-host');
 
 /**
  * Joins `host` with a new peer. The host's document must already hold the
- * note (after the first sync): the peer starts from a copy of it.
+ * note (after the first sync): the peer starts from a copy of it. Every peer
+ * gets a new Yjs client id, never a reused one: a client id writing against a
+ * stale copy would mint items whose ids already exist elsewhere. Blame groups
+ * a person's client ids by their stable person id instead.
  */
-export function createInTabPeer(
-  host: PeerHost,
-  person: PeerPerson,
-  options: InTabPeerOptions = {},
-): InTabPeer {
+export function createInTabPeer(host: PeerHost, person: PeerPerson): InTabPeer {
   const doc = new Y.Doc();
   // The origin of the peer's updates applied to the host: unique per peer, so
   // each peer only skips its own echo.
@@ -115,23 +107,12 @@ export function createInTabPeer(
 
   // Start from the note as it is, before the binding reads it.
   Y.applyUpdate(doc, Y.encodeStateAsUpdate(host.doc), FROM_HOST);
-  // A reused id is set after the copy, so its clocks continue from what the
-  // note holds (Yjs would replace an id a remote update writes to).
-  const { clientID } = options;
-  if (
-    clientID !== undefined &&
-    Number.isSafeInteger(clientID) &&
-    clientID > 0 &&
-    clientID !== host.doc.clientID
-  ) {
-    doc.clientID = clientID;
-  }
 
   let touchedAs = -1;
   const onHostUpdate = (update: Uint8Array, origin: unknown) => {
     if (origin !== fromPeer) {
       Y.applyUpdate(doc, update, FROM_HOST);
-      if (doc.clientID !== touchedAs && touchedAs !== -1) {
+      if (touchedAs !== -1 && doc.clientID !== touchedAs) {
         // Yjs gave the peer a new id (an update wrote to its old one): name it.
         touch();
       }
@@ -178,7 +159,20 @@ export function createInTabPeer(
       // Blame without a name is still blame.
     }
   }
-  touch();
+
+  // Whether the peer's own transactions changed the note (an insert or a
+  // deletion), the way the registry tracks people.
+  let changed = false;
+  const onPeerTransaction = (tr: Y.Transaction) => {
+    if (
+      tr.local &&
+      tr.origin !== REGISTRY_ORIGIN &&
+      (tr.insertSet.clients.has(doc.clientID) || !tr.deleteSet.isEmpty())
+    ) {
+      changed = true;
+    }
+  };
+  doc.on('afterTransaction', onPeerTransaction);
 
   const hostWritable = (): boolean => {
     if (host.writable !== undefined) {
@@ -194,10 +188,6 @@ export function createInTabPeer(
   // Presence: the peer's own Awareness, relayed into the host's. Every state
   // change (and the 15 s renewal) is applied there, and the provider sends it.
   const awareness = new Awareness(doc);
-  // Clocks start at the time, not at 0: a reused client id's earlier states
-  // (and the relay's removal of them) carry clocks every other client keeps,
-  // and a lower clock would be refused as old.
-  awareness.meta.set(doc.clientID, { clock: Date.now(), lastUpdated: Date.now() });
   const relay = ({
     added,
     updated,
@@ -254,6 +244,7 @@ export function createInTabPeer(
         return false;
       }
       let ok = true;
+      changed = false;
       try {
         editor.update(
           () => {
@@ -267,7 +258,7 @@ export function createInTabPeer(
           { discrete: true },
         );
         publishCursor();
-        if (ok && Date.now() - touchedAt >= SEEN_REFRESH_MS) {
+        if (changed && (touchedAs !== doc.clientID || Date.now() - touchedAt >= SEEN_REFRESH_MS)) {
           touch();
         }
       } catch (error) {
@@ -289,6 +280,7 @@ export function createInTabPeer(
       awareness.off('update', relay);
       host.doc.off('update', onHostUpdate);
       doc.off('update', onPeerUpdate);
+      doc.off('afterTransaction', onPeerTransaction);
       editor.dispose();
       doc.destroy();
     },

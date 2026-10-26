@@ -5,12 +5,9 @@ import { $getRoot, $getSelection, $isRangeSelection } from 'lexical';
 import {
   adoptExample,
   type ExampleFlag,
-  type ExamplePeerIds,
   isExampleCreator,
   readExampleFlag,
-  readExamplePeers,
   writeExampleFlag,
-  writeExamplePeers,
 } from '../../examples';
 import { blameState } from '../blame/state';
 import { createInTabPeer, type PeerPerson } from '../peers/peer';
@@ -56,8 +53,6 @@ export interface ExampleDeps {
   isCreator(id: string): boolean;
   readFlag(id: string): ExampleFlag | null;
   writeFlag(id: string, flag: ExampleFlag): void;
-  readPeers(id: string): ExamplePeerIds;
-  writePeers(id: string, ids: ExamplePeerIds): void;
   /** Moves the address to the note's link. */
   adopt(id: string): void;
   /**
@@ -87,8 +82,6 @@ const pageDeps: ExampleDeps = {
   isCreator: isExampleCreator,
   readFlag: readExampleFlag,
   writeFlag: writeExampleFlag,
-  readPeers: readExamplePeers,
-  writePeers: writeExamplePeers,
   adopt: adoptExample,
   lock: webLock,
   instant: () =>
@@ -224,13 +217,10 @@ export function createExampleState(
       connection: session.connection,
       writable: () => writable.peek(),
     };
-    const known = deps.readPeers(id);
-    const ana = createInTabPeer(host, ANA, { clientID: known[ANA.personId] });
-    const ai = createInTabPeer(host, JOT_AI_DEMO, { clientID: known[JOT_AI_DEMO.personId] });
-    deps.writePeers(id, {
-      [ANA.personId]: ana.doc.clientID,
-      [JOT_AI_DEMO.personId]: ai.doc.clientID,
-    });
+    // New client ids each time (never reused); blame groups them by person
+    // id, and an idle peer writes no registry entry.
+    const ana = createInTabPeer(host, ANA);
+    const ai = createInTabPeer(host, JOT_AI_DEMO);
     const you = createYouTyper(session, () => writable.peek());
     cast = {
       ana,

@@ -42,13 +42,13 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   presence and caret (resolvable by the page's binding) into the note's awareness, comes
   back after the provider drops remote states on disconnect, stays visible to another
   client after the relay's removal of the page's states, writes nothing while the note is
-  read only or full (or its host says no), refreshes its last-seen time at most every ten
-  minutes, can keep its client id across a reload (one registry entry, clocks continued,
-  never the page's own id), removes its presence and its listener on dispose while its
+  read only or full (or its host says no), writes its registry entry on its first change and refreshes it at most every ten
+  minutes, gets a new client id every time it is re-created (only showing its caret writes
+  nothing), removes its presence and its listener on dispose while its
   writes stay, and never throws from an edit;
 - the example's controller: an empty note is seeded once, marked played, adopted and
   played; a note with content is never seeded; a played example brings the collaborators
-  back idle with the same client ids and no new registry entries; it waits for the first
+  back idle under new client ids, writing nothing to the note; it waits for the first
   sync and a writable note, checked again when the queued join runs; the script stops
   when the note turns full or read only, and Replay then does nothing; a duplicated tab
   stays out while the original holds the lock and takes over, idle, when it closes; a
@@ -143,8 +143,8 @@ Durable Objects, over real WebSockets.
   where the banner does not show; the script plays to the same content in both; blame is
   on with three people (You, Ana (demo), jot AI (demo)), and the other window's blame
   shows three too; under reduced motion it plays at once and Replay demo plays it once
-  more, not twice over; a reload brings the collaborators back idle with the same client
-  ids, without seeding or playing again; Start blank goes to `/new`, the page sends their
+  more, not twice over; a reload brings the collaborators back idle under new client ids,
+  without seeding or playing again; Start blank goes to `/new`, the page sends their
   removal itself before its socket closes, and the collaborators leave the note for the
   other window while the content stays; Copy link copies the note's link;
 - the ⌘K menu toggles the theme;

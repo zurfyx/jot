@@ -159,18 +159,19 @@ test('a reload keeps the demo collaborators, idle; Start blank leaves them', asy
     .poll(async () => (await caretNames(other)).filter((name) => name.endsWith('(demo)')))
     .toEqual(['Ana (demo)', 'jot AI (demo)']);
 
-  // The reload kept the collaborators' client ids (one registry entry each).
-  const demoIds = (name: string) =>
-    new Set(sent.filter((state) => state.name === name).map((state) => state.clientID));
-  expect(demoIds('Ana (demo)').size).toBe(1);
-  expect(demoIds('jot AI (demo)').size).toBe(1);
+  // The reload gave the collaborators new client ids (never reused).
+  const demoIds = (name: string) => [
+    ...new Set(sent.filter((state) => state.name === name).map((state) => state.clientID)),
+  ];
+  expect(demoIds('Ana (demo)')).toHaveLength(2);
+  expect(demoIds('jot AI (demo)')).toHaveLength(2);
 
   // Leaving the page stops the demo: its collaborators leave the note. They
   // say so themselves, before the page's socket closes.
   await page.getByTestId('example-banner').getByRole('link', { name: 'Start blank' }).click();
   await expect(page).toHaveURL(/\/new$/);
   for (const name of ['Ana (demo)', 'jot AI (demo)']) {
-    const [clientID] = demoIds(name);
+    const clientID = demoIds(name).at(-1);
     expect(sent.some((state) => state.clientID === clientID && state.removed)).toBe(true);
   }
   await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');

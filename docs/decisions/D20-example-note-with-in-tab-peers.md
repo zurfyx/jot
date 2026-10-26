@@ -38,9 +38,13 @@ a way to write into a note as its own author.
   tab copies sessionStorage, so it waits for the lock and takes over, idle, when the original
   closes. Ana checks the note is empty on her own copy, in the update that writes the plan,
   so a plan is never doubled. Other windows see their edits and carets through the relay. A
-  reload of that tab brings them back idle under the same client ids (kept in sessionStorage),
-  so the registry does not grow per reload; leaving the page stops them and removes their
+  reload of that tab brings them back idle; leaving the page stops them and removes their
   presence.
+- **Every peer instance gets a new Yjs client id,** never a reused one: a reused id writing
+  against a stale copy (a duplicated tab that went offline before taking over) would create
+  items whose ids already exist. Blame groups a person's client ids by the stable person id
+  (`demo-ana`, `demo-jot-ai`), and a peer writes its registry entry only on its first
+  change, so a reload that only brings the carets back adds nothing to the note.
 - **Peers write only while the note takes edits:** binding active and not full. A note that
   turns read only or full stops the script, and Replay demo waits until it takes edits.
 - **Blame is on** when the example opens, since several authors are the point; the banner

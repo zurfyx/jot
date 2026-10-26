@@ -15,7 +15,7 @@ import {
 } from 'lexical';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ExampleFlag, ExamplePeerIds } from '../../examples';
+import type { ExampleFlag } from '../../examples';
 import { readRegistry } from '../blame/registry';
 import { jotEditorExtension } from '../extensions';
 import type { NoteSession } from '../session';
@@ -101,20 +101,17 @@ function fakeLocks() {
 
 function fakeDeps(overrides: Partial<ExampleDeps> = {}) {
   const flags = new Map<string, ExampleFlag>();
-  const peers = new Map<string, ExamplePeerIds>();
   const adopted: string[] = [];
   const deps: ExampleDeps = {
     isCreator: () => true,
     readFlag: (id) => flags.get(id) ?? 'new',
     writeFlag: (id, flag) => flags.set(id, flag),
-    readPeers: (id) => peers.get(id) ?? {},
-    writePeers: (id, ids) => peers.set(id, ids),
     adopt: (id) => adopted.push(id),
     lock: fakeLocks(),
     instant: () => true,
     ...overrides,
   };
-  return { deps, flags, peers, adopted };
+  return { deps, flags, adopted };
 }
 
 /** Lets the queued join and the instant script run. */
@@ -170,15 +167,20 @@ describe('the example controller', () => {
     expect(text()).toBe('Already here');
   });
 
-  it('brings the collaborators back idle on a played example, with the same client ids', async () => {
+  it('brings the collaborators back idle on a played example, writing nothing', async () => {
     const { session, asNote, text } = fakeSession();
-    const { deps, flags, peers } = fakeDeps();
+    const { deps, flags } = fakeDeps();
     const first = createExampleState(asNote, deps);
     const stopFirst = first.start();
     await settle();
     const played = text();
-    const ids = peers.get(session.noteId.value!);
+    const demoIds = () =>
+      [...session.awareness.getStates().keys()].filter(
+        (clientID) => clientID !== session.doc.clientID,
+      );
+    const ids = demoIds();
     const entries = readRegistry(session.doc).clients.size;
+    const state = Y.encodeStateVector(session.doc);
     stopFirst();
 
     expect(flags.get(session.noteId.value!)).toBe('played');
@@ -187,9 +189,12 @@ describe('the example controller', () => {
     await settle();
     expect(demoNames(session)).toEqual(['Ana (demo)', 'jot AI (demo)']);
     expect(text()).toBe(played);
-    expect(peers.get(session.noteId.value!)).toEqual(ids);
-    // Idle carets moved, but no new registry entries.
+    // New client ids, never reused; idle carets add nothing to the note.
+    for (const clientID of demoIds()) {
+      expect(ids).not.toContain(clientID);
+    }
     expect(readRegistry(session.doc).clients.size).toBe(entries);
+    expect(Y.encodeStateVector(session.doc)).toEqual(state);
   });
 
   it('waits for the first sync and a writable note, rechecked when the queued join runs', async () => {

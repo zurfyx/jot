@@ -36,39 +36,6 @@ export function writeExampleFlag(id: string, flag: ExampleFlag): void {
   }
 }
 
-/** The Yjs client ids of an example's demo collaborators in this tab, by name. */
-export type ExamplePeerIds = Partial<Record<string, number>>;
-
-/**
- * Reused after a reload, so the registry keeps one entry per collaborator
- * instead of one per reload.
- */
-export function readExamplePeers(id: string): ExamplePeerIds {
-  try {
-    const value: unknown = JSON.parse(sessionStorage.getItem(`${FLAG_PREFIX}${id}:peers`) ?? '{}');
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return {};
-    }
-    const ids: ExamplePeerIds = {};
-    for (const [name, clientID] of Object.entries(value as Record<string, unknown>)) {
-      if (typeof clientID === 'number' && Number.isSafeInteger(clientID) && clientID > 0) {
-        ids[name] = clientID;
-      }
-    }
-    return ids;
-  } catch {
-    return {};
-  }
-}
-
-export function writeExamplePeers(id: string, ids: ExamplePeerIds): void {
-  try {
-    sessionStorage.setItem(`${FLAG_PREFIX}${id}:peers`, JSON.stringify(ids));
-  } catch {
-    // The next reload writes as new clients.
-  }
-}
-
 /** The example `/new?example` opens, until its page moves to `/n/<id>`. */
 let pending: string | null = null;
 /** Pages whose session storage refused the flag still know their example. */

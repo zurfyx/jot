@@ -58,8 +58,8 @@ afterEach(() => {
 function setup() {
   const host = createHost();
   const peers: InTabPeer[] = [];
-  const join = (person: PeerPerson, clientID?: number) => {
-    const peer = createInTabPeer(host, person, { clientID });
+  const join = (person: PeerPerson) => {
+    const peer = createInTabPeer(host, person);
     peers.push(peer);
     return peer;
   };
@@ -88,13 +88,17 @@ describe('in-tab peers', () => {
     expect(ana.editor.getEditorState().read(() => $getRoot().getTextContent())).toBe('Hello');
 
     let hostUpdates = 0;
+    let peerUpdates = 0;
     host.doc.on('update', () => hostUpdates++);
+    ana.doc.on('update', () => peerUpdates++);
     ana.edit(() => {
       $getRoot().getFirstChildOrThrow().selectEnd().insertText(', world');
     });
     expect(hostText(host)).toBe('Hello, world');
-    // One update for the peer's write: nothing bounced back.
-    expect(hostUpdates).toBe(1);
+    // The text, then the peer's registry entry: each reaches the host once,
+    // and nothing bounces back into the peer.
+    expect(peerUpdates).toBe(2);
+    expect(hostUpdates).toBe(2);
 
     host.editor.update(() => $getRoot().getLastChildOrThrow().selectEnd().insertText('!'), {
       discrete: true,
@@ -112,6 +116,9 @@ describe('in-tab peers', () => {
     expect(ana.doc.clientID).not.toBe(ai.doc.clientID);
     ai.edit(() => {
       $getRoot().getFirstChildOrThrow().selectEnd().insertText('Drafted');
+    });
+    ana.edit(() => {
+      $getRoot().getFirstChildOrThrow().selectStart().insertText('Ana: ');
     });
     const { clients, people } = readRegistry(host.doc);
     expect(clients.get(ana.doc.clientID)).toBe('demo-ana');
@@ -235,11 +242,14 @@ describe('in-tab peers', () => {
     const { host, join } = setup();
     const ana = join(ANA);
     const seen = () => readRegistry(host.doc).people.get('demo-ana')?.seen;
-    const start = seen();
     const write = () =>
       ana.edit(() => {
         $getRoot().getFirstChildOrThrow().selectEnd().insertText('x');
       });
+    expect(seen()).toBeUndefined();
+    write();
+    const start = seen();
+    expect(start).toBe(1_000_000_000);
     vi.setSystemTime(1_000_000_000_000 + 60_000);
     write();
     expect(seen()).toBe(start);
@@ -248,29 +258,36 @@ describe('in-tab peers', () => {
     expect(seen()).toBe(start! + Math.floor((SEEN_REFRESH_MS + 1000) / 1000));
   });
 
-  it('can keep their client id across a reload: one registry entry, clocks continued', () => {
+  it('get a new client id every time, and a registry entry only once they edit', () => {
     const { host, join } = setup();
     const first = join(ANA);
-    const id = first.doc.clientID;
     first.edit(() => {
       $getRoot().getFirstChildOrThrow().selectEnd().insertText('one');
     });
+    const firstId = first.doc.clientID;
     first.dispose();
-    const again = join(ANA, id);
-    expect(again.doc.clientID).toBe(id);
+
+    // A re-created peer (a reload) never reuses the id.
+    const again = join(ANA);
+    expect(again.doc.clientID).not.toBe(firstId);
+    expect(again.doc.clientID).not.toBe(host.doc.clientID);
+    // Only showing its caret writes nothing to the note.
+    const before = Y.encodeStateVector(host.doc);
+    again.edit(() => {
+      $getRoot().getFirstChildOrThrow().selectEnd();
+    });
+    expect(Y.encodeStateVector(host.doc)).toEqual(before);
+    expect(readRegistry(host.doc).clients.has(again.doc.clientID)).toBe(false);
+
+    // Its first change names it, under the same person as before.
     again.edit(() => {
       $getRoot().getFirstChildOrThrow().selectEnd().insertText(' two');
     });
     expect(hostText(host)).toBe('one two');
-    const { clients } = readRegistry(host.doc);
-    expect([...clients.values()].filter((person) => person === 'demo-ana')).toHaveLength(1);
-    // A fresh document built from the note agrees: nothing was overwritten.
-    const copy = new Y.Doc();
-    Y.applyUpdate(copy, Y.encodeStateAsUpdate(host.doc));
-    expect(Y.encodeStateVector(copy)).toEqual(Y.encodeStateVector(host.doc));
-    // The page's own id is never taken.
-    const clash = join(AI, host.doc.clientID);
-    expect(clash.doc.clientID).not.toBe(host.doc.clientID);
+    const { clients, people } = readRegistry(host.doc);
+    expect(clients.get(firstId)).toBe('demo-ana');
+    expect(clients.get(again.doc.clientID)).toBe('demo-ana');
+    expect(people.size).toBe(1);
   });
 
   it('never throw from an edit', () => {

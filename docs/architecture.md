@@ -178,12 +178,12 @@ Work offline, edits waiting and "merged".
   (`synced: true`, no undo); `edit(fn)` runs a discrete update on it and publishes its
   selection as its caret, and writes nothing (returning false) unless the note takes edits:
   the host's `writable()`, or its `status` `active` and `cap` not `full`, and the peer's own
-  binding active. It writes its registry entry (kind `demo` or `ai`, `askedBy` for AI) under
-  its own client id, so blame names it, and refreshes its last-seen time from edits at most
-  every ten minutes. A caller may pass the client id the peer had before on this note (a
-  reload), set after the copy so its clocks continue, so the registry keeps one entry. Its
-  own `Awareness`, with clocks starting at the time so a reused id is never refused as old,
-  is relayed into the note's (`applyAwarenessUpdate`), which the provider sends like any
+  binding active. Every peer gets a new client id, never a reused one (an id writing
+  against a stale copy would mint duplicate items); blame groups a person's ids by person
+  id. Like a person, it writes its registry entry (kind `demo` or `ai`, `askedBy` for AI)
+  on its first change, an insert or a deletion, and refreshes it at most every ten
+  minutes, so a peer that only shows its caret adds nothing to the note. Its own
+  `Awareness` is relayed into the note's (`applyAwarenessUpdate`), which the provider sends like any
   state; when the note reconnects it announces itself two clocks on, past the removal the
   relay sent for the page's lost socket, and `dispose()` removes its presence everywhere
   while its writes stay. A live peer mirrors every change to the note, keystrokes
@@ -196,8 +196,7 @@ Work offline, edits waiting and "merged".
   it on the creating tab while it holds the Web Lock `jot-example:<id>` (a duplicated tab
   copies the sessionStorage flag, so it waits, and takes over when the original closes),
   after the first sync and while the note takes edits, checked again when the queued join
-  runs: Ana and jot AI join (with this tab's earlier client ids for the note, from
-  sessionStorage), Ana seeds the note if her own copy of it is empty, blame turns on, the
+  runs: Ana and jot AI join, Ana seeds the note if her own copy of it is empty, blame turns on, the
   address moves to `/n/<id>`, and the script plays (a reload of that tab brings them back
   idle). A note that turns read only or full stops the script, and Replay demo is disabled
   until it takes edits again. "You" type through the page's own
