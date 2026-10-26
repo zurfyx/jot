@@ -6,12 +6,10 @@ type Tone = 'ok' | 'muted' | 'warn' | 'bad';
 
 /** What the pill says, and in which tone (the dot repeats it). */
 export function useNoteStatus(session: NoteSession): { label: string; tone: Tone } {
-  const noteId = useSignal(session.noteId);
   const status = useSignal(session.status);
   const connection = useSignal(session.connection);
   const everSynced = useSignal(session.everSynced);
   const confirmed = useSignal(session.confirmed);
-  const hasLocalContent = useSignal(session.hasLocalContent);
   const cap = useSignal(session.cap);
   const bytes = useSignal(session.bytes);
   const workOffline = useSignal(session.workOffline);
@@ -26,10 +24,7 @@ export function useNoteStatus(session: NoteSession): { label: string; tone: Tone
   if (cap === 'full') {
     return { label: `Full · ${size}`, tone: 'bad' };
   }
-  if (noteId === null) {
-    return { label: 'Only on this device', tone: near };
-  }
-  if (workOffline || (connection === 'offline' && (everSynced || hasLocalContent))) {
+  if (workOffline || (connection === 'offline' && everSynced)) {
     return { label: `Offline · ${editsWaiting(pending)}`, tone: 'muted' };
   }
   if (!confirmed && pending > 0) {
@@ -46,15 +41,13 @@ export function useNoteStatus(session: NoteSession): { label: string; tone: Tone
 }
 
 /**
- * The note's state and Yjs size. On a shared note, a click toggles Work
- * offline; a Reconnect button sits beside it while offline is on.
+ * The note's state and Yjs size. A click toggles Work offline; a Reconnect button sits beside it while offline is on.
  */
 export function StatusPill({ session }: { session: NoteSession }) {
   const { label, tone } = useNoteStatus(session);
-  const noteId = useSignal(session.noteId);
   const status = useSignal(session.status);
   const workOffline = useSignal(session.workOffline);
-  const canToggle = noteId !== null && status !== 'readonly';
+  const canToggle = status !== 'readonly';
 
   return (
     <>

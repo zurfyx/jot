@@ -49,7 +49,7 @@ function fakeSession(id = 'AAAAAAAAAAAAAAAAAAAAAA', from: Y.Doc | null = null) {
   const { binding } = getExtensionDependencyFromEditor(editor, YCollabExtension).output;
   const awareness = new Awareness(doc);
   const session = {
-    noteId: signal<string | null>(id),
+    noteId: id,
     doc,
     awareness,
     editor,
@@ -143,8 +143,8 @@ describe('the example controller', () => {
     expect(plans(text())).toBe(1);
     expect(text()).toContain('Afternoon: hack session');
     expect(text()).toContain(EXAMPLE.anaTodo);
-    expect(flags.get(session.noteId.value!)).toBe('played');
-    expect(adopted).toEqual([session.noteId.value]);
+    expect(flags.get(session.noteId)).toBe('played');
+    expect(adopted).toEqual([session.noteId]);
     expect(demoNames(session)).toEqual(['Ana (demo)', 'jot AI (demo)']);
     stop();
     expect(demoNames(session)).toEqual([]);
@@ -183,7 +183,7 @@ describe('the example controller', () => {
     const state = Y.encodeStateVector(session.doc);
     stopFirst();
 
-    expect(flags.get(session.noteId.value!)).toBe('played');
+    expect(flags.get(session.noteId)).toBe('played');
     const again = createExampleState(asNote, deps);
     cleanups.push(again.start());
     await settle();

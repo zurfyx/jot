@@ -115,7 +115,6 @@ function MoreMenu({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const bytes = useSignal(session.bytes);
-  const noteId = useSignal(session.noteId);
   const status = useSignal(session.status);
   const workOffline = useSignal(session.workOffline);
   const theme = useTheme();
@@ -138,7 +137,7 @@ function MoreMenu({
         icon="offline"
         label="Work offline"
         checked={workOffline}
-        disabled={noteId === null || status === 'readonly'}
+        disabled={status === 'readonly'}
         onChange={(on) => session.setWorkOffline(on)}
       />
       <MenuSeparator />
@@ -156,7 +155,7 @@ function MoreMenu({
         label="New note"
         onSelect={() => {
           close();
-          startNewNote(session);
+          startNewNote();
         }}
       />
       <MenuToggle

@@ -2,13 +2,6 @@ import type { Page } from '@playwright/test';
 
 const NOTE_SOCKET = /\/api\/n\//;
 
-/** The note's socket opens but nothing reaches the server: no sync, ever. */
-export async function neverConnect(page: Page): Promise<void> {
-  await page.routeWebSocket(NOTE_SOCKET, () => {
-    // Not connecting to the server leaves the page with a silent socket.
-  });
-}
-
 /**
  * Holds the page's outgoing sync step 2 and updates (its content) while
  * `hold` is on, and lets everything else through, so the server syncs the

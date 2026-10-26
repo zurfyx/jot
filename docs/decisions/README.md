@@ -8,12 +8,13 @@ decision gets a row here and its own file in the same commit.
 
 ## Status legend
 
-| Status     | Meaning                                                                |
-| ---------- | ---------------------------------------------------------------------- |
-| `DECIDED`  | Ratified. A decision file exists. Do not re-open without new evidence. |
-| `PROPOSED` | Recommendation on the table, awaiting the owner's ratification.        |
-| `OPEN`     | Genuinely undecided; needs research or the owner's call.               |
-| `DEFERRED` | Deliberately not decided until something forces it.                    |
+| Status       | Meaning                                                                  |
+| ------------ | ------------------------------------------------------------------------ |
+| `DECIDED`    | Ratified. A decision file exists. Do not re-open without new evidence.   |
+| `PROPOSED`   | Recommendation on the table, awaiting the owner's ratification.          |
+| `OPEN`       | Genuinely undecided; needs research or the owner's call.                 |
+| `DEFERRED`   | Deliberately not decided until something forces it.                      |
+| `SUPERSEDED` | Replaced by a later decision, named in its file. Kept for its reasoning. |
 
 ## Blast radius
 
@@ -44,7 +45,7 @@ How expensive is this to get wrong?
 | [D06](D06-ninety-day-expiry.md)                  | 90-day expiry without visits                                            | MED    | `DECIDED` |
 | [D08](D08-pr-workflow.md)                        | PR workflow: protected main, required checks, squash merge              | MED    | `DECIDED` |
 | [D10](D10-ci-topology-and-deploy-on-green.md)    | CI topology, deploy-on-green, and each PR as its own preview Worker     | MED    | `DECIDED` |
-| [D18](D18-local-drafts.md)                       | An unshared note lives only in this browser; Share gives it a link      | MED    | `DECIDED` |
+| [D23](D23-new-notes-are-shared-at-once.md)       | A new note is shared from its first moment; `/new` opens a fresh link   | MED    | `DECIDED` |
 | [D19](D19-blame-from-yjs-attributions.md)        | Blame from Yjs 14 attributions in the browser, with a people registry   | MED    | `DECIDED` |
 | [D20](D20-example-note-with-in-tab-peers.md)     | The example is a real shared note, edited by in-tab Yjs peers           | MED    | `DECIDED` |
 | [D21](D21-ask-ai-with-chromes-built-in-model.md) | Ask AI runs Chrome's built-in model; jot AI writes as an in-tab peer    | MED    | `DECIDED` |
@@ -56,6 +57,12 @@ How expensive is this to get wrong?
 | [D15](D15-no-public-note.md)                     | No public note: abuse on a personal domain, and anyone can fill it      | LOW    | `DECIDED` |
 | [D17](D17-notes-out-of-search-engines.md)        | Notes and the API are `noindex, nofollow` and disallowed in robots.txt  | LOW    | `DECIDED` |
 | [D22](D22-docs-in-the-app.md)                    | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`   | LOW    | `DECIDED` |
+
+## Superseded
+
+| ID                         | Decision                                                           | Superseded by |
+| -------------------------- | ------------------------------------------------------------------ | ------------- |
+| [D18](D18-local-drafts.md) | An unshared note lives only in this browser; Share gives it a link | D23           |
 
 ## Tier 3: open, or deferred until something forces it
 

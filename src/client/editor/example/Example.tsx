@@ -1,7 +1,6 @@
 import { type MouseEvent, useLayoutEffect } from 'react';
 
-import { navigate } from '../../router';
-import { copyNoteLink, linkCopied } from '../actions';
+import { copyNoteLink, linkCopied, startNewNote } from '../actions';
 import { MenuItem } from '../menu';
 import type { NoteSession } from '../session';
 import { useSignal } from '../useSignal';
@@ -30,7 +29,7 @@ export function ExampleBanner({ session }: { session: NoteSession }) {
       return;
     }
     event.preventDefault();
-    navigate('/new');
+    startNewNote();
   };
   return (
     <div className="example-banner" role="note" data-testid="example-banner">

@@ -265,8 +265,8 @@ export function createExampleState(
       play(true);
     },
     start() {
-      const id = session.noteId.peek();
-      if (id === null || !deps.isCreator(id)) {
+      const id = session.noteId;
+      if (!deps.isCreator(id)) {
         return () => undefined;
       }
       let stopped = false;

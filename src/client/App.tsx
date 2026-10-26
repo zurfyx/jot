@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
-import { useDraftPage } from './drafts';
 import { useExampleId } from './examples';
 import { Landing } from './landing/Landing';
 import { loadNotePage } from './loadNote';
+import { newNotePath } from './notes';
 import { matchRoute, redirect, useLocationPath } from './router';
 
 // The editor, Lexical and Yjs load only on a note page, so the landing page stays light.
@@ -14,7 +14,6 @@ const DocsPage = lazy(() => import('./docs/DocsPage'));
 
 export function App() {
   const route = matchRoute(useLocationPath());
-  const draft = useDraftPage();
   const exampleId = useExampleId();
   const invalid = route.name === 'missing' || (route.name === 'note' && !isNoteId(route.id));
 
@@ -26,13 +25,17 @@ export function App() {
     }
   }, [invalid]);
 
-  // A draft keeps its editor when Share moves it to /n/<id> (D18).
-  if (route.name === 'new' || (route.name === 'note' && route.id === draft.sharedAs)) {
-    return (
-      <Suspense fallback={null}>
-        <NotePage key={draft.key} id={null} />
-      </Suspense>
-    );
+  useEffect(() => {
+    // `/new` (old links, a modified click on a start link) opens a fresh
+    // shared note (D23). Checked against the address itself, so Strict
+    // Mode's second run doesn't start a second note.
+    if (route.name === 'new' && matchRoute(window.location.pathname).name === 'new') {
+      redirect(newNotePath());
+    }
+  }, [route.name]);
+
+  if (route.name === 'new') {
+    return null;
   }
   // The example is a shared note from the start (D20). Its page keeps the
   // same key, so the same editor, when it moves to /n/<id>.

@@ -45,7 +45,7 @@ const STEPS = [
   {
     who: 'you',
     title: '1 · Start a note',
-    text: "It's yours, on this device, until you share it.",
+    text: 'It has its own link from the first keystroke.',
   },
   {
     who: 'ana',
@@ -79,7 +79,7 @@ export function TwoWindows() {
             <i />
             <i />
             <i />
-            <span>jot.rovira.sh</span>
+            <span>jot.rovira.sh/n/k3Jd9xQ2…</span>
           </div>
           <div className="window-body">
             <h4>
@@ -100,7 +100,7 @@ export function TwoWindows() {
                 )}
               </>
             ) : (
-              <p className="muted">Only on this device.</p>
+              <p className="muted">Anyone with the link can edit.</p>
             )}
           </div>
         </div>

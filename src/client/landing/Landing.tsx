@@ -7,7 +7,8 @@ import { Fan } from './Fan';
 import { JoinField } from './JoinField';
 import { classifyTarget, landingKeyAction, startShortcutLabel } from './keys';
 import './landing.css';
-import { EXAMPLE_PATH, NEW_NOTE_PATH, openNote, plainClick } from './open';
+import { NEW_NOTE_PATH, newNotePath } from '../notes';
+import { EXAMPLE_PATH, openNote, plainClick } from './open';
 import { TwoWindows } from './TwoWindows';
 
 const GITHUB_URL = 'https://github.com/zurfyx/jot';
@@ -31,7 +32,7 @@ function platform(): string {
 export function Landing() {
   const newCard = useRef<HTMLAnchorElement>(null);
   const exampleCard = useRef<HTMLAnchorElement>(null);
-  const startNew = () => void openNote(NEW_NOTE_PATH, newCard.current);
+  const startNew = () => void openNote(newNotePath, newCard.current);
   const openExample = () => void openNote(EXAMPLE_PATH, exampleCard.current);
   const shortcut = startShortcutLabel(platform());
 
@@ -59,7 +60,7 @@ export function Landing() {
       });
       if (action === 'start') {
         event.preventDefault();
-        void openNote(NEW_NOTE_PATH, newCard.current);
+        void openNote(newNotePath, newCard.current);
       }
     };
     window.addEventListener('keydown', onKeyDown);

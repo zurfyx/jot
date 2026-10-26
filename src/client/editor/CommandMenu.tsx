@@ -23,7 +23,7 @@ export function CommandMenu({ session }: { session: NoteSession }) {
 
   const commands = useMemo<Command[]>(
     () => [
-      { id: 'new', label: 'New note', run: () => startNewNote(session) },
+      { id: 'new', label: 'New note', run: startNewNote },
       { id: 'copy', label: 'Copy link', run: () => void copyNoteLink(session) },
       { id: 'theme', label: 'Toggle theme', run: toggleTheme },
       {

@@ -3,14 +3,16 @@ import type { Page } from '@playwright/test';
 import { expect, freshNoteId, test } from './helpers';
 
 /**
- * The landing page's start actions open the local draft at `/new` (D18); the
- * example ones a new shared example note, which moves to `/n/<id>` (D20).
+ * The landing page's start actions open a fresh shared note at `/n/<id>`
+ * (D23); the example ones a new shared example note, which moves to
+ * `/n/<id>` once seeded (D20).
  */
-async function expectNotePage(page: Page, kind: 'draft' | 'example' = 'draft') {
+async function expectNotePage(page: Page, kind: 'new' | 'example' = 'new') {
   await expect(page.getByTestId('editor')).toBeVisible({ timeout: 15_000 });
-  if (kind === 'draft') {
-    await expect(page).toHaveURL(/\/new$/);
-    await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  if (kind === 'new') {
+    await expect(page).toHaveURL(/\/n\/[\w-]{22}$/);
+    await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+    await expect(page.getByTestId('example-banner')).toHaveCount(0);
   } else {
     await expect(page).toHaveURL(/\/n\/[\w-]{22}$/, { timeout: 15_000 });
     await expect(page.getByTestId('example-banner')).toBeVisible();
@@ -103,7 +105,7 @@ test('any printable key starts a new note, except inside the paste field', async
   await expectNotePage(page);
 });
 
-/** Records every client-side navigation, so a test can tell `/new` from `/new?example`. */
+/** Records every client-side navigation, so a test can tell a new note from `/new?example`. */
 async function recordPushes(page: Page) {
   await page.addInitScript(() => {
     const pushes: string[] = [];
@@ -145,13 +147,13 @@ for (const { testId, name, path, kind } of [
   {
     testId: 'new-note-card',
     name: 'the New note card starts a note',
-    path: '/new',
-    kind: 'draft' as const,
+    path: /^\/n\/[\w-]{22}$/,
+    kind: 'new' as const,
   },
   {
     testId: 'example-card',
     name: 'the example card opens the example',
-    path: '/new?example',
+    path: /^\/new\?example$/,
     kind: 'example' as const,
   },
 ]) {
@@ -164,7 +166,9 @@ for (const { testId, name, path, kind } of [
     await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
     await card.click({ position: await visiblePoint(page, testId), force: true });
     await expectNotePage(page, kind);
-    expect(await pushes(page)).toEqual([path]);
+    const pushed = await pushes(page);
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0]).toMatch(path);
   });
 }
 
@@ -184,9 +188,13 @@ test('the footer links open a note in place, or a tab with a modifier', async ({
     'href',
     '/new?example',
   );
-  await footer.getByRole('link', { name: 'New note' }).click();
+  const newNote = footer.getByRole('link', { name: 'New note' });
+  await expect(newNote).toHaveAttribute('href', '/new');
+  await newNote.click();
   await expectNotePage(page);
-  expect(await pushes(page)).toEqual(['/new']);
+  const pushed = await pushes(page);
+  expect(pushed).toHaveLength(1);
+  expect(pushed[0]).toMatch(/^\/n\/[\w-]{22}$/);
 });
 
 test('the feature tabs advance every 3 s and stop when one is chosen', async ({ page }) => {
