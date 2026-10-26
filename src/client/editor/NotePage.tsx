@@ -117,6 +117,9 @@ function NoteBody({ session }: { session: NoteSession }) {
           This note is almost full.
         </p>
       )}
+      {NOTE_FEATURES.map(
+        ({ id, banner: Banner }) => Banner && <Banner key={id} session={session} />,
+      )}
       <div className="note-surface" ref={surfaceRef}>
         {empty && status === 'active' && (
           <div className="note-placeholder" aria-hidden="true">

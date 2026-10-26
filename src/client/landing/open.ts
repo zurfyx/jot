@@ -4,7 +4,7 @@ import { flushSync } from 'react-dom';
 import { loadNotePage } from '../loadNote';
 import { navigate } from '../router';
 
-/** Where the landing page's actions go: the local draft (D18). `/new?example` behaves like `/new` for now. */
+/** Where the landing page's actions go: the local draft (D18), and the example note (D20). */
 export const NEW_NOTE_PATH = '/new';
 export const EXAMPLE_PATH = '/new?example';
 

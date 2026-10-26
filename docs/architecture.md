@@ -85,10 +85,13 @@ Vite, React and TypeScript. React draws the chrome; the editor is Lexical built 
 depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
 
 **Routes** (`router.ts`, History API only): `/` the landing page, `/new` the local draft,
-`/n/<id>` a note. The Worker serves the SPA for `/n/<id>`; `/new` falls back to it as an
-asset. `drafts.ts` (no Lexical or Yjs, so the landing page can import it) holds the page
-side of drafts: when a draft is shared, its editor stays mounted under the same React key
-while the address becomes `/n/<id>`.
+`/new?example` a new example note, `/n/<id>` a note. The Worker serves the SPA for
+`/n/<id>`; `/new` falls back to it as an asset. `drafts.ts` and `examples.ts` (no Lexical or
+Yjs, so the landing page can import them) hold the page side of drafts and examples: when a
+draft is shared, or an example is seeded, its editor stays mounted under the same React key
+while the address becomes `/n/<id>`. `examples.ts` gives `/new?example` a fresh id and marks
+it in sessionStorage (`jot:example:<id>`, `new` then `played`), so only the tab that created
+an example runs its demo.
 
 **`editor/session.ts`** creates a note session: a `Y.Doc`, an `Awareness`, the editor with
 `YCollabExtension`, and signals for connection, sync, binding status, size, cap state,
@@ -135,8 +138,8 @@ Work offline, edits waiting and "merged".
   popover behaviour (Escape, outside press, arrow keys) and the menu item primitives.
 - `features.ts`: the extension points for features. A `NoteFeature` can add a dock item
   before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯ (`menuTop`),
-  and a layer over the note surface (`surface`); `session.onReconnect` reports merges. Blame
-  is the first.
+  a banner above the text (`banner`) and a layer over the note surface (`surface`);
+  `session.onReconnect` reports merges. Blame is the first, the example the second.
 - `blame/` (D19), all in the browser:
   - `registry.ts`: the `jot-people` root. `trackLocalPerson` writes this tab's entry
     (person id, name, colour, kind, last seen) on its first local edit, an insert or a
@@ -167,6 +170,27 @@ Work offline, edits waiting and "merged".
     blame shows; with blame off only the registry check runs per transaction. After a Work
     offline spell is confirmed, it shows blame for four seconds (`state.ts` batches the
     switch, so turning blame on during that flash keeps what it shows).
+- `peers/peer.ts` (D20): in-tab peers, collaborators that run inside the tab as real Yjs
+  clients. `createInTabPeer(host, person)` makes a `Y.Doc` of its own (its own client id),
+  copies the note into it, and keeps the two in sync through `update` events, each side
+  applying the other's updates under an origin the other side skips, so nothing echoes. A
+  headless Lexical editor (no root element) runs `YCollabExtension` on that doc
+  (`synced: true`, no undo); `edit(fn)` runs a discrete update on it and publishes its
+  selection as its caret. It writes its registry entry (kind `demo` or `ai`, `askedBy` for
+  AI) under its own client id, so blame names it. Its own `Awareness` is relayed into the
+  note's (`applyAwarenessUpdate`), which the provider sends like any state; it announces
+  itself again when the note reconnects, and `dispose()` removes its presence everywhere
+  while its writes stay. The example's demo collaborators use it; jot AI will too.
+- `example/` (D20): `content.ts` writes the offsite plan and finds its parts again by text
+  in any editor's state (never by node key); `script.ts` is the demo, about 20 s, every
+  step skipped when its part was edited away, all at once under reduced motion, stopped by
+  an `AbortSignal`, and `resetDemo` puts its parts back for Replay; `controller.ts` starts
+  it on the creating tab after the first sync and status `active`: Ana and jot AI join,
+  Ana seeds an empty note, blame turns on, the address moves to `/n/<id>`, and the script
+  plays (a reload of that tab brings them back idle). "You" type through the page's own
+  editor at the end of the first agenda item; the caret follows only if it is there, or
+  if the person has not edited yet and the page has focus. `Example.tsx` has the banner,
+  ⋯ → Replay demo and the surface hook that stops everything when the page unmounts.
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the
@@ -180,7 +204,7 @@ a person points at or focuses a start action, or holds ⌘ or Ctrl. Its start ac
 `/new`: it loads the editor chunk, then navigates inside `document.startViewTransition`, so
 a cold start never freezes the page. The clicked card carries
 `view-transition-name: jot-note` in the old state and `#root` carries it in the new one, so
-the card grows into the draft's page. Under reduced motion the pages cross-fade in 150ms;
+the card grows into the note's page (the example card opens `/new?example`). Under reduced motion the pages cross-fade in 150ms;
 browsers without the API switch pages directly.
 
 There is no Yjs 14 IndexedDB provider yet, so a shared note's offline edits live in memory

@@ -2,13 +2,24 @@ import type { Page } from '@playwright/test';
 
 import { expect, freshNoteId, test } from './helpers';
 
-/** The landing page's start actions open the local draft at `/new` (D18). */
-async function expectNotePage(page: Page) {
+/**
+ * The landing page's start actions open the local draft at `/new` (D18); the
+ * example ones a new shared example note, which moves to `/n/<id>` (D20).
+ */
+async function expectNotePage(page: Page, kind: 'draft' | 'example' = 'draft') {
   await expect(page.getByTestId('editor')).toBeVisible({ timeout: 15_000 });
-  await expect(page).toHaveURL(/\/new(\?example)?$/);
-  await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  if (kind === 'draft') {
+    await expect(page).toHaveURL(/\/new$/);
+    await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  } else {
+    await expect(page).toHaveURL(/\/n\/[\w-]{22}$/, { timeout: 15_000 });
+    await expect(page.getByTestId('example-banner')).toBeVisible();
+  }
   // The landing page's styles stay loaded; the editor's own must still win.
-  await expect(page.locator('.note-avatar')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('.note-avatar').first()).not.toHaveCSS(
+    'background-color',
+    'rgba(0, 0, 0, 0)',
+  );
 }
 
 test('the hero has its title, buttons and links', async ({ page }) => {
@@ -130,9 +141,19 @@ async function visiblePoint(page: Page, testId: string) {
   return point!;
 }
 
-for (const { testId, name, path } of [
-  { testId: 'new-note-card', name: 'the New note card starts a note', path: '/new' },
-  { testId: 'example-card', name: 'the example card opens the example', path: '/new?example' },
+for (const { testId, name, path, kind } of [
+  {
+    testId: 'new-note-card',
+    name: 'the New note card starts a note',
+    path: '/new',
+    kind: 'draft' as const,
+  },
+  {
+    testId: 'example-card',
+    name: 'the example card opens the example',
+    path: '/new?example',
+    kind: 'example' as const,
+  },
 ]) {
   test(name, async ({ page }) => {
     await recordPushes(page);
@@ -142,7 +163,7 @@ for (const { testId, name, path } of [
     await page.waitForTimeout(900); // the card lifts
     await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
     await card.click({ position: await visiblePoint(page, testId), force: true });
-    await expectNotePage(page);
+    await expectNotePage(page, kind);
     expect(await pushes(page)).toEqual([path]);
   });
 }
@@ -151,7 +172,7 @@ test('See the example opens the example', async ({ page }) => {
   await recordPushes(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'See the example' }).click();
-  await expectNotePage(page);
+  await expectNotePage(page, 'example');
   expect(await pushes(page)).toEqual(['/new?example']);
 });
 
