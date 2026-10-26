@@ -12,7 +12,7 @@ Status: `DECIDED`
   `https://<preview-name>-jot.rovira.workers.dev` always serves the branch's latest
   deployment, and `https://<deployment-id>-jot.rovira.workers.dev` one exact deployment.
   The preview name is the branch name, slugified (`ci/workers-builds` becomes
-  `ci-workers-builds`). Workers Builds comments both on the pull request.
+  `ci-workers-builds`).
 - Production has no workers.dev URL: it answers only on jot.rovira.sh.
 - Every Preview response carries `X-Robots-Tag: noindex`.
 

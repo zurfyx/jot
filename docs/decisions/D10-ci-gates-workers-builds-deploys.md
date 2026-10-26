@@ -48,9 +48,10 @@ Workflow hygiene, after the OWASP and GitHub hardening guides:
 
 - **On GitHub:** the Cloudflare Workers and Pages GitHub App adds a check run,
   `Workers Builds: jot`, to each commit it builds, beside CI's checks on the pull request.
-  Its Details link opens that build's log in the Cloudflare dashboard. For a commit already
-  on a pull request it also comments the build status and the Preview URL. The check is not
-  required; CI's three are.
+  Its Details link opens that build's log in the Cloudflare dashboard. The check is not
+  required; CI's three are. Cloudflare documents a pull request comment with the Preview
+  URL too, but none has appeared on jot's pull requests, so take the URL from the pattern
+  in D24 or from the dashboard.
 - **In Cloudflare:** Workers & Pages > `jot` > Deployments for production, and the Preview
   dropdown for each branch's Preview, with its builds, deployments, logs and metrics.
 

@@ -55,8 +55,8 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
   Required checks: `static`, `test`, `e2e`. Squash merge. Commits: concise imperative
   subject, authored by the repo owner, no AI trailers.
 - Never deploy by hand. Cloudflare Workers Builds deploys every push to `main`, and builds
-  every other branch as a Preview at `<preview-name>-jot.rovira.workers.dev`, linked in a
-  PR comment (D10, D24). GitHub Actions only gates merges; it holds no Cloudflare secret.
+  every other branch as a Preview at `<preview-name>-jot.rovira.workers.dev`, the branch
+  name slugified (D10, D24). GitHub Actions only gates merges; it holds no Cloudflare secret.
 - Workflows: every action pinned to a full commit sha with a version comment, `contents:
 read` permissions, checkouts with `persist-credentials: false`. The `zizmor` CI job must
   stay clean.
