@@ -17,12 +17,15 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - cap logic: the warn and full thresholds and the update bound;
 - size and copy formatting for the pill and Note info ("238 KB", "1.72 MB", "2 MB", edits
   waiting, the kept-until date);
-- drafts: a document round-trips through the stored string, large ones included; a
-  corrupt draft is ignored; a page removes a stored draft only while it is still its own,
-  and a copy only while it is exactly what it checked; a stored copy "adds" newer inserts
-  and deletes and nothing when the document holds it; writes merge with the same draft,
-  never another; a move keeps one copy when there is room for only one, and leaves the
-  draft in place when the copy can't be stored; pending copies are kept per note;
+- the migration from local drafts (D23): a leftover draft moves to the new note's pending
+  copy under the Web Lock (none taken without a draft); of two tabs claiming at once only
+  one gets it, and the draft is re-read inside the lock; with no room for the copy the
+  draft stays; denied storage or a refused lock never throw, and `newNotePath` still gives
+  a fresh note; a stored copy reads back as its Yjs update, and anything else (bad JSON, an
+  empty state, bad base64, bytes that aren't an update) reads as nothing; only
+  `jot:pending:` keys count as copies; a copy adds nothing to a server that holds it,
+  deletions included (also when the server collected the deleted content), and adds to
+  one missing an insert or a deletion;
 - confirmation: the server's state vector confirms inserts it covers, never deletes;
 - blame: two peers' documents turn into lines of runs (a heading, bold text, a line break,
   a list, typing inside someone else's line), matching Lexical's lines; shares in
@@ -85,7 +88,7 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   skipped; an abort stops it;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
-- the landing page's destinations resolve to the draft and the example, the two-windows
+- the landing page's destinations (`/new` and the example's route), the two-windows
   phases and steps, and the feature tabs.
 - the docs: routes, the page order and Previous and Next, and that every landing page link
   names a docs page; the highlighter keeps every character; excerpts cut whole
@@ -125,10 +128,17 @@ Durable Objects, over real WebSockets.
 - the landing page: its title, headline, buttons, links and sections, with no em dashes;
   "Start a new note" (with its `aria-keyshortcuts`), ⌘↵ (Ctrl+Enter) and a printable key
   outside the paste field each open a note, while space only scrolls; hovering the New note
-  card and the example card lifts them and shows Open, and clicking each opens `/new` or
-  `/new?example` (which lands on `/n/<id>` with the example banner), as do "See the
-  example" and the footer links; the feature tabs advance
-  every 3 s, stop when one is chosen, and follow the arrow keys; under reduced motion
+  card and the example card lifts them and shows Open, and clicking each opens a fresh
+  `/n/<id>`, synced, or `/new?example` (which lands on `/n/<id>` with the example banner),
+  as do "See the example" and the footer links; the feature tabs advance every 3 s, stop
+  when one is chosen, and follow the arrow keys; the Blame tab's stage lays out as a narrow
+  name column, a bar of at most 4px as tall as its row and flowing text (a paragraph on
+  one or two lines, names never on the state pill or on each other) at 1440 and 390px;
+  opening from the New note card, the example card and "Start a new note" runs a 450ms
+  view transition (held paused to read it) whose group starts at the card's width and
+  ends at the page's, with both pictures filling it (cover, never pinned top-left) and the
+  cross-fade over by a quarter (card picture at 0, page at 1), and
+  under reduced motion only a 150ms cross-fade with no card named; under reduced motion
   nothing animates and the final states show; and it loads without the editor chunk;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
@@ -149,23 +159,18 @@ Durable Objects, over real WebSockets.
   stay editable, Reconnect merges both and shows "Back online · merged", then "Synced";
   the browser's `online` event doesn't end Work offline;
 - a dropped socket shows "Offline · N edits waiting" and syncs on reconnect;
-- a draft at `/new` says "Only on this device", survives a reload, and ⋯ → New note
-  empties it;
-- Share turns a draft (with typos fixed, so with deleted content) into `/n/<id>`, copies
-  the link, frees `jot:draft`, drops the pending copy once confirmed, and a second window
-  sees identical content with one title and one list; an empty draft shared and joined at
-  once seeds one paragraph;
-- with a socket that never reaches the server (`page.routeWebSocket`), edits after Share
-  are counted ("Syncing", then "Offline" under Work offline), survive leaving the page, and
-  the next page on the link pushes them;
-- with the page's content held back, a late confirmation keeps edits made after Share and
-  leaves another tab's new draft alone; reconnecting stays "Syncing · N edits waiting"
-  until the server has the edits, then shows "Back online · merged";
-- ⋯ → New note during an unconfirmed Share keeps the shared content;
-- a page that restored an older pending copy and gets it confirmed sends, rather than
-  drops, the newer edits another page saved to it before leaving;
-- when the pending copy can't be stored, Share shares nothing, says "Couldn't share ·
-  retry", keeps the draft (still editable and saved), and works once there is room;
+- with the page's content held back (`page.routeWebSocket`), reconnecting stays "Syncing ·
+  N edits waiting" until the server has the edits, then shows "Back online · merged";
+- new notes (D23): "Start a new note" opens a synced `/n/<id>` that a second browser joins
+  and that survives a reload; `/new` replaces itself with a fresh note each time; ⋯ → New
+  note and ⌘K → New note open another empty one; a `jot:draft` left by the earlier version
+  shows up in the next new note exactly once (its two lines, no extra empty one), reaches
+  a second browser, and is cleared; with the editor chunk held back, a start claims
+  nothing and the draft survives the page closing; with `localStorage` throwing, `/new` and
+  "Start a new note" still open fresh notes; a `jot:pending:<id>` copy reaches its own note
+  (not the new one) when a note page opens, and is cleared; a copy the server already
+  holds, with a deletion, is cleared and changes nothing; a copy for a full note is
+  refused, cleared, and its note is not dialled again by the next page;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
 - blame, with two people in separate browser contexts: off, nothing is painted; on,
@@ -180,7 +185,7 @@ Durable Objects, over real WebSockets.
   on with three people (You, Ana (demo), jot AI (demo)), and the other window's blame
   shows three too; under reduced motion it plays at once and Replay demo plays it once
   more, not twice over; a reload brings the collaborators back idle under new client ids,
-  without seeding or playing again; Start blank goes to `/new`, the page sends their
+  without seeding or playing again; Start blank opens a fresh note, the page sends their
   removal itself before its socket closes, and the collaborators leave the note for the
   other window while the content stays; Copy link copies the note's link;
 - Ask AI, with a fake `window.LanguageModel` from `addInitScript`: opening the field and
@@ -189,7 +194,7 @@ Durable Objects, over real WebSockets.
   names jot AI and You, its highlight covers the list, and its hover card says "asked by
   You"; without `LanguageModel` (and when it is unavailable) the panel only explains what
   it needs and nothing is created; Esc cancels a running request and nothing is written;
-  on a draft, a downloadable model shows its download, then writes; on someone else's
+  on a new note, a downloadable model shows its download, then writes; on someone else's
   note, asking before typing shows "asked by You" in the asker's blame and "asked by
   <name>" in the writer's; the target tint goes when a request settles (cancelled or
   failed) after the field closed;

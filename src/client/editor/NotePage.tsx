@@ -1,20 +1,20 @@
 import { $getRoot, $isElementNode } from 'lexical';
 import { useEffect, useRef, useState } from 'react';
 
-import { releaseDraftPage } from '../drafts';
 import { copyNoteLink, startNewNote } from './actions';
 import { CommandMenu } from './CommandMenu';
 import { Dock, isMac } from './Dock';
 import { NOTE_FEATURES } from './features';
 import { Avatars } from './people';
 import { RemoteCarets } from './RemoteCarets';
+import { pushLegacyCopies } from './legacy';
 import { createNoteSession, type NoteSession } from './session';
 import { ShareButton } from './ShareButton';
 import { StatusPill } from './StatusPill';
 import { useEditable, useSignal } from './useSignal';
 
-/** A note page: note `id`, or this browser's local draft when `id` is null (D18). */
-export default function NotePage({ id }: { id: string | null }) {
+/** A note page: note `id`, shared through the relay (D23). */
+export default function NotePage({ id }: { id: string }) {
   const [session, setSession] = useState<NoteSession | null>(null);
 
   useEffect(() => {
@@ -23,12 +23,11 @@ export default function NotePage({ id }: { id: string | null }) {
     const created = createNoteSession(id);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSession(created);
+    // Notes an earlier version of jot kept in this browser go to the relay.
+    pushLegacyCopies();
     return () => {
       created.dispose();
       setSession(null);
-      if (id === null) {
-        releaseDraftPage();
-      }
     };
   }, [id]);
 
@@ -73,7 +72,6 @@ function NoteBody({ session }: { session: NoteSession }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
-  const noteId = useSignal(session.noteId);
   const empty = useEmptyAndTitle(session);
   const editable = useEditable(session.editor);
 
@@ -104,7 +102,7 @@ function NoteBody({ session }: { session: NoteSession }) {
             href="/new"
             onClick={(event) => {
               event.preventDefault();
-              startNewNote(session);
+              startNewNote();
             }}
           >
             Start a new note
@@ -124,11 +122,7 @@ function NoteBody({ session }: { session: NoteSession }) {
         {empty && status === 'active' && (
           <div className="note-placeholder" aria-hidden="true">
             <p className="note-placeholder-title">Untitled</p>
-            <p>
-              {noteId === null
-                ? 'Start writing. It stays on this device until you press Share.'
-                : 'Start writing. Anyone with this link can edit.'}
-            </p>
+            <p>Start writing. Anyone with this link can edit.</p>
           </div>
         )}
         <div

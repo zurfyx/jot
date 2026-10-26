@@ -470,7 +470,7 @@ a.fan-card:focus-visible {
   background: var(--who, var(--ink));
 }
 
-.card-device {
+.card-link {
   margin-left: auto;
   font-weight: 500;
   white-space: nowrap;
@@ -1004,7 +1004,12 @@ a.fan-card:focus-visible {
   color: var(--ai);
 }
 
-.blame-row {
+/*
+ * The stage's blame rows: name, bar, text. Prefixed, because the editor's
+ * global .blame-name is absolutely positioned and would pull the name out of
+ * the grid, leaving the bar in the name's column and the text in the bar's.
+ */
+.stage-blame-row {
   display: grid;
   grid-template-columns: 56px 4px minmax(0, 1fr);
   gap: 0 12px;
@@ -1012,7 +1017,7 @@ a.fan-card:focus-visible {
   margin: 2px 0;
 }
 
-.blame-name {
+.stage-blame-name {
   padding-top: 6px;
   color: var(--who);
   font-size: 11.5px;
@@ -1020,7 +1025,7 @@ a.fan-card:focus-visible {
   text-align: right;
 }
 
-.blame-bar {
+.stage-blame-bar {
   display: block;
   border-radius: 2px;
   background: var(--who);
@@ -1263,7 +1268,7 @@ a.fan-card:focus-visible {
     font-size: 15.5px;
   }
 
-  .blame-row {
+  .stage-blame-row {
     grid-template-columns: 44px 3px minmax(0, 1fr);
     gap: 0 10px;
   }
@@ -1339,27 +1344,85 @@ a.fan-card:focus-visible {
 }
 
 /*
- * The card grows into the note page (open.ts names both ends): the group
- * grows from the card's box to the page's like a sheet of paper, clipping its
- * content at natural size, while the card's picture fades out.
+ * The card grows into the note page (open.ts names both ends). The group
+ * moves and resizes from the card's box (rotation included) to the page's.
+ * Its image pair is the sheet: the page colour, clipped to corners that go
+ * from the card's 20px to square. Both pictures fill it (cover, anchored top
+ * centre, where both start with "Untitled"), so neither is pinned to a corner,
+ * and they cross-fade in the first 20%, while the sheet is still near card
+ * size: by then the card's picture (scaled up by cover) is gone and the
+ * page's is opaque, so no blown-up card text shows through it. The clip also
+ * keeps the card's shadow, part of its picture, from scaling up beside it.
+ * The rest of the landing page fades out underneath.
  */
 ::view-transition-group(jot-note) {
-  overflow: clip;
-  border-radius: 20px;
-  background: var(--bg);
-  animation-duration: 0.55s;
+  animation-duration: 450ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-image-pair(jot-note) {
+  overflow: clip;
+  background: var(--bg);
+  animation: note-sheet-square 450ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 ::view-transition-old(jot-note),
 ::view-transition-new(jot-note) {
+  width: 100%;
   height: 100%;
-  object-fit: none;
-  object-position: left top;
+  object-fit: cover;
+  object-position: 50% 0;
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-fill-mode: both;
 }
 
+/* Plain fades in place of the browser's plus-lighter cross-fade, which would
+ * add the pictures onto the sheet's colour. */
 ::view-transition-old(jot-note) {
-  animation-duration: 0.2s;
+  animation-name: note-card-out;
+}
+
+::view-transition-new(jot-note) {
+  animation-name: note-page-in;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes note-sheet-square {
+  from {
+    border-radius: 20px;
+  }
+
+  to {
+    border-radius: 0;
+  }
+}
+
+@keyframes note-card-out {
+  from {
+    opacity: 1;
+  }
+
+  20%,
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes note-page-in {
+  from {
+    opacity: 0;
+  }
+
+  20%,
+  to {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

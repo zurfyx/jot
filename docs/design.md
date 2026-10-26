@@ -20,7 +20,7 @@ Toggle theme flip and remember it.
 | `--rule`, `--rule-strong`                | hairlines, borders, checkbox outlines                     |
 | `--hover`, `--select`                    | hover and selected rows, inline code, text selection      |
 | `--accent`                               | the one accent: links, focus, checked boxes, the caret    |
-| `--btn`, `--btn-ink`                     | the primary button, a draft's Share, Reconnect            |
+| `--btn`, `--btn-ink`                     | the primary button, Reconnect                             |
 | `--ok`, `--warn`, `--bad`                | status only, always beside a word                         |
 | `--peer-0` … `--peer-7`                  | collaborators' identity colours, with `--peer-ink` labels |
 | `--shadow`, `--shadow-soft`              | popovers and menus; the dock's lighter lift               |
@@ -63,13 +63,13 @@ playground needs: no toolbar is always there.
   - "Connecting…", "Offline · 3 edits waiting", "Syncing · 3 edits waiting" (connected,
     and the server hasn't confirmed them yet), and "Back online · merged" for four seconds
     once an offline spell's edits are confirmed;
-  - "Only on this device" for a draft; "Read only" for a newer layout.
+  - "Read only" for a newer layout.
 
-  On a shared note the pill is a button: a click toggles Work offline, and a dark
-  Reconnect button sits beside it while that is on.
+  The pill is a button: a click toggles Work offline, and a dark Reconnect button sits
+  beside it while that is on.
 
-- **Share** is quiet on a shared note and dark on a draft, where it is the one action that
-  creates the link. Both confirm with "Link copied".
+- **Share** is quiet: the note already has its link, so it only copies it, and confirms
+  with "Link copied".
 - **The dock,** one floating row centred at the bottom: **Aa**, **✦ Ask AI…** and **⋯**, with
   the blame chip right before ⋯ while blame shows. Aa and Ask AI are disabled while the
   note is read only.
@@ -116,8 +116,7 @@ playground needs: no toolbar is always there.
   bars and underlines use those colours. Their edits are content, not motion: under
   reduced motion the whole demo lands at once.
 - A new note shows the placeholder "Untitled" and "Start writing. Anyone with this link can
-  edit." (a draft: "It stays on this device until you press Share."). ⌘K opens a command
-  menu that performs actions.
+  edit." ⌘K opens a command menu that performs actions.
 - Read only and "This note is full" are banners that stay in view; "This note is almost
   full" is a quiet line.
 - Remote carets carry the collaborator's name, which fades to the bare caret after three
@@ -135,7 +134,7 @@ playground needs: no toolbar is always there.
   sparkle; under them, the paste field as one quiet line.
 - **Hero, right: the fan.** Three notes of one size, back to front: a recipe (static), the
   example ("Example · live", which types on its own with avatars and named carets) and a new
-  note ("this device", "Untitled" with a caret, "Press any key to start"). A soft glow in
+  note ("its own link", "Untitled" with a caret, "Press any key to start"). A soft glow in
   the three author colours drifts behind them. The fan sways at rest, spreads on hover, and
   the hovered note lifts and shows "Open ↗". The new note and the example are links; the
   recipe is decoration.
@@ -193,7 +192,11 @@ them off and shows the final state.
   Under reduced motion the example shows its finished text, the windows their last step,
   and the tabs stay put.
 - **Opening a note** from the landing page loads the editor chunk first, then runs a view
-  transition: the card grows into the note page in 550ms. Under reduced motion it is a
-  150ms cross-fade.
+  transition: the clicked card (the New note card for "Start a new note" and the keys, the
+  example card for the example) grows from where it sits into the note page in 450ms with
+  `cubic-bezier(0.2, 0, 0, 1)`, straightening and losing its rounded corners on the way.
+  Both pictures fill the growing sheet, on the page colour (cover, anchored top centre),
+  and cross-fade in its first 20%, while it is still near card size, so the scaled-up card
+  never shows through the page; the rest of the landing page fades out in 300ms. Under reduced motion it is a 150ms cross-fade.
 - Hover and focus states (links, the paste line, the tabs) change at once, without a
   colour transition.

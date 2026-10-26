@@ -279,13 +279,14 @@ test('Esc cancels a running request and nothing is written', async ({ context })
   await expect(editor(page)).toContainText('Demos, lunch, hack session');
 });
 
-test('a draft downloads the model on the first Ask, with progress', async ({ context }) => {
+test('a new note downloads the model on the first Ask, with progress', async ({ context }) => {
   const page = await withFakeModel(context, {
     availability: 'downloadable',
     reply: '## Lunch spots',
   });
   await page.goto('/new');
-  await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  await expect(page).toHaveURL(/\/n\/[\w-]{22}$/);
+  await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
   await editor(page).click();
   await askButton(page).click();
   await expect(page.getByTestId('ask-meta')).toHaveText(

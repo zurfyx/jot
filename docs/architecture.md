@@ -84,34 +84,42 @@ Vite, React and TypeScript. React draws the chrome; the editor is Lexical built 
 `buildEditorFromExtensions` and mounted on a `contenteditable` element, so the app does not
 depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
 
-**Routes** (`router.ts`, History API only): `/` the landing page, `/new` the local draft,
-`/new?example` a new example note, `/n/<id>` a note, `/docs` and `/docs/<slug>` the docs.
-The Worker serves the SPA for `/n/<id>`; `/new` and `/docs` fall back to it as assets.
-`drafts.ts` and `examples.ts` (no Lexical or Yjs, so the landing page can import them) hold
-the page side of drafts and examples: when a draft is shared, or an example is seeded, its
-editor stays mounted under the same React key while the address becomes `/n/<id>`. `examples.ts` gives `/new?example` a fresh id and marks
-it in sessionStorage (`jot:example:<id>`, `new` then `played`), so only the tab that created
-an example runs its demo.
+**Routes** (`router.ts`, History API only): `/` the landing page, `/new` a redirect to a
+fresh note, `/new?example` a new example note, `/n/<id>` a note, `/docs` and `/docs/<slug>`
+the docs. The Worker serves the SPA for `/n/<id>`; `/new` and `/docs` fall back to it as
+assets. `notes.ts` and `examples.ts` (no Lexical
+or Yjs, so the landing page can import them) hold the page side of starting notes (D23) and
+examples. `newNotePath()` picks a fresh id in the browser and returns `/n/<id>`; every start
+action navigates there, and `/new` replaces itself with it. `examples.ts` gives
+`/new?example` a fresh id and marks it in sessionStorage (`jot:example:<id>`, `new` then
+`played`), so only the tab that created an example runs its demo; when the example is
+seeded, its editor stays mounted under the same React key while the address becomes
+`/n/<id>`.
 
-**`editor/session.ts`** creates a note session: a `Y.Doc`, an `Awareness`, the editor with
-`YCollabExtension`, and signals for connection, sync, binding status, size, cap state,
-Work offline, edits waiting and "merged".
+**Migration from local drafts** (D23). An earlier version kept an unshared draft in
+`jot:draft` and, until the relay confirmed it, a shared note's copy in `jot:pending:<id>`
+(localStorage, `{ id, state }` with the Yjs state in base64). `newNotePath()`, called when a
+start commits to opening (`landing/open.ts` calls it after the editor chunk loads), copies a
+leftover `jot:draft` to the new note's `jot:pending:<id>` under the Web Lock
+`jot:legacy-draft`, re-reading the draft inside it, and removes the draft only once the copy
+reads back; it never rejects, so storage or lock failures just open the note. `editor/legacy.ts`
+runs when a note page opens: each `jot:pending:<id>` is pushed to its note by a headless
+client, an empty `Y.Doc` and a `WebsocketProvider` with no presence. The server's sync step 2
+(its whole state, against an empty state vector) and every later update are mirrored into a
+gc-off document; once synced, `copyAddsTo` applies the copy to a scratch copy of the mirror.
+No change means the server has it all, and the copy is removed; otherwise the copy is
+written to the document, the provider sends it, and the check repeats on the echo. A note
+status with the rejected flag removes the copy too (the note is full); after 30 s without
+either, the copy stays for the next page.
 
-- **A shared note** gets a `WebsocketProvider` (no BroadcastChannel: the server is the one
-  source of truth) that adopts the session's awareness. `binding.initialize()` runs after
-  the first sync; the binding's content-hashed seed keeps two clients opening an empty note
-  at once from doubling it.
-- **A draft** (D18) has no provider. Its stored state (`jot:draft` in localStorage, with a
-  draft id) is applied before the binding starts, and the binding initializes at once
-  (`synced: true`). Changes are written back 500 ms after the last one (a debounce) and on
-  `pagehide`. `share()` moves the draft to `jot:pending:<id>`, frees `jot:draft` if it still
-  holds this draft, and connects a provider with the same document; the draft's content is
-  pushed onto the provider's `unconfirmedUpdates`. If the copy can't be stored, `share()`
-  returns null and nothing changes. Saves merge with the stored copy of the same draft. Once
-  nothing is unconfirmed, the pending copy is removed only if it adds nothing to the
-  document (checked on a scratch copy); a newer one is applied and sent first. A shared
-  note that finds a pending copy for its id applies it before connecting and confirms it
-  the same way.
+**`editor/session.ts`** creates a note session for an id: a `Y.Doc`, an `Awareness`, the
+editor with `YCollabExtension`, a `WebsocketProvider`, and signals for connection, sync,
+binding status, size, cap state, Work offline, edits waiting and "merged".
+
+- **The provider** has no BroadcastChannel (the server is the one source of truth) and
+  adopts the session's awareness. It connects in a task, so React Strict Mode's double
+  mount opens one socket. `binding.initialize()` runs after the first sync; the binding's
+  content-hashed seed keeps two clients opening an empty note at once from doubling it.
 - **Confirmation.** A wrapped sync handler removes from `unconfirmedUpdates` what the server's
   sync step 1 already covers (content another client wrote first under the same derived
   client id never comes back as an echo); the provider removes what the relay echoes. The
@@ -119,8 +127,7 @@ Work offline, edits waiting and "merged".
   been confirmed.
 - **Work offline** calls `provider.disconnect()` and keeps the editor editable; the
   browser's `online` event no longer reconnects while it is on. Local transactions count
-  as edits waiting whenever a shared note is not confirmed (a shared draft that never
-  connected included), until it is. When an offline spell (chosen or not) is confirmed,
+  as edits waiting from the first sync on, whenever the note is not confirmed. When an offline spell (chosen or not) is confirmed,
   "merged" is true for four seconds and `onReconnect` listeners run, with whether the
   spell was Work offline.
 - **Size and cap:** the size is the larger of the server's note-status figure and a local
@@ -131,7 +138,7 @@ Work offline, edits waiting and "merged".
 **The chrome** (`editor/`):
 
 - `NotePage.tsx`: top right `Avatars`, `StatusPill` and `ShareButton`; the note surface; the
-  `Dock`; the ⌘K `CommandMenu`; ⌘⇧C copies the link (sharing a draft first).
+  `Dock`; the ⌘K `CommandMenu`; ⌘⇧C copies the link.
 - `Dock.tsx`: Aa (`FormatMenu.tsx`, block types and inline formats through Lexical
   commands and `$setBlocksType`; disabled, and closed, while the note is not editable, and
   every action checks editability first), ⋯ (`MoreMenu`) and `NoteInfo.tsx`. `menu.tsx` has the
@@ -243,13 +250,21 @@ Work offline, edits waiting and "merged".
   (`@lexical/code-core`, no highlighting), tables, tab indentation and markdown shortcuts.
 
 **The landing page** and the note page are separate chunks: the editor, Lexical and Yjs load
-only on a note page or a draft (`loadNote.ts`). The landing page prefetches that chunk when
-a person points at or focuses a start action, or holds ⌘ or Ctrl. Its start actions go to
-`/new`: it loads the editor chunk, then navigates inside `document.startViewTransition`, so
-a cold start never freezes the page. The clicked card carries
-`view-transition-name: jot-note` in the old state and `#root` carries it in the new one, so
-the card grows into the note's page (the example card opens `/new?example`). Under reduced motion the pages cross-fade in 150ms;
-browsers without the API switch pages directly.
+only on a note page (`loadNote.ts`). The landing page prefetches that chunk when
+a person points at or focuses a start action, or holds ⌘ or Ctrl. Its start actions open a
+fresh `/n/<id>` (the example ones `/new?example`) through `landing/open.ts`: it loads the
+editor chunk, then navigates inside `document.startViewTransition`, so a cold start never
+freezes the page. The card (the clicked one, or the New note card for the button and the
+keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
+`#root` carries it in the new one. `landing.css` styles the pair: the group animates from
+the card's box to the page's in 450ms; its `::view-transition-image-pair` is the sheet,
+`--bg` clipped to corners that go from 20px to square (the page's picture is otherwise
+transparent, and the clip keeps the card's shadow from scaling up);
+`::view-transition-old(jot-note)` and `::view-transition-new(jot-note)` fill it (`width` and
+`height` 100%, `object-fit: cover`, anchored top centre) and cross-fade with plain opacity
+keyframes in the first 20%, in place of the browser's plus-lighter fade, which would add
+them onto the sheet's colour. Under reduced motion no card is named and the pages cross-fade in 150ms; browsers
+without the API switch pages directly.
 
 **The docs** (`docs/`, D22) are a third chunk: a table of contents (`pages.ts`), one
 component per page under `docs/content/`, and code blocks from real files imported with
@@ -259,7 +274,7 @@ lines on GitHub. The live inspector (`Inspector.tsx`) is a lazy chunk of its own
 editor on a local `Y.Doc` beside the `lexical-y` root as rows (`yjsTree.ts`), whose lines
 pair in document order with the editor's line elements (`lines.ts`).
 
-There is no Yjs 14 IndexedDB provider yet, so a shared note's offline edits live in memory
+There is no Yjs 14 IndexedDB provider yet, so a note's offline edits live in memory
 until the socket reconnects (D13).
 
 ## Build and deploy

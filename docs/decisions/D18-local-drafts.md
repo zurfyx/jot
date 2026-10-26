@@ -1,6 +1,9 @@
 # D18: An unshared note lives only in this browser
 
-Status: `DECIDED`
+Status: `SUPERSEDED` by [D23](D23-new-notes-are-shared-at-once.md): a new note is shared from
+its first moment, and `/new` redirects to a fresh `/n/<id>`. D23 also says how drafts and
+pending copies this decision left in browsers reach the relay. The rest of this file is the
+decision as it stood.
 
 ## Context
 

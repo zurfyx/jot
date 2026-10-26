@@ -1,15 +1,12 @@
 import { signal } from '@lexical/extension';
 
-import { adoptSharedDraft, startNewDraft } from '../drafts';
 import type { NoteSession } from './session';
+
+export { startNewNote } from '../notes';
 
 /** True for a moment after a link was copied: Share says "Link copied". */
 export const linkCopied = signal(false);
 let copiedTimer: ReturnType<typeof setTimeout> | null = null;
-
-/** True for a while after a Share failed because the browser couldn't store the draft. */
-export const shareFailed = signal(false);
-let failedTimer: ReturnType<typeof setTimeout> | null = null;
 
 export async function copyText(text: string): Promise<boolean> {
   try {
@@ -31,32 +28,10 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 /**
- * Share, Copy link and ⌘⇧C. A draft is shared first (D18): it gets an id and
- * a provider, and the address bar moves to `/n/<id>` with the same editor.
- * The link is copied in the same task as the click, while the page still
- * holds the user's activation.
+ * Share, Copy link and ⌘⇧C: copy the note's link and say so for a moment.
  */
 export async function copyNoteLink(session: NoteSession): Promise<boolean> {
-  if (session.noteId.peek() === null) {
-    const shared = session.share();
-    if (shared === null) {
-      // Nothing was shared: the draft stays as it was, and Share can be
-      // tried again.
-      shareFailed.value = true;
-      if (failedTimer !== null) {
-        clearTimeout(failedTimer);
-      }
-      failedTimer = setTimeout(() => {
-        failedTimer = null;
-        shareFailed.value = false;
-      }, 5000);
-      return false;
-    }
-    shareFailed.value = false;
-    adoptSharedDraft(shared);
-  }
-  const link = session.link();
-  if (link === null || !(await copyText(link))) {
+  if (!(await copyText(session.link()))) {
     return false;
   }
   linkCopied.value = true;
@@ -68,10 +43,4 @@ export async function copyNoteLink(session: NoteSession): Promise<boolean> {
     linkCopied.value = false;
   }, 1800);
   return true;
-}
-
-/** ⋯ → New note: an empty draft at /new. */
-export function startNewNote(session: NoteSession): void {
-  session.forgetDraft();
-  startNewDraft();
 }

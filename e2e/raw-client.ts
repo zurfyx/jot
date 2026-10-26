@@ -5,15 +5,8 @@ import * as encoding from 'lib0/encoding';
 
 import { MESSAGE_SYNC } from '../src/shared/protocol';
 
-/**
- * Writes to a note from Node over the real protocol, without the editor:
- * for states a browser cannot easily reach (a document from a newer layout).
- */
-export async function writeRawNote(
-  baseURL: string,
-  id: string,
-  write: (doc: Y.Doc) => void,
-): Promise<void> {
+/** Joins note `id` from Node over the real protocol and syncs its document. */
+async function syncRaw(baseURL: string, id: string) {
   const doc = new Y.Doc();
   const socket = new WebSocket(`${baseURL.replace(/^http/, 'ws')}/api/n/${id}/ws`);
   socket.binaryType = 'arraybuffer';
@@ -42,6 +35,26 @@ export async function writeRawNote(
       }
     };
   });
+  return { doc, socket, send };
+}
+
+/** The note's whole Yjs state, as the server holds it. */
+export async function readRawNote(baseURL: string, id: string): Promise<Uint8Array> {
+  const { doc, socket } = await syncRaw(baseURL, id);
+  socket.close();
+  return Y.encodeStateAsUpdate(doc);
+}
+
+/**
+ * Writes to a note from Node over the real protocol, without the editor:
+ * for states a browser cannot easily reach (a document from a newer layout).
+ */
+export async function writeRawNote(
+  baseURL: string,
+  id: string,
+  write: (doc: Y.Doc) => void,
+): Promise<void> {
+  const { doc, socket, send } = await syncRaw(baseURL, id);
   const updates: Uint8Array[] = [];
   doc.on('update', (update: Uint8Array, origin: unknown) => {
     if (origin !== 'remote') {

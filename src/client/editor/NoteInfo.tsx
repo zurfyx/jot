@@ -10,7 +10,6 @@ import { useSignal } from './useSignal';
 export function NoteInfo({ session, viaKeyboard }: { session: NoteSession; viaKeyboard: boolean }) {
   const bytes = useSignal(session.bytes);
   const cap = useSignal(session.cap);
-  const noteId = useSignal(session.noteId);
   const people = usePeople(session);
   const ref = useRef<HTMLDivElement>(null);
   // Opening the note counts as a visit, so it is kept 90 days from now.
@@ -65,11 +64,7 @@ export function NoteInfo({ session, viaKeyboard }: { session: NoteSession; viaKe
       </ul>
 
       <h3 className="note-info-key">Kept until</h3>
-      <p className="note-info-line">
-        {noteId === null
-          ? 'Only in this browser until you share it'
-          : `${keptUntil(openedAt)} · 90 days after the last visit`}
-      </p>
+      <p className="note-info-line">{keptUntil(openedAt)} · 90 days after the last visit</p>
     </div>
   );
 }

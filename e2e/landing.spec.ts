@@ -3,14 +3,16 @@ import type { Page } from '@playwright/test';
 import { expect, freshNoteId, test } from './helpers';
 
 /**
- * The landing page's start actions open the local draft at `/new` (D18); the
- * example ones a new shared example note, which moves to `/n/<id>` (D20).
+ * The landing page's start actions open a fresh shared note at `/n/<id>`
+ * (D23); the example ones a new shared example note, which moves to
+ * `/n/<id>` once seeded (D20).
  */
-async function expectNotePage(page: Page, kind: 'draft' | 'example' = 'draft') {
+async function expectNotePage(page: Page, kind: 'new' | 'example' = 'new') {
   await expect(page.getByTestId('editor')).toBeVisible({ timeout: 15_000 });
-  if (kind === 'draft') {
-    await expect(page).toHaveURL(/\/new$/);
-    await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  if (kind === 'new') {
+    await expect(page).toHaveURL(/\/n\/[\w-]{22}$/);
+    await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+    await expect(page.getByTestId('example-banner')).toHaveCount(0);
   } else {
     await expect(page).toHaveURL(/\/n\/[\w-]{22}$/, { timeout: 15_000 });
     await expect(page.getByTestId('example-banner')).toBeVisible();
@@ -103,7 +105,7 @@ test('any printable key starts a new note, except inside the paste field', async
   await expectNotePage(page);
 });
 
-/** Records every client-side navigation, so a test can tell `/new` from `/new?example`. */
+/** Records every client-side navigation, so a test can tell a new note from `/new?example`. */
 async function recordPushes(page: Page) {
   await page.addInitScript(() => {
     const pushes: string[] = [];
@@ -145,13 +147,13 @@ for (const { testId, name, path, kind } of [
   {
     testId: 'new-note-card',
     name: 'the New note card starts a note',
-    path: '/new',
-    kind: 'draft' as const,
+    path: /^\/n\/[\w-]{22}$/,
+    kind: 'new' as const,
   },
   {
     testId: 'example-card',
     name: 'the example card opens the example',
-    path: '/new?example',
+    path: /^\/new\?example$/,
     kind: 'example' as const,
   },
 ]) {
@@ -164,7 +166,9 @@ for (const { testId, name, path, kind } of [
     await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
     await card.click({ position: await visiblePoint(page, testId), force: true });
     await expectNotePage(page, kind);
-    expect(await pushes(page)).toEqual([path]);
+    const pushed = await pushes(page);
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0]).toMatch(path);
   });
 }
 
@@ -184,9 +188,13 @@ test('the footer links open a note in place, or a tab with a modifier', async ({
     'href',
     '/new?example',
   );
-  await footer.getByRole('link', { name: 'New note' }).click();
+  const newNote = footer.getByRole('link', { name: 'New note' });
+  await expect(newNote).toHaveAttribute('href', '/new');
+  await newNote.click();
   await expectNotePage(page);
-  expect(await pushes(page)).toEqual(['/new']);
+  const pushed = await pushes(page);
+  expect(pushed).toHaveLength(1);
+  expect(pushed[0]).toMatch(/^\/n\/[\w-]{22}$/);
 });
 
 test('the feature tabs advance every 3 s and stop when one is chosen', async ({ page }) => {
@@ -214,6 +222,186 @@ test('the feature tabs advance every 3 s and stop when one is chosen', async ({ 
   await page.keyboard.press('ArrowDown');
   await expect(tab('Blame')).toHaveAttribute('aria-selected', 'true');
   await expect(tab('Blame')).toBeFocused();
+});
+
+for (const width of [1440, 390]) {
+  test(`the Blame stage lays out as name, bar, text at ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const tabs = page.getByRole('tablist', { name: 'Features' });
+    await tabs.scrollIntoViewIfNeeded();
+    await tabs.getByRole('tab', { name: /^Blame/ }).click();
+
+    const rows = page.getByTestId('stage-blame-row');
+    await expect(rows).toHaveCount(3);
+    await expect(page.getByTestId('stage-blame-name')).toHaveText(['You', 'jot AI', 'Ana']);
+
+    // The paragraph flows: one or two lines, not a word per line.
+    const paragraph = rows.first().locator('p');
+    const lineHeight = await paragraph.evaluate((el) =>
+      parseFloat(getComputedStyle(el).lineHeight),
+    );
+    const box = async (locator: ReturnType<typeof page.locator>) => {
+      const rect = await locator.boundingBox();
+      if (!rect) throw new Error('not rendered');
+      return rect;
+    };
+    expect((await box(paragraph)).height).toBeLessThanOrEqual(lineHeight * 2 + 1);
+    expect((await box(rows.nth(1).locator('li').first())).height).toBeLessThanOrEqual(
+      lineHeight * 2 + 1,
+    );
+
+    const pill = await box(page.getByTestId('engine-state'));
+    let previousBottom = pill.y + pill.height;
+    for (let index = 0; index < 3; index++) {
+      const row = await box(rows.nth(index));
+      const name = await box(rows.nth(index).getByTestId('stage-blame-name'));
+      const bar = await box(rows.nth(index).getByTestId('stage-blame-bar'));
+      // Each name sits in its own row, below the one before and the pill, never on them.
+      expect(name.y).toBeGreaterThanOrEqual(previousBottom);
+      expect(name.y + name.height).toBeLessThanOrEqual(row.y + row.height + 1);
+      previousBottom = name.y + name.height;
+      // A narrow name column, then a thin bar as tall as the row, then the text.
+      expect(name.width).toBeLessThanOrEqual(56);
+      expect(name.x + name.width).toBeLessThanOrEqual(bar.x);
+      expect(bar.width).toBeLessThanOrEqual(4);
+      expect(bar.height).toBeGreaterThan(row.height - 2);
+    }
+  });
+}
+
+/**
+ * Holds every view transition at its start: once it is ready, its animations
+ * are paused, so a test can read the pseudo-elements, then let it finish.
+ */
+async function holdViewTransitions(page: Page) {
+  await page.addInitScript(() => {
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = (update) => {
+      const transition = start(update);
+      transition.ready.then(
+        () => {
+          for (const animation of document.getAnimations()) {
+            if (String((animation.effect as KeyframeEffect).pseudoElement).includes('view-')) {
+              animation.pause();
+            }
+          }
+          document.documentElement.dataset.vt = 'held';
+        },
+        () => undefined,
+      );
+      return transition;
+    };
+  });
+}
+
+function releaseViewTransitions(page: Page) {
+  return page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      animation.finish();
+    }
+  });
+}
+
+for (const trigger of ['new-note-card', 'example-card', 'start-button'] as const) {
+  test(`opening from the ${trigger} grows the card into the page`, async ({ page }) => {
+    await holdViewTransitions(page);
+    await page.goto('/');
+    const card = trigger === 'example-card' ? 'example-card' : 'new-note-card';
+    const cardWidth = await page
+      .getByTestId(card)
+      .evaluate((el) => (el as HTMLElement).offsetWidth);
+    if (trigger === 'start-button') {
+      await page
+        .getByRole('button', { name: /^Start a new note/ })
+        .first()
+        .click();
+    } else {
+      await page
+        .getByTestId(trigger)
+        .click({ position: await visiblePoint(page, trigger), force: true });
+    }
+    await expect(page.locator('html[data-vt="held"]')).toBeAttached({ timeout: 15_000 });
+
+    const shared = await page.evaluate(() => {
+      const style = (pseudo: string) => {
+        const s = getComputedStyle(document.documentElement, pseudo);
+        return { width: s.width, height: s.height, fit: s.objectFit, position: s.objectPosition };
+      };
+      const group = document
+        .getAnimations()
+        .find(
+          (animation) =>
+            (animation.effect as KeyframeEffect).pseudoElement ===
+            '::view-transition-group(jot-note)',
+        );
+      const frames = (group?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
+      return {
+        group: style('::view-transition-group(jot-note)'),
+        old: style('::view-transition-old(jot-note)'),
+        new: style('::view-transition-new(jot-note)'),
+        duration: group?.effect?.getTiming().duration,
+        from: frames[0]?.width,
+        to: frames.at(-1)?.width,
+        viewport: `${document.documentElement.clientWidth}px`,
+      };
+    });
+    // The group runs from the card's box to the page's...
+    expect(shared.duration).toBe(450);
+    expect(parseFloat(String(shared.from))).toBeCloseTo(cardWidth, 0);
+    expect(shared.to).toBe(shared.viewport);
+    // ...and both pictures fill it, never pinned to its top-left corner.
+    for (const picture of [shared.old, shared.new]) {
+      expect(picture.width).toBe(shared.group.width);
+      expect(picture.height).toBe(shared.group.height);
+      expect(picture.fit).toBe('cover');
+      expect(picture.position).not.toMatch(/^0(%|px)? 0(%|px)?$/);
+    }
+
+    // A quarter in, the cross-fade is over: no blown-up card shows through.
+    const quarter = await page.evaluate(() => {
+      for (const animation of document.getAnimations()) {
+        animation.currentTime = 450 / 4;
+      }
+      const opacity = (pseudo: string) =>
+        getComputedStyle(document.documentElement, pseudo).opacity;
+      return {
+        old: opacity('::view-transition-old(jot-note)'),
+        new: opacity('::view-transition-new(jot-note)'),
+      };
+    });
+    expect(quarter).toEqual({ old: '0', new: '1' });
+
+    await releaseViewTransitions(page);
+    await expectNotePage(page, trigger === 'example-card' ? 'example' : 'new');
+  });
+}
+
+test('under reduced motion, opening a card is a short cross-fade', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await holdViewTransitions(page);
+  await page.goto('/');
+  await page.getByTestId('new-note-card').click({
+    position: await visiblePoint(page, 'new-note-card'),
+    force: true,
+  });
+  await expect(page.locator('html[data-vt="held"]')).toBeAttached({ timeout: 15_000 });
+  const animations = await page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((animation) =>
+        String((animation.effect as KeyframeEffect).pseudoElement).includes('view-'),
+      )
+      .map((animation) => ({
+        pseudo: (animation.effect as KeyframeEffect).pseudoElement,
+        duration: animation.effect?.getTiming().duration,
+      })),
+  );
+  expect(animations.length).toBeGreaterThan(0);
+  expect(animations.every(({ pseudo }) => !pseudo?.includes('jot-note'))).toBe(true);
+  expect(animations.every(({ duration }) => duration === 150)).toBe(true);
+  await releaseViewTransitions(page);
+  await expectNotePage(page);
 });
 
 test('nothing moves under reduced motion; the final states show', async ({ page }) => {

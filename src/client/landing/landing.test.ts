@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { matchRoute } from '../router';
 import { ADVANCE_MS, FEATURES } from './EngineTabs';
-import { EXAMPLE_PATH, NEW_NOTE_PATH } from './open';
+import { NEW_NOTE_PATH } from '../notes';
+import { EXAMPLE_PATH } from './open';
 import { LOOP_MS, PHASE_STARTS, stepOfPhase } from './TwoWindows';
 
 describe("the landing page's destinations", () => {
-  it('start opens the draft, and the example its own route', () => {
+  it('start redirects to a fresh note, and the example has its own route', () => {
     expect(matchRoute(NEW_NOTE_PATH)).toEqual({ name: 'new' });
     expect(matchRoute(EXAMPLE_PATH)).toEqual({ name: 'example' });
     expect(matchRoute('/new/?example')).toEqual({ name: 'example' });

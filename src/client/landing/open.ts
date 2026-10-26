@@ -1,11 +1,11 @@
 import type { MouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 
+import { generateNoteId, notePath } from '../../shared/ids';
 import { loadNotePage } from '../loadNote';
 import { navigate } from '../router';
 
-/** Where the landing page's actions go: the local draft (D18), and the example note (D20). */
-export const NEW_NOTE_PATH = '/new';
+/** Where the example actions go: a new shared example note (D20). */
 export const EXAMPLE_PATH = '/new?example';
 
 /** The shared view-transition name: a card on the landing page, then the note page. */
@@ -49,17 +49,40 @@ function until(check: () => boolean, timeoutMs: number): Promise<void> {
  * carries it in the new one. Under reduced motion the pages cross-fade briefly
  * (landing.css); without the API they just switch.
  */
-export async function openNote(path: string, card: HTMLElement | null = null): Promise<void> {
+export async function openNote(
+  to: string | (() => Promise<string>),
+  card: HTMLElement | null = null,
+): Promise<void> {
   if (opening) {
     return;
   }
   opening = true;
-  const go = () => navigate(path);
+  try {
+    await transitionTo(to, card);
+  } catch {
+    // Whatever failed, the latch never sticks.
+    opening = false;
+  }
+}
+
+async function transitionTo(
+  to: string | (() => Promise<string>),
+  card: HTMLElement | null,
+): Promise<void> {
   try {
     await loadNotePage();
   } catch {
     // Offline or a stale deploy: switch pages and let the route load it.
   }
+  // A fresh note's id (and a legacy draft's claim on it) is settled only now,
+  // when the note really opens: a page closed during a slow load claims nothing.
+  let path: string;
+  try {
+    path = typeof to === 'string' ? to : await to();
+  } catch {
+    path = notePath(generateNoteId());
+  }
+  const go = () => navigate(path);
   if (typeof document.startViewTransition !== 'function') {
     opening = false;
     go();
@@ -79,7 +102,7 @@ export async function openNote(path: string, card: HTMLElement | null = null): P
 
   const transition = document.startViewTransition(async () => {
     flushSync(go);
-    // `/new` mounts the local draft's (loaded) editor a moment later.
+    // The note page's (loaded) chunk mounts a moment later.
     await until(() => root?.querySelector('.note-page') != null, 1500);
     if (shared) {
       root.style.viewTransitionName = NOTE_TRANSITION_NAME;

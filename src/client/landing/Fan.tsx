@@ -3,7 +3,8 @@ import { type RefObject, useEffect, useRef, useState } from 'react';
 import { prefetchNotePage } from '../loadNote';
 import { Avatars, By, Caret, Check, OpenIcon } from './bits';
 import { useOnScreen, useReducedMotion } from './motion';
-import { EXAMPLE_PATH, NEW_NOTE_PATH, plainClick } from './open';
+import { NEW_NOTE_PATH } from '../notes';
+import { EXAMPLE_PATH, plainClick } from './open';
 
 const TYPED = ' with demos';
 /** Ticks per loop: type the words, Ana adds her line, then a pause. */
@@ -140,7 +141,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
         >
           <div className="card-head">
             <span className="card-tag">New note</span>
-            <span className="card-device">this device</span>
+            <span className="card-link">its own link</span>
           </div>
           <h4 className="card-untitled">
             Untitled

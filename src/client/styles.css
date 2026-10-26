@@ -372,13 +372,11 @@ button {
   background: var(--hover);
 }
 
-.button-share-draft,
 .reconnect {
   background: var(--btn);
   color: var(--btn-ink);
 }
 
-.button-share-draft:hover,
 .reconnect:hover {
   background: var(--accent);
 }

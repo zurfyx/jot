@@ -1,8 +1,13 @@
 import { useSyncExternalStore } from 'react';
 
 /**
+<<<<<<< HEAD
  * A small router: `/`, `/new` (a local draft), `/new?example` (the example
  * note), `/n/<id>` and `/docs/<slug>`. History API only, no library.
+=======
+ * A small router: `/`, `/new` (redirects to a fresh note), `/new?example`
+ * (the example note) and `/n/<id>`. History API only, no library.
+>>>>>>> 49e8271 (Give a new note its shareable link at once)
  */
 
 const NAVIGATE_EVENT = 'jot:navigate';
