@@ -1,7 +1,8 @@
 import type { Page } from '@playwright/test';
+import * as Y from '@y/y';
 
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
-import { readRawNote } from './raw-client';
+import { readRawNote, writeRawNote } from './raw-client';
 
 const NOTE_URL = /\/n\/([\w-]{22})$/;
 
@@ -30,6 +31,24 @@ async function storedNote(page: Page, baseURL: string, lines: string[]) {
   await page.close();
   const state = Buffer.from(await readRawNote(baseURL, id)).toString('base64');
   return JSON.stringify({ id: 'old-draft', state });
+}
+
+/** Stores `copy` as an earlier version kept a shared note's unconfirmed copy. */
+async function storeCopy(page: Page, id: string, copy: string) {
+  await page.goto('/');
+  await page.evaluate(
+    ([key, value]) => localStorage.setItem(key!, value!),
+    [`jot:pending:${id}`, copy],
+  );
+}
+
+/** Text that doesn't compress into fewer Yjs bytes. */
+function filler(length: number): string {
+  let text = '';
+  while (text.length < length) {
+    text += Math.random().toString(36).slice(2);
+  }
+  return text.slice(0, length);
 }
 
 test('Start a new note opens a shared note at once, and a second window joins it', async ({
@@ -139,4 +158,105 @@ test("a note copy left by jot's earlier version reaches its note when a page ope
   const other = await otherContext.newPage();
   await openNote(other, pendingId);
   await expect(editor(other)).toHaveText('Shared, then closed');
+});
+
+test('a draft is claimed only when the note opens: a page left during a slow load keeps it', async ({
+  context,
+}) => {
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('jot:draft', '{"id":"d","state":"AA=="}'));
+  // The editor chunk never arrives.
+  await page.route('**/src/client/editor/NotePage.tsx*', () => undefined);
+  await page
+    .getByRole('button', { name: /^Start a new note/ })
+    .first()
+    .click();
+  await page.waitForTimeout(800);
+  await expect(page).toHaveURL(/\/$/);
+  expect(await storedKeys(page)).toEqual(['jot:draft']);
+  await page.close();
+
+  const later = await context.newPage();
+  await later.goto('/');
+  expect(await storedKeys(later)).toEqual(['jot:draft']);
+});
+
+test('with storage denied, /new and Start a new note still open a fresh note', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('denied', 'SecurityError');
+      },
+    });
+  });
+  await page.goto('/new');
+  const first = await expectFreshNote(page);
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: /^Start a new note/ })
+    .first()
+    .click();
+  expect(await expectFreshNote(page)).not.toBe(first);
+});
+
+test('a copy the server already holds, deletions included, is cleared and changes nothing', async ({
+  page,
+  otherContext,
+  baseURL,
+}) => {
+  const id = freshNoteId();
+  const writer = await otherContext.newPage();
+  await openNote(writer, id);
+  await editor(writer).click();
+  await writer.keyboard.type('Hello world');
+  for (let i = 0; i < 6; i++) {
+    await writer.keyboard.press('Backspace');
+  }
+  await expect(writer.getByTestId('status-pill')).toContainText('Synced');
+  await expect.poll(async () => (await readRawNote(baseURL!, id)).byteLength).toBeGreaterThan(0);
+  const copy = JSON.stringify({
+    id: 'old',
+    state: Buffer.from(await readRawNote(baseURL!, id)).toString('base64'),
+  });
+  await writer.keyboard.type(' again');
+  await expect(editor(writer)).toHaveText('Hello again');
+  await expect(writer.getByTestId('status-pill')).toContainText('Synced');
+
+  await storeCopy(page, id, copy);
+  await page.goto('/new');
+  await expectFreshNote(page);
+  await expect.poll(() => storedKeys(page)).toEqual([]);
+  await expect(editor(writer)).toHaveText('Hello again');
+});
+
+test('a copy for a full note is dropped, not retried on every page', async ({ page, baseURL }) => {
+  test.setTimeout(60_000);
+  const id = freshNoteId();
+  // Two writes, each under the relay's message size, fill the note near the cap.
+  await writeRawNote(baseURL!, id, (doc) => doc.get('filler').insert(0, filler(950_000)));
+  await writeRawNote(baseURL!, id, (doc) => doc.get('filler').insert(0, filler(950_000)));
+  const doc = new Y.Doc();
+  doc.get('copy').insert(0, `COPY${filler(200_000)}`);
+  const copy = JSON.stringify({
+    id: 'old',
+    state: Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64'),
+  });
+
+  const sockets: string[] = [];
+  page.on('websocket', (socket) => sockets.push(socket.url()));
+  await storeCopy(page, id, copy);
+  await page.goto('/new');
+  await expectFreshNote(page);
+  await expect.poll(() => storedKeys(page), { timeout: 15_000 }).toEqual([]);
+  const server = new Y.Doc();
+  Y.applyUpdate(server, await readRawNote(baseURL!, id));
+  expect(server.get('copy').toString()).not.toContain('COPY');
+  expect(sockets.filter((url) => url.includes(id))).toHaveLength(1);
+
+  // The next note page leaves that note alone.
+  await page.goto('/new');
+  await expectFreshNote(page);
+  await page.waitForTimeout(500);
+  expect(sockets.filter((url) => url.includes(id))).toHaveLength(1);
 });

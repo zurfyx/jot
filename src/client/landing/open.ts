@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 
+import { generateNoteId, notePath } from '../../shared/ids';
 import { loadNotePage } from '../loadNote';
 import { navigate } from '../router';
 
@@ -49,21 +50,39 @@ function until(check: () => boolean, timeoutMs: number): Promise<void> {
  * (landing.css); without the API they just switch.
  */
 export async function openNote(
-  to: string | (() => string),
+  to: string | (() => Promise<string>),
   card: HTMLElement | null = null,
 ): Promise<void> {
   if (opening) {
     return;
   }
   opening = true;
-  // A fresh note's id is picked only once the note really opens.
-  const path = typeof to === 'string' ? to : to();
-  const go = () => navigate(path);
+  try {
+    await transitionTo(to, card);
+  } catch {
+    // Whatever failed, the latch never sticks.
+    opening = false;
+  }
+}
+
+async function transitionTo(
+  to: string | (() => Promise<string>),
+  card: HTMLElement | null,
+): Promise<void> {
   try {
     await loadNotePage();
   } catch {
     // Offline or a stale deploy: switch pages and let the route load it.
   }
+  // A fresh note's id (and a legacy draft's claim on it) is settled only now,
+  // when the note really opens: a page closed during a slow load claims nothing.
+  let path: string;
+  try {
+    path = typeof to === 'string' ? to : await to();
+  } catch {
+    path = notePath(generateNoteId());
+  }
+  const go = () => navigate(path);
   if (typeof document.startViewTransition !== 'function') {
     opening = false;
     go();

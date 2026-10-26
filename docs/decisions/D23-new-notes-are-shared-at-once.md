@@ -26,16 +26,27 @@ writes across tabs, and a pill state of their own.
   pill has no draft state and Share only copies the link.
 - **Migration from D18.** Nothing writes `jot:draft` or `jot:pending:<id>` any more. A
   browser that still holds them keeps their content:
-  - the next new note (from any start, or a load of `/new`) takes `jot:draft`: before the
-    note opens, the draft moves to that note's `jot:pending:<id>`, keeping one stored copy
-    at every step;
+  - the next new note (from any start, or a load of `/new`) takes `jot:draft`, at the
+    moment it commits to opening (after the editor chunk has loaded), so a page left
+    during a slow load claims nothing. The draft is copied to that note's
+    `jot:pending:<id>` and removed only once the copy reads back; with no room for the
+    copy, the draft stays and the note opens empty. The claim runs under a Web Lock
+    (`jot:legacy-draft`) and re-reads the draft inside it, so two tabs starting notes at
+    once can't take one draft into two notes. Storage that throws (denied) or a refused
+    lock skip the migration; the note still opens;
   - every note page that opens pushes each `jot:pending:<id>` to its own note from a
-    headless client (its own `Y.Doc` and provider, no presence), and removes the copy once
-    the relay has confirmed all of it (the same confirmation as a note page: the relay's
-    echo and the server's sync step 1). A push that hasn't finished in 30 s gives up and
-    keeps the copy for the next page. An unreadable copy is dropped.
+    headless client with no presence. Its document starts empty, so the server's sync
+    step 2 is the note's whole state, mirrored with every later update. A copy that adds
+    nothing to the mirror (inserts and deletes alike) is already there and is removed;
+    otherwise it is written and sent, and removed once the echo shows all of it. A copy
+    the server refuses (the note is full) can never land: it is removed too, so it isn't
+    retried on every page. A push that hasn't finished in 30 s gives up and keeps the copy
+    for the next page. An unreadable copy is dropped;
   - the moved draft shares the binding's content-derived seed with the new note's own
-    first sync, so the note shows the draft once, without an extra empty line.
+    first sync, so the note shows the draft once, without an extra empty line;
+  - a tab still running the earlier version during the deploy can write `jot:draft` again
+    after it was claimed; the next new note claims that too, so it lands in a second note
+    rather than being lost.
 
 ## Consequences
 
@@ -45,5 +56,7 @@ writes across tabs, and a pill state of their own.
   first keystroke. The link is 128 random bits (D02), so in practice that is whoever it is
   given to.
 - Offline edits of every note live in memory until the socket reconnects (D13).
+- A legacy copy for a full note is dropped: its content was never on the server and can't
+  be, and keeping it would open a socket on every note page.
 - The migration code can go once old drafts are unlikely to exist: it is small and
   touches nothing else.

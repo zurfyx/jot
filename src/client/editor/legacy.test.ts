@@ -1,7 +1,7 @@
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 
-import { legacyCopyIds, parseLegacyCopy } from './legacy';
+import { copyAddsTo, legacyCopyIds, parseLegacyCopy } from './legacy';
 
 function stored(doc: Y.Doc): string {
   const update = Y.encodeStateAsUpdate(doc);
@@ -40,5 +40,41 @@ describe('legacyCopyIds', () => {
     const keys = [...items.keys()];
     const storage = { length: keys.length, key: (i: number) => keys[i] ?? null } as Storage;
     expect(legacyCopyIds(storage)).toEqual(['abc', 'def']);
+  });
+});
+
+describe('copyAddsTo', () => {
+  const state = (doc: Y.Doc) => Y.encodeStateAsUpdate(doc);
+
+  it('is false for a copy the server holds, deletions included', () => {
+    const server = new Y.Doc();
+    const text = server.get('lexical-y');
+    text.insert(0, 'Hello world');
+    text.delete(5, 6);
+    const copy = state(server);
+    text.insert(5, ' again');
+    expect(copyAddsTo(state(server), copy)).toBe(false);
+  });
+
+  it('is false against a server that has collected the deleted content', () => {
+    const page = new Y.Doc({ gc: false });
+    page.get('lexical-y').insert(0, 'Hello world');
+    page.get('lexical-y').delete(5, 6);
+    const server = new Y.Doc({ gc: true });
+    Y.applyUpdate(server, state(page));
+    expect(copyAddsTo(state(server), state(page))).toBe(false);
+  });
+
+  it('is true for a copy with an insert or a deletion the server lacks', () => {
+    const server = new Y.Doc();
+    server.get('lexical-y').insert(0, 'Hello world');
+    const page = new Y.Doc();
+    Y.applyUpdate(page, state(server));
+    page.get('lexical-y').delete(0, 6);
+    expect(copyAddsTo(state(server), state(page))).toBe(true);
+    const typed = new Y.Doc();
+    Y.applyUpdate(typed, state(server));
+    typed.get('lexical-y').insert(11, '!');
+    expect(copyAddsTo(state(server), state(typed))).toBe(true);
   });
 });

@@ -195,8 +195,8 @@ them off and shows the final state.
   transition: the clicked card (the New note card for "Start a new note" and the keys, the
   example card for the example) grows from where it sits into the note page in 450ms with
   `cubic-bezier(0.2, 0, 0, 1)`, straightening and losing its rounded corners on the way.
-  Both pictures fill the growing sheet (cover, anchored top centre): the card's scales up
-  while the page's, on the page colour, fades in over it, and the rest of the landing page
-  fades out in 300ms. Under reduced motion it is a 150ms cross-fade.
+  Both pictures fill the growing sheet, on the page colour (cover, anchored top centre),
+  and cross-fade in its first 20%, while it is still near card size, so the scaled-up card
+  never shows through the page; the rest of the landing page fades out in 300ms. Under reduced motion it is a 150ms cross-fade.
 - Hover and focus states (links, the paste line, the tabs) change at once, without a
   colour transition.

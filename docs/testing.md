@@ -18,10 +18,14 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - size and copy formatting for the pill and Note info ("238 KB", "1.72 MB", "2 MB", edits
   waiting, the kept-until date);
 - the migration from local drafts (D23): a leftover draft moves to the new note's pending
-  copy once, keeping one copy when there is room for only one and staying put when the
-  copy can't be written; a stored copy reads back as its Yjs update, and anything else
-  (bad JSON, an empty state, bad base64, bytes that aren't an update) reads as nothing;
-  only `jot:pending:` keys count as copies;
+  copy under the Web Lock (none taken without a draft); of two tabs claiming at once only
+  one gets it, and the draft is re-read inside the lock; with no room for the copy the
+  draft stays; denied storage or a refused lock never throw, and `newNotePath` still gives
+  a fresh note; a stored copy reads back as its Yjs update, and anything else (bad JSON, an
+  empty state, bad base64, bytes that aren't an update) reads as nothing; only
+  `jot:pending:` keys count as copies; a copy adds nothing to a server that holds it,
+  deletions included (also when the server collected the deleted content), and adds to
+  one missing an insert or a deletion;
 - confirmation: the server's state vector confirms inserts it covers, never deletes;
 - blame: two peers' documents turn into lines of runs (a heading, bold text, a line break,
   a list, typing inside someone else's line), matching Lexical's lines; shares in
@@ -132,7 +136,8 @@ Durable Objects, over real WebSockets.
   one or two lines, names never on the state pill or on each other) at 1440 and 390px;
   opening from the New note card, the example card and "Start a new note" runs a 450ms
   view transition (held paused to read it) whose group starts at the card's width and
-  ends at the page's, with both pictures filling it (cover, never pinned top-left), and
+  ends at the page's, with both pictures filling it (cover, never pinned top-left) and the
+  cross-fade over by a quarter (card picture at 0, page at 1), and
   under reduced motion only a 150ms cross-fade with no card named; under reduced motion
   nothing animates and the final states show; and it loads without the editor chunk;
 - the paste field validates in place and opens links and bare codes;
@@ -160,8 +165,12 @@ Durable Objects, over real WebSockets.
   and that survives a reload; `/new` replaces itself with a fresh note each time; ⋯ → New
   note and ⌘K → New note open another empty one; a `jot:draft` left by the earlier version
   shows up in the next new note exactly once (its two lines, no extra empty one), reaches
-  a second browser, and is cleared; a `jot:pending:<id>` copy reaches its own note (not
-  the new one) when a note page opens, and is cleared;
+  a second browser, and is cleared; with the editor chunk held back, a start claims
+  nothing and the draft survives the page closing; with `localStorage` throwing, `/new` and
+  "Start a new note" still open fresh notes; a `jot:pending:<id>` copy reaches its own note
+  (not the new one) when a note page opens, and is cleared; a copy the server already
+  holds, with a deletion, is cleared and changes nothing; a copy for a full note is
+  refused, cleared, and its note is not dialled again by the next page;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
 - blame, with two people in separate browser contexts: off, nothing is painted; on,

@@ -12,6 +12,9 @@ const NotePage = lazy(loadNotePage);
 // The docs are their own chunk too; their live inspector loads Lexical only on its page.
 const DocsPage = lazy(() => import('./docs/DocsPage'));
 
+/** A `/new` redirect is being resolved (it waits for a legacy draft's lock). */
+let redirecting = false;
+
 export function App() {
   const route = matchRoute(useLocationPath());
   const exampleId = useExampleId();
@@ -27,10 +30,18 @@ export function App() {
 
   useEffect(() => {
     // `/new` (old links, a modified click on a start link) opens a fresh
-    // shared note (D23). Checked against the address itself, so Strict
-    // Mode's second run doesn't start a second note.
-    if (route.name === 'new' && matchRoute(window.location.pathname).name === 'new') {
-      redirect(newNotePath());
+    // shared note (D23). Checked against the address itself, before and
+    // after picking the note, so Strict Mode's second run doesn't start a
+    // second note.
+    const onNew = () => matchRoute(window.location.pathname).name === 'new';
+    if (route.name === 'new' && onNew() && !redirecting) {
+      redirecting = true;
+      void newNotePath().then((path) => {
+        redirecting = false;
+        if (onNew()) {
+          redirect(path);
+        }
+      });
     }
   }, [route.name]);
 

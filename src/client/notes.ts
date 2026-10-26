@@ -18,50 +18,78 @@ export const NEW_NOTE_PATH = '/new';
 export const LEGACY_DRAFT_KEY = 'jot:draft';
 export const LEGACY_PENDING_PREFIX = 'jot:pending:';
 
+/** The Web Lock that keeps two tabs from claiming one draft into two notes. */
+export const LEGACY_DRAFT_LOCK = 'jot:legacy-draft';
+
 export function legacyPendingKey(id: string): string {
   return `${LEGACY_PENDING_PREFIX}${id}`;
 }
 
+export interface ClaimOptions {
+  /** Defaults to `localStorage`, read inside the guard (it throws where storage is denied). */
+  storage?: Storage;
+  /** Defaults to `navigator.locks`; without it the claim runs unserialized. */
+  locks?: Pick<LockManager, 'request'> | null;
+}
+
 /**
  * Hands a draft left by the earlier version to note `id`: it becomes that
- * note's pending copy, which the note's page pushes to the relay and then
- * clears. One stored copy exists at every step: when there is no room for
- * two, the draft slot is freed first and put back if the copy still can't be
- * written. Does nothing when there is no draft.
+ * note's pending copy, which a note page pushes to the relay and then clears.
+ * Runs under a Web Lock and re-reads the draft inside it, so of two tabs
+ * starting notes at once only one takes it. The draft is removed only once
+ * the copy is written and reads back; if there is no room for it, the draft
+ * stays where it is and the note opens empty. Never throws; resolves to
+ * whether the draft moved.
  */
-export function claimLegacyDraft(id: string, storage: Storage = localStorage): void {
+export async function claimLegacyDraft(id: string, options: ClaimOptions = {}): Promise<boolean> {
   try {
-    const draft = storage.getItem(LEGACY_DRAFT_KEY);
-    if (draft === null) {
-      return;
+    const storage = options.storage ?? localStorage;
+    // The common case, no draft at all, takes no lock.
+    if (storage.getItem(LEGACY_DRAFT_KEY) === null) {
+      return false;
     }
-    const key = legacyPendingKey(id);
-    try {
-      storage.setItem(key, draft);
+    const claim = (): boolean => {
+      const draft = storage.getItem(LEGACY_DRAFT_KEY);
+      if (draft === null) {
+        return false;
+      }
+      const key = legacyPendingKey(id);
+      try {
+        storage.setItem(key, draft);
+      } catch {
+        // No room for a second copy: keep the draft for a later note.
+        return false;
+      }
+      if (storage.getItem(key) !== draft) {
+        return false;
+      }
       storage.removeItem(LEGACY_DRAFT_KEY);
-      return;
-    } catch {
-      // No room for two copies.
-    }
-    storage.removeItem(LEGACY_DRAFT_KEY);
-    try {
-      storage.setItem(key, draft);
-    } catch {
-      storage.setItem(LEGACY_DRAFT_KEY, draft);
-    }
+      return true;
+    };
+    const locks =
+      options.locks === undefined
+        ? typeof navigator === 'undefined'
+          ? null
+          : (navigator.locks ?? null)
+        : options.locks;
+    return locks === null ? claim() : await locks.request(LEGACY_DRAFT_LOCK, claim);
   } catch {
-    // No storage (private mode): nothing was kept to hand over.
+    return false;
   }
 }
 
-/** A fresh note's path. A draft left by the earlier version goes into it. */
-export function newNotePath(): string {
+/**
+ * A fresh note's path. A draft left by the earlier version goes into it.
+ * Call it when committing to open the note, not before: a claimed draft
+ * belongs to that note. Never rejects.
+ */
+export async function newNotePath(options?: ClaimOptions): Promise<string> {
   const id = generateNoteId();
-  claimLegacyDraft(id);
+  await claimLegacyDraft(id, options);
   return notePath(id);
 }
 
 /** ⋯ → New note, the full-note banner and Start blank: open a fresh note. */
 export function startNewNote(): void {
-  navigate(newNotePath());
+  void newNotePath().then(navigate);
 }

@@ -141,7 +141,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
         >
           <div className="card-head">
             <span className="card-tag">New note</span>
-            <span className="card-device">its own link</span>
+            <span className="card-link">its own link</span>
           </div>
           <h4 className="card-untitled">
             Untitled

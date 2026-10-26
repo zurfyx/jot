@@ -98,12 +98,19 @@ seeded, its editor stays mounted under the same React key while the address beco
 
 **Migration from local drafts** (D23). An earlier version kept an unshared draft in
 `jot:draft` and, until the relay confirmed it, a shared note's copy in `jot:pending:<id>`
-(localStorage, `{ id, state }` with the Yjs state in base64). `newNotePath()` moves a
-leftover `jot:draft` to the new note's `jot:pending:<id>` (one stored copy at every step).
-`editor/legacy.ts` runs when a note page opens: each `jot:pending:<id>` is pushed to its note
-by a headless client, a `Y.Doc` with the copy and a `WebsocketProvider` with no presence,
-whose whole document starts as unconfirmed; the copy is removed once the provider is synced
-and nothing is unconfirmed (confirmation as below), and kept if 30 s pass first.
+(localStorage, `{ id, state }` with the Yjs state in base64). `newNotePath()`, called when a
+start commits to opening (`landing/open.ts` calls it after the editor chunk loads), copies a
+leftover `jot:draft` to the new note's `jot:pending:<id>` under the Web Lock
+`jot:legacy-draft`, re-reading the draft inside it, and removes the draft only once the copy
+reads back; it never rejects, so storage or lock failures just open the note. `editor/legacy.ts`
+runs when a note page opens: each `jot:pending:<id>` is pushed to its note by a headless
+client, an empty `Y.Doc` and a `WebsocketProvider` with no presence. The server's sync step 2
+(its whole state, against an empty state vector) and every later update are mirrored into a
+gc-off document; once synced, `copyAddsTo` applies the copy to a scratch copy of the mirror.
+No change means the server has it all, and the copy is removed; otherwise the copy is
+written to the document, the provider sends it, and the check repeats on the echo. A note
+status with the rejected flag removes the copy too (the note is full); after 30 s without
+either, the copy stays for the next page.
 
 **`editor/session.ts`** creates a note session for an id: a `Y.Doc`, an `Awareness`, the
 editor with `YCollabExtension`, a `WebsocketProvider`, and signals for connection, sync,
@@ -250,12 +257,13 @@ editor chunk, then navigates inside `document.startViewTransition`, so a cold st
 freezes the page. The card (the clicked one, or the New note card for the button and the
 keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
 `#root` carries it in the new one. `landing.css` styles the pair: the group animates from
-the card's box to the page's in 450ms; `::view-transition-old(jot-note)` and
-`::view-transition-new(jot-note)` fill it (`width` and `height` 100%, `object-fit: cover`,
-anchored top centre), the new one on `--bg` because the page's picture is otherwise
-transparent, with keyframes of jot's own in place of the browser's cross-fade (the card's
-picture stays opaque underneath while the page's fades in, so the landing page never shows
-through). Under reduced motion no card is named and the pages cross-fade in 150ms; browsers
+the card's box to the page's in 450ms; its `::view-transition-image-pair` is the sheet,
+`--bg` clipped to corners that go from 20px to square (the page's picture is otherwise
+transparent, and the clip keeps the card's shadow from scaling up);
+`::view-transition-old(jot-note)` and `::view-transition-new(jot-note)` fill it (`width` and
+`height` 100%, `object-fit: cover`, anchored top centre) and cross-fade with plain opacity
+keyframes in the first 20%, in place of the browser's plus-lighter fade, which would add
+them onto the sheet's colour. Under reduced motion no card is named and the pages cross-fade in 150ms; browsers
 without the API switch pages directly.
 
 **The docs** (`docs/`, D22) are a third chunk: a table of contents (`pages.ts`), one

@@ -358,6 +358,20 @@ for (const trigger of ['new-note-card', 'example-card', 'start-button'] as const
       expect(picture.position).not.toMatch(/^0(%|px)? 0(%|px)?$/);
     }
 
+    // A quarter in, the cross-fade is over: no blown-up card shows through.
+    const quarter = await page.evaluate(() => {
+      for (const animation of document.getAnimations()) {
+        animation.currentTime = 450 / 4;
+      }
+      const opacity = (pseudo: string) =>
+        getComputedStyle(document.documentElement, pseudo).opacity;
+      return {
+        old: opacity('::view-transition-old(jot-note)'),
+        new: opacity('::view-transition-new(jot-note)'),
+      };
+    });
+    expect(quarter).toEqual({ old: '0', new: '1' });
+
     await releaseViewTransitions(page);
     await expectNotePage(page, trigger === 'example-card' ? 'example' : 'new');
   });
