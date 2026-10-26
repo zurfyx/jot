@@ -354,14 +354,14 @@ button {
 }
 
 /* The people here: overlapping initials in their colours. */
-.avatars {
+.note-avatars {
   display: inline-flex;
   flex: none;
   padding-left: 6px;
   margin-right: 2px;
 }
 
-.avatar {
+.note-avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -378,7 +378,7 @@ button {
   animation: fade-in var(--enter) var(--ease);
 }
 
-.avatar-more {
+.note-avatar-more {
   background: var(--hover);
   color: var(--muted);
 }
@@ -1165,7 +1165,7 @@ button {
     max-width: calc(100vw - 20px);
   }
 
-  .avatars {
+  .note-avatars {
     display: none;
   }
 }

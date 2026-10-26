@@ -13,7 +13,7 @@ test('the status pill shows the size, and the avatars the people here', async ({
   await expect(a.getByTestId('avatars')).toHaveAttribute('data-count', '1');
   await openNote(b, id);
   await expect(a.getByTestId('avatars')).toHaveAttribute('data-count', '2');
-  await expect(a.locator('.avatar')).toHaveCount(2);
+  await expect(a.locator('.note-avatar')).toHaveCount(2);
   await b.close();
   await expect(a.getByTestId('avatars')).toHaveAttribute('data-count', '1');
 });

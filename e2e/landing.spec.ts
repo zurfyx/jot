@@ -5,8 +5,10 @@ import { expect, freshNoteId, test } from './helpers';
 /** The landing page's start actions open the local draft at `/new` (D18). */
 async function expectNotePage(page: Page) {
   await expect(page.getByTestId('editor')).toBeVisible({ timeout: 15_000 });
-  await expect(page).toHaveURL(/\/new$/);
+  await expect(page).toHaveURL(/\/new(\?example)?$/);
   await expect(page.getByTestId('status-pill')).toHaveText('Only on this device');
+  // The landing page's styles stay loaded; the editor's own must still win.
+  await expect(page.locator('.note-avatar')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 }
 
 test('the hero has its title, buttons and links', async ({ page }) => {

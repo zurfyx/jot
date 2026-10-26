@@ -116,7 +116,7 @@ export function Avatars({ session }: { session: NoteSession }) {
   const names = people.map((person) => (person.self ? `${person.name} (you)` : person.name));
   return (
     <span
-      className="avatars"
+      className="note-avatars"
       role="img"
       aria-label={`Here now: ${names.join(', ')}`}
       data-testid="avatars"
@@ -125,14 +125,14 @@ export function Avatars({ session }: { session: NoteSession }) {
       {shown.map((person) => (
         <span
           key={person.clientID}
-          className="avatar"
+          className="note-avatar"
           style={peerStyle(person.color)}
           title={person.self ? `${person.name} (you)` : person.name}
         >
           {initial(person.name)}
         </span>
       ))}
-      {more > 0 && <span className="avatar avatar-more">+{more}</span>}
+      {more > 0 && <span className="note-avatar note-avatar-more">+{more}</span>}
     </span>
   );
 }
