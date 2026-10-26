@@ -143,6 +143,22 @@ export function registerClickToFocus(page: HTMLElement, editor: LexicalEditor): 
     };
   };
 
+  // Chrome on its own may put the caret in the nearest editable text when the
+  // blank page is pressed. With a menu open, the press must only close it.
+  const onMouseDown = (event: MouseEvent) => {
+    const root = editor.getRootElement();
+    const target = event.target;
+    if (
+      press?.overOverlay === true &&
+      target instanceof Element &&
+      root !== null &&
+      !root.contains(target) &&
+      target.closest(OWN_PRESSES) === null
+    ) {
+      event.preventDefault();
+    }
+  };
+
   const onClick = (event: MouseEvent) => {
     const start = press;
     press = null;
@@ -187,9 +203,11 @@ export function registerClickToFocus(page: HTMLElement, editor: LexicalEditor): 
   // On the window in the capture phase, ahead of the popovers' own listener
   // that closes them on the same press.
   window.addEventListener('pointerdown', onPointerDown, true);
+  page.addEventListener('mousedown', onMouseDown);
   page.addEventListener('click', onClick);
   return () => {
     window.removeEventListener('pointerdown', onPointerDown, true);
+    page.removeEventListener('mousedown', onMouseDown);
     page.removeEventListener('click', onClick);
   };
 }
