@@ -1,0 +1,4 @@
+# Mirrors CI's static and test jobs so a red never reaches GitHub.
+# e2e stays in CI (it needs a browser and the dev server).
+# Bypass: git push --no-verify
+pnpm typecheck && pnpm lint && pnpm format:check && pnpm test

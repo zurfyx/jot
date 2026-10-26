@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jot",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-10-25",
+  // The account comes from CLOUDFLARE_ACCOUNT_ID (CI secret), never this file.
+  "routes": [{ "pattern": "jot.rovira.sh", "custom_domain": true }],
+  "assets": {
+    "binding": "ASSETS",
+    // Unknown paths fall back to index.html; the client router decides.
+    "not_found_handling": "single-page-application",
+    // The Worker validates note ids before anything is served (D02).
+    "run_worker_first": ["/api/*", "/n/*"],
+  },
+  // One SQLite-backed Durable Object per note (D01).
+  "durable_objects": {
+    "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
+  "observability": { "enabled": true },
+}

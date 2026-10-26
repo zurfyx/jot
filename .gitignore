@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars*
+.env
+.env.*
+*.log
+*.tsbuildinfo
+.DS_Store
+coverage/
+playwright-report/
+test-results/
+AGENTS.local.md
+CLAUDE.local.md
