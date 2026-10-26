@@ -93,8 +93,16 @@ depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
 - The cap state comes from the server's note-status messages and a local estimate
   (`encodeStateAsUpdate` length, measured a second after changes). A rejection makes the
   note read only at once.
+- `router.ts` routes `/`, `/new` and `/n/<id>` with the History API. `/new` (also
+  `/new?example`) starts a fresh note: it resolves to a new `/n/<id>`.
 - The landing page and the note page are separate chunks: the editor, Lexical and Yjs load
-  only on a note page.
+  only on a note page (`loadNote.ts`). The landing page prefetches that chunk when a person
+  points at or focuses a start action, or holds ⌘ or Ctrl.
+- The landing page loads the editor chunk, then opens the note inside
+  `document.startViewTransition`, so a cold start never freezes the page: the clicked card
+  carries `view-transition-name: jot-note` in the old state and `#root` carries it in the
+  new one, so the card grows into the note page. Under reduced motion the pages cross-fade
+  in 150ms; browsers without the API switch pages directly.
 
 There is no Yjs 14 IndexedDB provider yet, so offline edits live in memory until the
 socket reconnects (D13).

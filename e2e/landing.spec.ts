@@ -1,12 +1,236 @@
+import type { Page } from '@playwright/test';
+
 import { expect, freshNoteId, test } from './helpers';
 
-test('Start a new note opens /n/<id>', async ({ page }) => {
+const NOTE_URL = /\/(new|n\/[A-Za-z0-9_-]{21}[AQgw])$/;
+
+/** A note page is open: `/new` (a fresh note) or the `/n/<id>` it resolves to. */
+async function expectNotePage(page: Page) {
+  await expect(page.getByTestId('editor')).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(NOTE_URL);
+}
+
+test('the hero has its title, buttons and links', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Write together, live.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start a new note' }).click();
-  await expect(page).toHaveURL(/\/n\/[A-Za-z0-9_-]{21}[AQgw]$/);
-  await expect(page.getByTestId('status-pill')).toContainText('Synced');
-  await expect(page.getByText('Start writing. Anyone with this link can edit.')).toBeVisible();
+  await expect(page).toHaveTitle('jot · Just start typing');
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
+  await expect(page.getByText('Live · Lexical + Yjs 14 playground')).toBeVisible();
+  const start = page.getByRole('button', { name: /^Start a new note/ });
+  await expect(start).toHaveCount(2);
+  await expect(start.first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'See the example' })).toBeVisible();
+  await expect(page.getByLabel('Note link or code')).toHaveAttribute(
+    'placeholder',
+    'Or paste a note link to join it.',
+  );
+  const nav = page.getByRole('navigation', { name: 'Site' });
+  await expect(nav.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs');
+  await expect(nav.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
+    'href',
+    'https://github.com/zurfyx/jot',
+  );
+  await expect(page.getByRole('link', { name: 'Open a new note' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open the example' })).toBeAttached();
+});
+
+test('the sections below the hero', async ({ page }) => {
+  await page.goto('/');
+  for (const name of [
+    'Start a note. Share it. Type together.',
+    'Lexical with Yjs 14, up close.',
+    'Read the code that matters.',
+    'Try it, then see how it works.',
+  ]) {
+    await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
+  }
+  for (const question of [
+    'Is my note private?',
+    'How long do notes last?',
+    'What is Yjs 14?',
+    'Can I run my own?',
+  ]) {
+    await expect(page.getByText(question)).toBeVisible();
+  }
+  await expect(page.getByRole('link', { name: 'Quick start in about 20 lines' })).toHaveAttribute(
+    'href',
+    /^\/docs\//,
+  );
+  await expect(page.getByText('© 2026 Gerard Rovira · MIT License')).toBeVisible();
+  // No em dashes anywhere on the page (house rule).
+  expect(await page.locator('body').innerText()).not.toContain('\u2014');
+});
+
+test('Start a new note opens a note', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: /^Start a new note/ })
+    .first()
+    .click();
+  await expectNotePage(page);
+});
+
+test('⌘↵ (Ctrl+Enter) starts a new note from anywhere on the page', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Note link or code').focus();
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expectNotePage(page);
+});
+
+test('any printable key starts a new note, except inside the paste field', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Note link or code').pressSequentially('abc');
+  await expect(page).toHaveURL('/');
+  await page.getByLabel('Note link or code').blur();
+  await page.keyboard.press('Shift');
+  // Space scrolls the page instead.
+  await page.keyboard.press(' ');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.keyboard.press('Shift+ ');
+  await expect(page).toHaveURL('/');
+  await page.keyboard.press('k');
+  await expectNotePage(page);
+});
+
+/** Records every client-side navigation, so a test can tell `/new` from `/new?example`. */
+async function recordPushes(page: Page) {
+  await page.addInitScript(() => {
+    const pushes: string[] = [];
+    (window as unknown as { __pushes: string[] }).__pushes = pushes;
+    const push = history.pushState.bind(history);
+    history.pushState = (state, unused, url) => {
+      pushes.push(String(url));
+      push(state, unused, url);
+    };
+  });
+}
+
+function pushes(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { __pushes: string[] }).__pushes);
+}
+
+/**
+ * A point inside `testId`'s card that is on top (the fan overlaps its cards),
+ * relative to the card's box, for `click({ position, force: true })`.
+ */
+async function visiblePoint(page: Page, testId: string) {
+  const point = await page.evaluate((id) => {
+    const card = document.querySelector(`[data-testid="${id}"]`)!;
+    const box = card.getBoundingClientRect();
+    for (let y = box.top + 30; y < box.bottom; y += 12) {
+      for (let x = box.right - 20; x > box.left; x -= 12) {
+        if (document.elementFromPoint(x, y)?.closest(`[data-testid="${id}"]`) === card) {
+          return { x: x - box.left, y: y - box.top };
+        }
+      }
+    }
+    return null;
+  }, testId);
+  expect(point).not.toBeNull();
+  return point!;
+}
+
+for (const { testId, name, path } of [
+  { testId: 'new-note-card', name: 'the New note card starts a note', path: '/new' },
+  { testId: 'example-card', name: 'the example card opens the example', path: '/new?example' },
+]) {
+  test(name, async ({ page }) => {
+    await recordPushes(page);
+    await page.goto('/');
+    const card = page.getByTestId(testId);
+    await card.hover({ position: await visiblePoint(page, testId), force: true });
+    await page.waitForTimeout(900); // the card lifts
+    await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
+    await card.click({ position: await visiblePoint(page, testId), force: true });
+    await expectNotePage(page);
+    expect(await pushes(page)).toEqual([path]);
+  });
+}
+
+test('See the example opens the example', async ({ page }) => {
+  await recordPushes(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'See the example' }).click();
+  await expectNotePage(page);
+  expect(await pushes(page)).toEqual(['/new?example']);
+});
+
+test('the footer links open a note in place, or a tab with a modifier', async ({ page }) => {
+  await recordPushes(page);
+  await page.goto('/');
+  const footer = page.getByRole('navigation', { name: 'Product' });
+  await expect(footer.getByRole('link', { name: 'Example' })).toHaveAttribute(
+    'href',
+    '/new?example',
+  );
+  await footer.getByRole('link', { name: 'New note' }).click();
+  await expectNotePage(page);
+  expect(await pushes(page)).toEqual(['/new']);
+});
+
+test('the feature tabs advance every 3 s and stop when one is chosen', async ({ page }) => {
+  await page.goto('/');
+  const tabs = page.getByRole('tablist', { name: 'Features' });
+  await tabs.scrollIntoViewIfNeeded();
+  const tab = (name: string) => tabs.getByRole('tab', { name: new RegExp(`^${name}`) });
+  const state = page.getByTestId('engine-state');
+
+  await expect(tab('Live cursors')).toHaveAttribute('aria-selected', 'true');
+  await expect(state).toHaveText('3 here');
+  await expect(tab('Blame')).toHaveAttribute('aria-selected', 'true', { timeout: 5000 });
+  await expect(state).toContainText('Blame · You 46%');
+  await expect(tab('Offline, then merge')).toHaveAttribute('aria-selected', 'true', {
+    timeout: 5000,
+  });
+
+  await tab('Live cursors').click();
+  await expect(tab('Live cursors')).toHaveAttribute('aria-selected', 'true');
+  await page.waitForTimeout(3600);
+  await expect(tab('Live cursors')).toHaveAttribute('aria-selected', 'true');
+  await expect(state).toHaveText('3 here');
+
+  // The arrow keys move between tabs too.
+  await page.keyboard.press('ArrowDown');
+  await expect(tab('Blame')).toHaveAttribute('aria-selected', 'true');
+  await expect(tab('Blame')).toBeFocused();
+});
+
+test('nothing moves under reduced motion; the final states show', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.waitForTimeout(500);
+  await page.getByRole('link', { name: 'Open a new note' }).hover();
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+
+  // The example card shows its finished text, and the story its last step.
+  const example = page.getByTestId('example-card');
+  await expect(example).toContainText('with demos');
+  await expect(example).toContainText('Send the agenda');
+  await expect(page.getByTestId('how-steps').locator('li.is-on')).toHaveCount(3);
+
+  // The tabs don't advance on their own.
+  const tabs = page.getByRole('tablist', { name: 'Features' });
+  await page.waitForTimeout(3600);
+  await expect(tabs.getByRole('tab', { name: /^Live cursors/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  const before = await example.innerText();
+  await page.waitForTimeout(500);
+  expect(await example.innerText()).toBe(before);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+});
+
+test('the landing page loads without the editor chunk', async ({ page }) => {
+  const scripts: string[] = [];
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script') {
+      scripts.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  expect(scripts.some((url) => /NotePage|lexical|@y\/y|yjs/i.test(url))).toBe(false);
 });
 
 test('the paste field validates in place', async ({ page }) => {
@@ -41,7 +265,7 @@ test('a malformed note link is a 400', async ({ request }) => {
 
 test('there is no public note', async ({ page, request }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Write together, live.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'public note' })).toHaveCount(0);
   const response = await request.get('/n/public');
   expect(response.status()).toBe(400);

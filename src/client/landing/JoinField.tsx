@@ -4,7 +4,7 @@ import { notePath, shortNoteId } from '../../shared/ids';
 import { parseNoteInput } from '../../shared/links';
 import { navigate } from '../router';
 
-/** Paste a jot link or a code; says in place which note it opens. */
+/** Paste a jot link or a code, on one quiet line; says in place which note it opens. */
 export function JoinField() {
   const [value, setValue] = useState('');
   const id = parseNoteInput(value, window.location.host);
@@ -19,12 +19,12 @@ export function JoinField() {
 
   return (
     <form className="join" onSubmit={open} noValidate>
-      <div className="join-row">
+      <div className={`join-row is-${state}`}>
         <input
-          className={`field${state === 'invalid' ? ' is-invalid' : ''}`}
+          className="join-input"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder="Paste a note link or code"
+          placeholder="Or paste a note link to join it."
           aria-label="Note link or code"
           aria-invalid={state === 'invalid'}
           aria-describedby="join-hint"
@@ -32,15 +32,11 @@ export function JoinField() {
           autoCapitalize="off"
           spellCheck={false}
         />
-        <button
-          type="submit"
-          className={state === 'valid' ? 'button-primary' : 'button-secondary'}
-          disabled={state !== 'valid'}
-        >
+        <button type="submit" className="join-open" disabled={state !== 'valid'}>
           Open
         </button>
       </div>
-      <p id="join-hint" className={`hint hint-${state}`} aria-live="polite">
+      <p id="join-hint" className={`join-hint is-${state}`} aria-live="polite">
         {state === 'valid' && id !== null && (
           <>
             Opens note <span className="mono">{shortNoteId(id)}</span>

@@ -4,13 +4,17 @@ Three layers, each run in CI as its own job (D10).
 
 ## Unit (`pnpm test`, project `unit`)
 
-Vitest in Node, next to the code (`src/shared/*.test.ts`):
+Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.ts`):
 
 - note ids: 22 base64url characters, 128 bits, no repeats, strict validation (the last
   character must be one of A, Q, g, w; no fixed words such as `public`);
 - link and code parsing for the paste field, including hosts that only look like jot's;
 - link normalisation for the selection toolbar (no `javascript:` links);
-- cap logic: the warn and full thresholds and the update bound.
+- cap logic: the warn and full thresholds and the update bound;
+- the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
+  space always left to scrolling, and the shortcut label per platform;
+- the landing page's destinations resolve to `/new`, the two-windows phases and steps, and
+  the feature tabs.
 
 ## Durable Object (`pnpm test`, project `workers`)
 
@@ -35,7 +39,13 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 Playwright (Chromium) against its own dev server on port 5174: the real client, Worker and
 Durable Objects, over real WebSockets.
 
-- Start a new note goes to `/n/<id>` and shows the empty-note placeholder;
+- the landing page: its title, headline, buttons, links and sections, with no em dashes;
+  "Start a new note" (with its `aria-keyshortcuts`), ⌘↵ (Ctrl+Enter) and a printable key
+  outside the paste field each open a note, while space only scrolls; hovering the New note
+  card and the example card lifts them and shows Open, and clicking each opens `/new` or
+  `/new?example`, as do "See the example" and the footer links; the feature tabs advance
+  every 3 s, stop when one is chosen, and follow the arrow keys; under reduced motion
+  nothing animates and the final states show; and it loads without the editor chunk;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-/** A two-route router: `/` and `/n/<id>`. History API only, no library. */
+/** A small router: `/`, `/new` and `/n/<id>`. History API only, no library. */
 
 const NAVIGATE_EVENT = 'jot:navigate';
 
@@ -32,11 +32,15 @@ export function redirect(path: string): void {
   window.dispatchEvent(new Event(NAVIGATE_EVENT));
 }
 
-export type Route = { name: 'landing' } | { name: 'note'; id: string } | { name: 'missing' };
+export type Route =
+  { name: 'landing' } | { name: 'new' } | { name: 'note'; id: string } | { name: 'missing' };
 
 export function matchRoute(pathname: string): Route {
   if (pathname === '/') {
     return { name: 'landing' };
+  }
+  if (pathname === '/new' || pathname === '/new/') {
+    return { name: 'new' };
   }
   const note = /^\/n\/([^/]+)\/?$/.exec(pathname);
   if (note !== null) {

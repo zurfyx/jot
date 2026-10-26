@@ -7,10 +7,15 @@ version of the engine.
 
 ## What a person can do
 
-- **Start a note.** The landing page's primary action opens `/n/<id>`, a new, empty note.
+- **Start a note.** The landing page's "Start a new note", ⌘↵ (Ctrl+Enter off Mac), any key
+  typed on the page outside a field, or the New note card opens `/new`, which starts a new,
+  empty note at `/n/<id>`.
+- **See the example.** "See the example" and the example card open `/new?example`. Until the
+  example note exists, it starts an empty note like `/new`.
 - **Share it.** The note's link is the whole access model. Share copies it.
-- **Join one.** Paste a jot link or just its code on the landing page. The field says which
-  note it opens, or that the text isn't a note link or code.
+- **Join one.** Paste a jot link or just its code into the landing page's quiet "Or paste a
+  note link to join it." line. It says which note it opens, or that the text isn't a note
+  link or code.
 - **Write together.** Rich text with headings, bold, italic, inline code, links, bulleted,
   numbered and checklists, quotes and tables. Markdown shortcuts while typing, a selection
   toolbar, and a ⌘K menu (New note, Copy link, Toggle theme, Insert table, Go home).
