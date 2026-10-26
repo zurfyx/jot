@@ -1,48 +1,38 @@
-import { useEffect, useRef, useState } from 'react';
+import { copyNoteLink, linkCopied, shareFailed } from './actions';
+import type { NoteSession } from './session';
+import { useSignal } from './useSignal';
 
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Older browsers, or a page without clipboard permission.
-    const area = document.createElement('textarea');
-    area.value = text;
-    area.setAttribute('readonly', '');
-    area.style.position = 'fixed';
-    area.style.opacity = '0';
-    document.body.append(area);
-    area.select();
-    const ok = document.execCommand('copy');
-    area.remove();
-    return ok;
-  }
-}
-
-export function copyNoteLink(): Promise<boolean> {
-  return copyText(window.location.href);
-}
-
-/** Copies the note's link and confirms in place. */
-export function ShareButton() {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => clearTimeout(timer.current ?? undefined), []);
+/**
+ * Copies the note's link and confirms in place. On a draft it shares first:
+ * the note gets its link, and the draft leaves this device (D18).
+ */
+export function ShareButton({ session }: { session: NoteSession }) {
+  const copied = useSignal(linkCopied);
+  const failed = useSignal(shareFailed);
+  const noteId = useSignal(session.noteId);
+  const cap = useSignal(session.cap);
+  // A full draft would be refused by the server.
+  const disabled = noteId === null && cap === 'full';
+  const label = copied
+    ? 'Link copied'
+    : failed && noteId === null
+      ? "Couldn't share · retry"
+      : 'Share';
 
   return (
     <button
       type="button"
-      className="button-ghost share-button"
-      onClick={async () => {
-        if (await copyNoteLink()) {
-          setCopied(true);
-          clearTimeout(timer.current ?? undefined);
-          timer.current = setTimeout(() => setCopied(false), 1800);
-        }
-      }}
+      className={`button-small ${noteId === null ? 'button-share-draft' : 'button-share'}`}
+      disabled={disabled}
+      title={
+        failed
+          ? "This browser's storage is full, so the draft couldn't be kept while it is shared. Free some space and try again."
+          : undefined
+      }
+      onClick={() => void copyNoteLink(session)}
     >
-      <span key={copied ? 'copied' : 'share'} className="swap">
-        {copied ? 'Link copied' : 'Share'}
+      <span key={label} className="swap" aria-live="polite">
+        {label}
       </span>
     </button>
   );

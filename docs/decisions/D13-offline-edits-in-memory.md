@@ -9,9 +9,12 @@ Yjs 13.
 
 ## Decision
 
-Offline edits live in the page's `Y.Doc` and sync when the socket reconnects. The pill says
-"Offline · will sync when you reconnect". Closing the tab while offline loses the
-unsynced edits.
+A shared note's offline edits (from losing the network, or from Work offline) live in the
+page's `Y.Doc` and sync when the socket reconnects. The pill says "Offline · N edits
+waiting". Closing the tab while offline loses the unsynced edits.
+
+An unshared draft is different: its whole state is small and has no server copy, so it is
+kept in localStorage (D18).
 
 ## Revisit when
 

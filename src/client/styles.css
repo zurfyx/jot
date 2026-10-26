@@ -22,6 +22,7 @@
   --warn: #8a6100;
   --bad: #b42318;
   --shadow: rgb(0 0 0 / 0.16);
+  --shadow-soft: rgb(0 0 0 / 0.1);
   --scrim: rgb(20 22 26 / 0.12);
   /* Collaborators' colours: identity, not status. */
   --peer-ink: #fff;
@@ -52,6 +53,7 @@
   --warn: #e3b341;
   --bad: #ff8a7a;
   --shadow: rgb(0 0 0 / 0.5);
+  --shadow-soft: rgb(0 0 0 / 0.4);
   --scrim: rgb(0 0 0 / 0.4);
   --peer-ink: #121316;
   --peer-0: #5fd07d;
@@ -299,21 +301,114 @@ button {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  max-width: calc(100vw - 28px);
   padding: 2px;
   border-radius: 10px;
   background: var(--bg);
 }
 
-.pill {
+.button-small {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.button-small:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.button-share {
+  font-weight: 500;
+}
+
+.button-share:hover {
+  background: var(--hover);
+}
+
+.button-share-draft,
+.reconnect {
+  background: var(--btn);
+  color: var(--btn-ink);
+}
+
+.button-share-draft:hover,
+.reconnect:hover {
+  background: var(--accent);
+}
+
+.reconnect {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+/* The people here: overlapping initials in their colours. */
+.note-avatars {
+  display: inline-flex;
+  flex: none;
+  padding-left: 6px;
+  margin-right: 2px;
+}
+
+.note-avatar {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--peer);
+  box-shadow: 0 0 0 2px var(--bg);
+  color: var(--peer-ink);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.note-avatar-more {
+  background: var(--hover);
+  color: var(--muted);
+}
+
+.pill {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
   gap: 7px;
-  padding: 5px 10px;
+  height: 30px;
+  padding: 0 10px;
   border-radius: 999px;
   color: var(--muted);
   font-size: 13px;
   white-space: nowrap;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.pill:not(:disabled):hover {
+  background: var(--hover);
+}
+
+.pill:disabled {
+  cursor: default;
+}
+
+.pill[aria-pressed='true'] {
+  background: var(--hover);
 }
 
 .pill-dot {
@@ -325,12 +420,29 @@ button {
   transition: background-color var(--enter) var(--ease);
 }
 
-.pill-dot-ok {
+.pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-ok .pill-dot {
   background: var(--ok);
 }
 
-.pill-dot-warn {
+.pill-warn {
+  color: var(--warn);
+}
+
+.pill-warn .pill-dot {
   background: var(--warn);
+}
+
+.pill-bad {
+  color: var(--bad);
+}
+
+.pill-bad .pill-dot {
+  background: var(--bad);
 }
 
 .pill-label,
@@ -444,6 +556,19 @@ button {
   padding-left: 14px;
   border-left: 3px solid var(--rule-strong);
   color: var(--body);
+}
+
+.jot-codeblock {
+  display: block;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--hover);
+  font-family: var(--mono);
+  font-size: 14.5px;
+  line-height: 1.6;
+  tab-size: 2;
+  white-space: pre-wrap;
 }
 
 .jot-ul,
@@ -635,54 +760,326 @@ button {
   transform: scale(0.85);
 }
 
-/* Selection toolbar. */
+/* The dock: one floating row at the bottom (Aa · ⋯, and feature slots). */
 
-.selection-toolbar {
+.dock-wrap {
   position: fixed;
-  z-index: 30;
+  right: 0;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 25;
   display: flex;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 9px;
-  background: var(--btn);
-  color: var(--btn-ink);
-  box-shadow: 0 6px 20px var(--shadow);
-  font-size: 13px;
-  font-weight: 600;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 10px 30px var(--shadow-soft);
+  pointer-events: auto;
+}
+
+.dock-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 650;
   line-height: 1;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+
+.dock-button:not(:disabled):hover,
+.dock-button[aria-expanded='true'],
+.icon-button:not(:disabled):hover {
+  background: var(--hover);
+}
+
+.dock-button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* Popovers open above the dock, centred on it. */
+
+.popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  width: min(260px, calc(100vw - 24px));
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 14px 40px var(--shadow);
+  font-size: 14px;
   transform: translateX(-50%);
-  animation: toolbar-in var(--enter) var(--ease);
+  animation: menu-up var(--pop) var(--ease);
 }
 
-.selection-toolbar button {
-  min-width: 30px;
-  padding: 7px 8px;
-  border-radius: 6px;
-  transition: background-color 120ms ease-out;
-}
-
-.selection-toolbar button:hover {
-  background: color-mix(in srgb, var(--btn-ink) 14%, transparent);
-}
-
-.selection-toolbar button.is-active {
-  background: color-mix(in srgb, var(--btn-ink) 22%, transparent);
-}
-
-.toolbar-link input {
-  width: 240px;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--btn-ink) 10%, transparent);
-  color: var(--btn-ink);
-  font: inherit;
-  font-weight: 500;
+.popover:focus {
   outline: none;
 }
 
-.toolbar-link input::placeholder {
-  color: color-mix(in srgb, var(--btn-ink) 60%, transparent);
+.menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--ink);
+  text-align: left;
+  line-height: 1.3;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.menu-item:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.menu-item:disabled:hover {
+  background: none;
+}
+
+.menu-item .icon {
+  color: var(--muted);
+}
+
+.menu-item[aria-checked='true'][role='menuitemradio'] {
+  background: var(--select);
+  color: var(--accent);
+}
+
+.menu-item[aria-checked='true'][role='menuitemradio'] .icon {
+  color: var(--accent);
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-glyph {
+  flex: none;
+  width: 16px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.menu-item[aria-checked='true'][role='menuitemradio'] .menu-glyph {
+  color: var(--accent);
+}
+
+.menu-hint {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--rule);
+}
+
+/* A switch: the knob slides when the toggle changes. */
+.switch {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--rule-strong);
+  transition: background-color var(--enter) var(--ease);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: transform var(--enter) var(--ease);
+}
+
+.switch.is-on {
+  background: var(--accent);
+}
+
+.switch.is-on::after {
+  transform: translateX(12px);
+}
+
+.format-row {
+  display: flex;
+  gap: 2px;
+  margin-top: 6px;
+  padding: 6px 2px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.format-row .icon-button {
+  min-width: 34px;
+  padding: 0;
+}
+
+.format-row .icon-button[aria-checked='true'] {
+  background: var(--select);
+  color: var(--accent);
+}
+
+.format-row .icon-button:disabled {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.format-row .icon-button:disabled:hover {
+  background: none;
+}
+
+.link-form {
+  padding: 2px;
+}
+
+.link-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.link-input:focus {
+  border-color: var(--accent);
+}
+
+/* Note info. */
+
+.note-info {
+  width: min(300px, calc(100vw - 24px));
+  padding: 14px;
+  font-size: 13.5px;
+}
+
+.note-info-title {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.note-info-key {
+  margin: 12px 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.note-info-size,
+.note-info-line {
+  margin: 0;
+}
+
+.note-info-size {
+  display: flex;
+  justify-content: space-between;
+}
+
+.note-info-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.meter {
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--hover);
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform var(--enter) var(--ease);
+}
+
+.meter-warn span {
+  background: var(--warn);
+}
+
+.meter-full span {
+  background: var(--bad);
+}
+
+.note-info-people {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-info-people li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.person-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--peer);
+}
+
+.person-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-info-people .note-info-muted {
+  margin-left: auto;
 }
 
 /* ⌘K command menu. */
@@ -765,6 +1162,11 @@ button {
   .note-chrome {
     top: 10px;
     right: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .note-avatars {
+    display: none;
   }
 }
 
@@ -776,10 +1178,10 @@ button {
   }
 }
 
-@keyframes toolbar-in {
+@keyframes menu-up {
   from {
     opacity: 0;
-    transform: translate(-50%, 4px);
+    transform: translate(-50%, 6px);
   }
 }
 

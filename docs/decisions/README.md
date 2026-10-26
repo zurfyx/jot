@@ -44,6 +44,7 @@ How expensive is this to get wrong?
 | [D06](D06-ninety-day-expiry.md)               | 90-day expiry without visits                                            | MED    | `DECIDED` |
 | [D08](D08-pr-workflow.md)                     | PR workflow: protected main, required checks, squash merge              | MED    | `DECIDED` |
 | [D10](D10-ci-topology-and-deploy-on-green.md) | CI topology and deploy-on-green; no PR previews                         | MED    | `DECIDED` |
+| [D18](D18-local-drafts.md)                    | An unshared note lives only in this browser; Share gives it a link      | MED    | `DECIDED` |
 | [D12](D12-presence-through-awareness.md)      | Presence: names, colours and carets through awareness                   | LOW    | `DECIDED` |
 | [D14](D14-lexical-without-lexical-react.md)   | The editor is built with the extension API, without `@lexical/react`    | LOW    | `DECIDED` |
 | [D07](D07-design-direction.md)                | Design: editor direction A, the fan landing page, Geist                 | LOW    | `DECIDED` |

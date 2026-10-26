@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 5174;
+// JOT_E2E_PORT lets parallel checkouts on one machine each run their own server.
+const PORT = Number(process.env.JOT_E2E_PORT ?? 5174);
 
 export default defineConfig({
   testDir: './e2e',

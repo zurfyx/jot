@@ -253,7 +253,11 @@ describe('NoteRoom', () => {
     a.type(0, filler(100_000));
     await a.until(() => a.lastStatus !== null && a.text.length === 100_000);
     a.doc.get('text').delete(0, 100_000);
-    await a.until(() => a.text.length === 0);
+    // The delete is applied locally at once; wait until the room has it too.
+    // A client that joins now gets the room's state, then any update still on
+    // its way, so its text empties only once the room has applied the delete.
+    const witness = await TestClient.connect(id);
+    await witness.until(() => witness.text.length === 0);
     await flush(id);
     const stored = await runInDurableObject(stubFor(id), (_room: NoteRoom, state) => {
       const row = state.storage.sql.exec('SELECT state FROM note').one();
@@ -261,5 +265,6 @@ describe('NoteRoom', () => {
     });
     expect(stored).toBeLessThan(1_000);
     a.close();
+    witness.close();
   });
 });

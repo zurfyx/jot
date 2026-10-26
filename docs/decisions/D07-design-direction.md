@@ -5,8 +5,10 @@ Status: `DECIDED`
 ## Decision
 
 - **Editor: direction A, "Pure page".** The window is the document, a centred column of
-  about 680px. The only chrome is a status pill and Share floating top right, plus a ⌘K
-  command menu and a selection toolbar that appear on demand.
+  about 680px. The chrome is the people here, a status pill with the note's size and Share
+  floating top right, and one floating dock at the bottom (Aa · ⋯) whose menus open on
+  click. No toolbar is always there: a persistent or selection text bar was rejected as
+  ugly. ⌘K opens a command menu.
 - **Landing: "the fan", Clean in light and Night in dark.** The hero shows the product
   itself: three fanned notes (a recipe, the live example that types on its own, a new note
   in front) over a drifting glow in the author colours, beside "Just start typing." with

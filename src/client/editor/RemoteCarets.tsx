@@ -48,8 +48,7 @@ export function RemoteCarets({
   session: NoteSession;
   surfaceRef: RefObject<HTMLDivElement | null>;
 }) {
-  const { editor, binding, provider } = session;
-  const { awareness } = provider;
+  const { editor, binding, awareness } = session;
   const [carets, setCarets] = useState<Caret[]>([]);
 
   // Publish the local selection.

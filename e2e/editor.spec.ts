@@ -4,16 +4,18 @@ import { writeRawNote } from './raw-client';
 // Two pages in one context: each page is its own Yjs client. (Chromium's
 // single-process mode, used in sandboxed shells, allows one context.)
 
-test('the status pill reaches Synced and counts people', async ({ context }) => {
+test('the status pill shows the size, and the avatars the people here', async ({ context }) => {
   const id = freshNoteId();
   const a = await context.newPage();
   const b = await context.newPage();
   await openNote(a, id);
-  await expect(a.getByTestId('status-pill')).toHaveText('Synced · 1 here');
+  await expect(a.getByTestId('status-pill')).toHaveText(/^Synced · \d+(\.\d)? (B|KB)$/);
+  await expect(a.getByTestId('avatars')).toHaveAttribute('data-count', '1');
   await openNote(b, id);
-  await expect(a.getByTestId('status-pill')).toHaveText('Synced · 2 here');
+  await expect(a.getByTestId('avatars')).toHaveAttribute('data-count', '2');
+  await expect(a.locator('.note-avatar')).toHaveCount(2);
   await b.close();
-  await expect(a.getByTestId('status-pill')).toHaveText('Synced · 1 here');
+  await expect(a.getByTestId('avatars')).toHaveAttribute('data-count', '1');
 });
 
 test('two pages on one note type and converge', async ({ context }) => {
@@ -68,7 +70,7 @@ test('Share copies the link', async ({ context, page }) => {
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
 });
 
-test('markdown shortcuts and the selection toolbar format text', async ({ page }) => {
+test('markdown shortcuts and the Aa menu format text', async ({ page }) => {
   await openNote(page, freshNoteId());
   await editor(page).click();
   await page.keyboard.type('Title');
@@ -85,15 +87,22 @@ test('markdown shortcuts and the selection toolbar format text', async ({ page }
   for (let i = 0; i < 'make me bold'.length; i++) {
     await page.keyboard.press('Shift+ArrowLeft');
   }
-  const toolbar = page.getByRole('toolbar', { name: 'Format' });
-  await expect(toolbar).toBeVisible();
-  await toolbar.getByRole('button', { name: 'Bold' }).click();
+  // No toolbar appears over a selection: formatting lives behind Aa.
+  await expect(page.getByRole('toolbar', { name: 'Format' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Format' }).click();
+  const menu = page.getByRole('menu', { name: 'Format' });
+  await menu.getByRole('menuitemcheckbox', { name: 'Bold' }).click();
   await expect(editor(page).locator('.jot-bold')).toHaveText('make me bold');
+  await expect(menu.getByRole('menuitemcheckbox', { name: 'Bold' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 
-  await toolbar.getByRole('button', { name: 'Link', exact: true }).click();
+  await menu.getByRole('menuitemcheckbox', { name: 'Link', exact: true }).click();
   await page.getByLabel('Link address').fill('lexical.dev');
   await page.getByLabel('Link address').press('Enter');
   await expect(editor(page).locator('a')).toHaveAttribute('href', 'https://lexical.dev/');
+  await expect(menu).toBeHidden();
 });
 
 test('the command menu toggles the theme', async ({ page }) => {
@@ -132,9 +141,10 @@ test('offline edits sync on reconnect', async ({ context }) => {
 
   offline = true;
   for (const ws of sockets) await ws.close();
-  await expect(a.getByTestId('status-pill')).toHaveText('Offline · will sync when you reconnect');
+  await expect(a.getByTestId('status-pill')).toHaveText('Offline · no edits waiting');
   await a.keyboard.press('Enter');
   await a.keyboard.type('Written offline');
+  await expect(a.getByTestId('status-pill')).toHaveText(/^Offline · \d+ edits waiting$/);
   await editor(b).click();
   await b.keyboard.press('ControlOrMeta+End');
   await b.keyboard.press('Enter');
@@ -142,7 +152,9 @@ test('offline edits sync on reconnect', async ({ context }) => {
   await expect(editor(b)).not.toContainText('Written offline');
 
   offline = false;
-  await expect(a.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  await expect(a.getByTestId('status-pill')).toHaveText('Back online · merged', {
+    timeout: 15_000,
+  });
   await expect(editor(b)).toContainText('Written offline');
   await expect(editor(a)).toContainText('Written online');
 });

@@ -11,4 +11,5 @@ Status: `DECIDED`
   over the page with Lexical's `createDOMRange` and `createRectsFromDOMRange`.
 - Awareness states are untrusted: names are clipped, colours are indexes into theme
   tokens, cursors that fail to resolve are skipped.
-- The count in "Synced · N here" is the number of awareness states.
+- The avatars top right and Note info's "Here now" list the awareness states; someone
+  whose caret moved in the last minute is "editing", otherwise "idle".
