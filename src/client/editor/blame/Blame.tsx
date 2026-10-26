@@ -304,7 +304,12 @@ function BlameLayer({
         setCard(null);
         return;
       }
-      const found = attributedAt(plan, at.x, at.y);
+      let found: string | null = null;
+      try {
+        found = attributedAt(plan, at.x, at.y);
+      } catch {
+        // A point blame cannot resolve shows no card.
+      }
       const person = found === null ? undefined : snapshot.people.get(found);
       if (person === undefined) {
         setCard((current) => (current === null ? current : null));

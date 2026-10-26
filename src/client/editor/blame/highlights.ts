@@ -42,35 +42,47 @@ export function createPainter(): Painter {
     }
     names = [];
   };
+  const paintNow = (
+    people: readonly { id: string; color: number }[],
+    ranges: Map<string, Range[]>,
+    focus: string | null,
+  ) => {
+    clear();
+    const rules: string[] = [];
+    people.forEach((person, index) => {
+      const name = `${HIGHLIGHT_PREFIX}${index}`;
+      const list = ranges.get(person.id);
+      if (list === undefined || list.length === 0) {
+        return;
+      }
+      CSS.highlights.set(name, new Highlight(...list));
+      names.push(name);
+      const color = `var(--peer-${Math.abs(Math.trunc(person.color)) % PEER_COLORS})`;
+      const shown =
+        focus === null || focus === person.id
+          ? color
+          : `color-mix(in srgb, ${color} var(--blame-faded), transparent)`;
+      rules.push(
+        `::highlight(${name}){text-decoration:underline 2px ${shown};text-underline-offset:0.24em;text-decoration-skip-ink:none}`,
+      );
+    });
+    const next = rules.join('\n');
+    if (next !== css) {
+      css = next;
+      sheet.replaceSync(next);
+    }
+    if (!adopted) {
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      adopted = true;
+    }
+  };
   return {
     paint(people, ranges, focus) {
-      clear();
-      const rules: string[] = [];
-      people.forEach((person, index) => {
-        const name = `${HIGHLIGHT_PREFIX}${index}`;
-        const list = ranges.get(person.id);
-        if (list === undefined || list.length === 0) {
-          return;
-        }
-        CSS.highlights.set(name, new Highlight(...list));
-        names.push(name);
-        const color = `var(--peer-${Math.abs(Math.trunc(person.color)) % PEER_COLORS})`;
-        const shown =
-          focus === null || focus === person.id
-            ? color
-            : `color-mix(in srgb, ${color} var(--blame-faded), transparent)`;
-        rules.push(
-          `::highlight(${name}){text-decoration:underline 2px ${shown};text-underline-offset:0.24em;text-decoration-skip-ink:none}`,
-        );
-      });
-      const next = rules.join('\n');
-      if (next !== css) {
-        css = next;
-        sheet.replaceSync(next);
-      }
-      if (!adopted) {
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-        adopted = true;
+      try {
+        paintNow(people, ranges, focus);
+      } catch (error) {
+        // Blame never breaks the page: without underlines, the margin still shows.
+        console.warn('jot: blame could not paint underlines', error);
       }
     },
     clear() {
