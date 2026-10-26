@@ -30,7 +30,7 @@ Geist (`@fontsource-variable/geist`) for everything; Geist Mono only for codes a
 
 ## Editor page
 
-- The window is the document: a centred 680px column, 17px text, so lines stay near 70
+- The window is the document: a centred 680px column, 18px text, so lines stay near 70
   characters.
 - The note's first line is its title (styled large, and shown in `document.title`). There
   is no title field.

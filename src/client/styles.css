@@ -553,11 +553,13 @@ button {
   position: absolute;
   inset: 0 0 auto;
   color: var(--muted);
+  font-size: 18px;
+  line-height: 1.65;
   pointer-events: none;
   user-select: none;
 }
 
-.note-placeholder p {
+.note-placeholder p:not(.note-placeholder-title) {
   margin: 0 0 12px;
 }
 
@@ -567,8 +569,8 @@ button {
   min-height: 50vh;
   outline: none;
   color: var(--ink);
-  /* 17px Geist in the 616px text column keeps lines near 70 characters. */
-  font-size: 17px;
+  /* 18px Geist in the 616px text column keeps lines near 70 characters. */
+  font-size: 18px;
   line-height: 1.65;
   caret-color: var(--accent);
   overflow-wrap: break-word;
@@ -726,7 +728,7 @@ button {
 .jot-table {
   margin: 6px 0 14px;
   border-collapse: collapse;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .jot-td,
@@ -923,7 +925,8 @@ button {
     padding: 68px 20px 45vh;
   }
 
-  .jot-editor {
+  .jot-editor,
+  .note-placeholder {
     font-size: 16px;
   }
 
