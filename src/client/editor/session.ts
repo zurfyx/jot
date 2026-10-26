@@ -131,6 +131,9 @@ export function createNoteSession(id: string): NoteSession {
   let mergedTimer: ReturnType<typeof setTimeout> | null = null;
 
   let measureTimer: ReturnType<typeof setTimeout> | null = null;
+  // Local edits made while connected that the relay has not echoed yet. A link
+  // that dies silently is only noticed later, so these wait too once it drops.
+  let inFlight = 0;
   const onDocUpdate = (_update: Uint8Array, origin: unknown) => {
     if (measureTimer === null) {
       measureTimer = setTimeout(() => {
@@ -140,13 +143,12 @@ export function createNoteSession(id: string): NoteSession {
     }
     // Edits after the first sync wait for the server's confirmation; the
     // people registry's own writes (blame) are not edits.
-    if (
-      origin !== provider &&
-      everSynced.peek() &&
-      !confirmed.peek() &&
-      origin !== REGISTRY_ORIGIN
-    ) {
-      pendingEdits.value++;
+    if (origin !== provider && everSynced.peek() && origin !== REGISTRY_ORIGIN) {
+      if (confirmed.peek()) {
+        inFlight++;
+      } else {
+        pendingEdits.value++;
+      }
     }
   };
   // The provider joins `${serverUrl}/${room}`, which is noteSocketPath(id).
@@ -228,6 +230,10 @@ export function createNoteSession(id: string): NoteSession {
   const onSync = (isSynced: boolean) => {
     synced.value = isSynced;
     if (!isSynced) {
+      if (confirmed.peek() && provider.unconfirmedUpdates.length > 0) {
+        pendingEdits.value += inFlight;
+      }
+      inFlight = 0;
       confirmed.value = false;
       outstanding = null;
       if (everSynced.peek() && offlineSpell === null) {
@@ -243,8 +249,14 @@ export function createNoteSession(id: string): NoteSession {
     outstanding = [...provider.unconfirmedUpdates];
     settle();
   };
+  const onSyncStatus = () => {
+    if (provider.unconfirmedUpdates.length === 0) {
+      inFlight = 0;
+    }
+  };
   provider.on('status', onStatus);
   provider.on('sync', onSync);
+  provider.on('sync-status', onSyncStatus);
   doc.on('update', onDocUpdate);
 
   // Reconnect at once when the browser says the network is back, unless the
@@ -322,6 +334,7 @@ export function createNoteSession(id: string): NoteSession {
       doc.off('update', onDocUpdate);
       provider.off('status', onStatus);
       provider.off('sync', onSync);
+      provider.off('sync-status', onSyncStatus);
       provider.destroy();
       awareness.destroy();
       editor.dispose();

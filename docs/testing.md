@@ -161,6 +161,8 @@ Durable Objects, over real WebSockets.
   stay editable, Reconnect merges both and shows "Back online · merged", then "Synced";
   the browser's `online` event doesn't end Work offline;
 - a dropped socket shows "Offline · N edits waiting" and syncs on reconnect;
+- edits typed into a link that died silently (the page still connected, its content
+  swallowed) count as waiting once the drop is noticed, and merge when the link is back;
 - with the page's content held back (`page.routeWebSocket`), reconnecting stays "Syncing ·
   N edits waiting" until the server has the edits, then shows "Back online · merged";
 - new notes (D23): "Start a new note" opens a synced `/n/<id>` that a second browser joins

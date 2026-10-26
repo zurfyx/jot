@@ -131,7 +131,10 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   been confirmed.
 - **Work offline** calls `provider.disconnect()` and keeps the editor editable; the
   browser's `online` event no longer reconnects while it is on. Local transactions count
-  as edits waiting from the first sync on, whenever the note is not confirmed. When an offline spell (chosen or not) is confirmed,
+  as edits waiting from the first sync on, whenever the note is not confirmed. Those made
+  while confirmed that the relay has not echoed yet count too once the connection drops: a
+  link that dies silently is only noticed later (the provider's 30 s message timeout), and
+  what was typed into it is waiting. When an offline spell (chosen or not) is confirmed,
   "merged" is true for four seconds and `onReconnect` listeners run, with whether the
   spell was Work offline.
 - **Size and cap:** the size is the larger of the server's note-status figure and a local
