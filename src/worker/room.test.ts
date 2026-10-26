@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { generateNoteId, noteSocketPath } from '../shared/ids';
 import { NOTE_EXPIRY_MS, NOTE_MAX_BYTES } from '../shared/limits';
 import { CLOSE_MALFORMED } from '../shared/protocol';
+import worker from './index';
 import type { NoteRoom } from './room';
 import { TestClient } from './test-client';
 
@@ -103,6 +104,30 @@ describe('search engines (D17)', () => {
     const socket = response.webSocket!;
     socket.accept();
     socket.close();
+  });
+
+  it('in production, marks only notes and the API', async () => {
+    const response = await worker.fetch(new Request('http://jot.test/api/elsewhere'), env);
+    expect(response.headers.get('X-Robots-Tag')).toBe(NOINDEX);
+    const landing = await worker.fetch(new Request('http://jot.test/'), {
+      ...env,
+      ASSETS: { fetch: () => Promise.resolve(new Response('landing')) } as unknown as Fetcher,
+    });
+    expect(landing.headers.get('X-Robots-Tag')).toBeNull();
+  });
+
+  // Previews (D10) set JOT_ENV=preview in wrangler.jsonc's `previews.vars`.
+  it('marks every response of a Preview noindex, nofollow, the landing page included', async () => {
+    const preview = {
+      ...env,
+      JOT_ENV: 'preview',
+      ASSETS: { fetch: () => Promise.resolve(new Response('landing')) } as unknown as Fetcher,
+    };
+    for (const path of ['/', '/docs', `/n/${generateNoteId()}`, '/api/elsewhere']) {
+      const response = await worker.fetch(new Request(`http://jot.test${path}`), preview);
+      expect(response.headers.get('X-Robots-Tag'), path).toBe(NOINDEX);
+      await response.body?.cancel();
+    }
   });
 });
 

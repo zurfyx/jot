@@ -3,8 +3,13 @@
   "name": "jot",
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-10-25",
-  // The account comes from CLOUDFLARE_ACCOUNT_ID (CI secret), never this file.
+  // Workers Builds deploys `main` and every other branch as a Preview (D10).
+  // The account is the one the Worker is connected to; never put its id here.
   "routes": [{ "pattern": "jot.rovira.sh", "custom_domain": true }],
+  // Production answers only on jot.rovira.sh. Each Preview answers on workers.dev at
+  // <preview-name>-jot.rovira.workers.dev, which Cloudflare marks noindex (D24).
+  "workers_dev": false,
+  "preview_urls": true,
   "assets": {
     "binding": "ASSETS",
     // Unknown paths fall back to index.html; the client router decides.
@@ -16,24 +21,20 @@
   "durable_objects": {
     "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
   },
+  // Migrations stay at the top level; every Preview runs them into its own namespace.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
   "observability": { "enabled": true },
-  "env": {
-    // PR previews (D10). CI builds with CLOUDFLARE_ENV=preview, then
-    // scripts/preview-config.mjs writes the config it deploys as jot-pr-<n> on
-    // workers.dev, and refuses anything below it does not expect. Routes are
-    // inheritable, so `routes: []` keeps a preview off jot.rovira.sh. Its own
-    // binding and migration give it its own Durable Object namespace: never add
-    // a `script_name` or a transferred class, which would reach production.
-    "preview": {
-      "name": "jot-preview",
-      "routes": [],
-      "workers_dev": true,
-      "preview_urls": false,
-      "durable_objects": {
-        "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
-      },
-      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
+  "vars": { "JOT_ENV": "production" },
+  // Preview settings (D10). Previews inherit none of the above except assets,
+  // compatibility, migrations and observability, so the binding and vars are
+  // repeated here. Each Preview gets its own Durable Object namespace: never add
+  // a `script_name`, which would reach production's notes. No routes or crons:
+  // those always target production.
+  "previews": {
+    "durable_objects": {
+      "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
     },
+    // The Worker marks every response noindex when it runs as a Preview.
+    "vars": { "JOT_ENV": "preview" },
   },
 }

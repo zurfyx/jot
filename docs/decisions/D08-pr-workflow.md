@@ -13,5 +13,5 @@ Status: `DECIDED`
 
 ## Consequences
 
-Because a green `main` deploys itself (D10), the PR review and the required checks are
-the release gate.
+Because Workers Builds deploys every push to `main` (D10), the PR review and the required
+checks are the release gate.

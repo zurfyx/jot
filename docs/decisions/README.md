@@ -44,7 +44,7 @@ How expensive is this to get wrong?
 | [D04](D04-lexical-from-pkg-pr-new.md)            | Lexical from pkg.pr.new at a pinned PR commit; single copy; bump script | MED    | `DECIDED` |
 | [D06](D06-ninety-day-expiry.md)                  | 90-day expiry without visits                                            | MED    | `DECIDED` |
 | [D08](D08-pr-workflow.md)                        | PR workflow: protected main, required checks, squash merge              | MED    | `DECIDED` |
-| [D10](D10-ci-topology-and-deploy-on-green.md)    | CI topology, deploy-on-green, and each PR as its own preview Worker     | MED    | `DECIDED` |
+| [D10](D10-ci-gates-workers-builds-deploys.md)    | GitHub CI gates merges; Cloudflare Workers Builds deploys               | MED    | `DECIDED` |
 | [D23](D23-new-notes-are-shared-at-once.md)       | A new note is shared from its first moment; `/new` opens a fresh link   | MED    | `DECIDED` |
 | [D19](D19-blame-from-yjs-attributions.md)        | Blame from Yjs 14 attributions in the browser, with a people registry   | MED    | `DECIDED` |
 | [D20](D20-example-note-with-in-tab-peers.md)     | The example is a real shared note, edited by in-tab Yjs peers           | MED    | `DECIDED` |
@@ -57,6 +57,7 @@ How expensive is this to get wrong?
 | [D15](D15-no-public-note.md)                     | No public note: abuse on a personal domain, and anyone can fill it      | LOW    | `DECIDED` |
 | [D17](D17-notes-out-of-search-engines.md)        | Notes and the API are `noindex, nofollow` and disallowed in robots.txt  | LOW    | `DECIDED` |
 | [D22](D22-docs-in-the-app.md)                    | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`   | LOW    | `DECIDED` |
+| [D24](D24-previews-on-workers-dev.md)            | Branch Previews on rovira.workers.dev, noindex, own Durable Objects     | LOW    | `DECIDED` |
 
 ## Superseded
 

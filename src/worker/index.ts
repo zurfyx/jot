@@ -7,7 +7,10 @@ export { NoteRoom } from './room';
 const SOCKET_ROUTE = /^\/api\/n\/([^/]+)\/ws$/;
 const NOTE_ROUTE = /^\/n\/([^/]+)\/?$/;
 
-/** Notes and the API stay out of search engines; the landing page does not (D17). */
+/**
+ * Notes and the API stay out of search engines; the landing page does not (D17). A Preview
+ * (D10) is out of them entirely: `previews.vars` in wrangler.jsonc sets JOT_ENV.
+ */
 const ROBOTS_HEADER = 'X-Robots-Tag';
 const ROBOTS_VALUE = 'noindex, nofollow';
 
@@ -38,7 +41,8 @@ export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
     const response = await route(request, env, url);
-    return isPrivatePath(url.pathname) ? withNoIndex(response) : response;
+    const noIndex = env.JOT_ENV === 'preview' || isPrivatePath(url.pathname);
+    return noIndex ? withNoIndex(response) : response;
   },
 } satisfies ExportedHandler<Env>;
 

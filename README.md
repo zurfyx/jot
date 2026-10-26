@@ -32,6 +32,17 @@ pnpm dev          # http://localhost:5173: the client, the Worker and its Durabl
 | `pnpm build`        | Production build of the client and the Worker                  |
 | `pnpm bump-lexical` | `pnpm bump-lexical <pr-or-sha>`: move Lexical to another build |
 
+## Deploys
+
+Cloudflare Workers Builds deploys every push to `main` to jot.rovira.sh, and builds every
+other branch as a Preview at `<preview-name>-jot.rovira.workers.dev`, with its own notes;
+the pull request gets a comment with the link. GitHub Actions only runs CI (`static`,
+`test`, `e2e`, `zizmor`), the checks a pull request needs to merge, and holds no Cloudflare
+secret. Builds and deploys show as a `Workers Builds` check on each commit and in the
+Cloudflare dashboard under Workers & Pages > `jot`. See
+[D10](docs/decisions/D10-ci-gates-workers-builds-deploys.md) and
+[D24](docs/decisions/D24-previews-on-workers-dev.md).
+
 ## Layout
 
 ```

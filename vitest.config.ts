@@ -7,12 +7,7 @@ export default defineConfig({
       {
         test: {
           name: 'unit',
-          include: [
-            'src/shared/**/*.test.ts',
-            'src/client/**/*.test.ts',
-            'src/docs/**/*.test.ts',
-            'scripts/**/*.test.mjs',
-          ],
+          include: ['src/shared/**/*.test.ts', 'src/client/**/*.test.ts', 'src/docs/**/*.test.ts'],
           environment: 'node',
         },
       },
