@@ -1,4 +1,13 @@
-import { $createParagraphNode, $getRoot, $isDecoratorNode, type LexicalEditor } from 'lexical';
+import { $isCodeNode } from '@lexical/code-core';
+import { $isQuoteNode } from '@lexical/rich-text';
+import { $isTableNode } from '@lexical/table';
+import {
+  $createParagraphNode,
+  $getRoot,
+  $isDecoratorNode,
+  type LexicalEditor,
+  type LexicalNode,
+} from 'lexical';
 
 /**
  * Presses that keep their own meaning: controls, media, the chrome, menus and
@@ -90,12 +99,25 @@ function caretAt(root: HTMLElement, x: number, y: number): { node: Node; offset:
   return point !== null && root.contains(point.node) ? point : null;
 }
 
+/**
+ * Whether writing after `last` needs a new line: a caret can't sit after an
+ * image or another decorator, and at the end of a code block, a table or a
+ * quote the typing would land inside it.
+ */
+function $needsLineAfter(last: LexicalNode | null): boolean {
+  return (
+    last === null ||
+    $isDecoratorNode(last) ||
+    $isCodeNode(last) ||
+    $isTableNode(last) ||
+    $isQuoteNode(last)
+  );
+}
+
 function selectEnd(editor: LexicalEditor): void {
   editor.update(() => {
     const root = $getRoot();
-    const last = root.getLastChild();
-    // A caret can't sit after an image or another decorator: give it a line.
-    if (last === null || $isDecoratorNode(last)) {
+    if ($needsLineAfter(root.getLastChild())) {
       root.append($createParagraphNode());
     }
     root.selectEnd();

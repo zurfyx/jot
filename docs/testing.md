@@ -164,8 +164,9 @@ Durable Objects, over real WebSockets.
   caret line above the dock after every line;
 - a click on the blank page writes, at 1440 and 390px: below an empty note it focuses the
   editor without scrolling; below the text the typing lands at the end of the last line;
-  in the margin beside a line, in that line; a tap below the text on a touch screen writes
-  at the end; a press outside an open menu only closes it (the caret stays put), a click
+  in the margin beside a line, in that line, also with only `caretRangeFromPoint` (older
+  Safari); below a note ending in a code block or a quote, on a new line after it; a tap
+  below the text on a touch screen writes at the end; a press outside an open menu only closes it (the caret stays put), a click
   beside the dock writes, and a drag from the text onto the blank page keeps its selection;
 - markdown shortcuts, and Aa's Bold and Link (no toolbar appears over a selection);
 - the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items (Show blame first),

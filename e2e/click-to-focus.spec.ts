@@ -81,6 +81,58 @@ for (const viewport of [
   });
 }
 
+for (const block of [
+  { name: 'code block', shortcut: '``` ', selector: 'code' },
+  { name: 'quote', shortcut: '> ', selector: 'blockquote' },
+]) {
+  test(`a click below a note ending in a ${block.name} writes on a new line after it`, async ({
+    page,
+  }) => {
+    await openNote(page, freshNoteId());
+    await editor(page).click();
+    await page.keyboard.type('Title');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(block.shortcut);
+    await page.keyboard.type('inside');
+    await expect(editor(page).locator(block.selector)).toHaveText('inside');
+    await blurEditor(page);
+    const { x, y } = await belowTheText(page);
+    await page.mouse.click(x, y);
+    await page.keyboard.type('after');
+    await expect(editor(page).locator(block.selector)).toHaveText('inside');
+    await expect(editor(page).locator(':scope > *').last()).toHaveText('after');
+    await expect(editor(page).locator(':scope > p').last()).toHaveText('after');
+  });
+}
+
+test.describe('without caretPositionFromPoint', () => {
+  test.beforeEach(async ({ page }) => {
+    // Older Safari: only caretRangeFromPoint.
+    await page.addInitScript(() => {
+      delete (Document.prototype as Partial<Document>).caretPositionFromPoint;
+    });
+  });
+
+  test('a click in the margin beside a line still puts the caret in that line', async ({
+    page,
+  }) => {
+    await openNote(page, freshNoteId());
+    expect(await page.evaluate(() => typeof document.caretPositionFromPoint)).toBe('undefined');
+    expect(await page.evaluate(() => typeof document.caretRangeFromPoint)).toBe('function');
+    await editor(page).click();
+    await page.keyboard.type('Title');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Middle');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Last');
+    await blurEditor(page);
+    const middle = await editor(page).locator(':scope > *').nth(1).boundingBox();
+    await page.mouse.click(page.viewportSize()!.width - 4, middle!.y + middle!.height / 2);
+    await page.keyboard.type('!');
+    await expect(editor(page).locator(':scope > *')).toHaveText(['Title', 'Middle!', 'Last']);
+  });
+});
+
 test.describe('on a touch screen', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
