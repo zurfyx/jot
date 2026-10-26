@@ -1,14 +1,18 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
+import { $createCodeNode } from '@lexical/code-core';
+import { $isLinkNode } from '@lexical/link';
 import { $createListItemNode, $createListNode, $isListNode, type ListNode } from '@lexical/list';
 import { $createHeadingNode } from '@lexical/rich-text';
 import { $createTableNodeWithDimensions } from '@lexical/table';
 import {
+  $createLineBreakNode,
   $createParagraphNode,
   $createTextNode,
   $getRoot,
   defineExtension,
   type ElementNode,
   type LexicalEditor,
+  type TextNode,
 } from 'lexical';
 import { describe, expect, it } from 'vitest';
 
@@ -16,6 +20,7 @@ import { jotEditorExtension } from '../extensions';
 import {
   $blocksToMarkdown,
   $replaceBlocks,
+  $snapshotBlocks,
   $targetBetween,
   buildPrompt,
   cleanReply,
@@ -148,11 +153,109 @@ describe('Ask AI Markdown', () => {
     expect(result.list).toBe('- Demos\n- Lunch with **Ana**');
   });
 
+  it('exports blocks that start or end with a line break, and code blocks with blank edges', () => {
+    const editor = createEditor();
+    const result = update(editor, () => {
+      const leading = $createParagraphNode().append(
+        $createLineBreakNode(),
+        $createTextNode('after'),
+      );
+      const trailing = $createParagraphNode().append(
+        $createTextNode('before'),
+        $createLineBreakNode(),
+      );
+      const code = $createCodeNode().append(
+        $createLineBreakNode(),
+        $createTextNode('const x = 1;'),
+        $createLineBreakNode(),
+      );
+      const onlyBreak = $createParagraphNode().append($createLineBreakNode());
+      $getRoot().clear().append(leading, trailing, code, onlyBreak);
+      return {
+        leading: $blocksToMarkdown([leading]),
+        trailing: $blocksToMarkdown([trailing]),
+        code: $blocksToMarkdown([code]),
+        all: $blocksToMarkdown([leading, trailing, code]),
+        onlyBreak: $blocksToMarkdown([onlyBreak]),
+      };
+    });
+    expect(result.leading).toBe('after');
+    expect(result.trailing).toBe('before');
+    expect(result.code).toBe('```\n\nconst x = 1;\n\n```');
+    expect(result.all).toContain('after');
+    expect(result.all).toContain('before');
+    expect(result.all).toContain('const x = 1;');
+    expect(result.onlyBreak).toBe('');
+  });
+
+  it('round-trips code blocks through a reply', () => {
+    const editor = createEditor();
+    seed(editor);
+    const result = update(editor, () => {
+      $replaceBlocks([children()[1]!], '```\nconst a = 1;\n```\n\nThen:\n\n```\nconst b = 2;\n```');
+      return children().map((node) => node.getType());
+    });
+    expect(result).toEqual(['heading', 'code', 'paragraph', 'code', 'list', 'paragraph']);
+  });
+
+  it('snapshots what Markdown drops', () => {
+    const editor = createEditor();
+    seed(editor);
+    const result = update(editor, () => {
+      const paragraph = children()[1]!;
+      const before = {
+        markdown: $blocksToMarkdown([paragraph]),
+        snapshot: $snapshotBlocks([paragraph]),
+      };
+      (paragraph.getFirstDescendant() as TextNode).toggleFormat('underline');
+      const underlined = {
+        markdown: $blocksToMarkdown([paragraph]),
+        snapshot: $snapshotBlocks([paragraph]),
+      };
+      paragraph.setFormat('center');
+      return { before, underlined, centered: $snapshotBlocks([paragraph]) };
+    });
+    expect(result.underlined.markdown).toBe(result.before.markdown);
+    expect(result.underlined.snapshot).not.toBe(result.before.snapshot);
+    expect(result.centered).not.toBe(result.underlined.snapshot);
+  });
+
+  it('keeps only http, https and mailto links from a reply', () => {
+    const editor = createEditor();
+    seed(editor);
+    const links = update(editor, () => {
+      $replaceBlocks(
+        [children()[1]!],
+        '[safe](https://lexical.dev) [mail](mailto:a@b.co) [bad](javascript:alert(1)) [data](data:text/html,hi)',
+      );
+      const paragraph = children()[1]!;
+      return {
+        text: paragraph.getTextContent(),
+        urls: paragraph
+          .getChildren()
+          .filter($isLinkNode)
+          .map((link) => link.getURL()),
+      };
+    });
+    expect(links.urls).toEqual(['https://lexical.dev/', 'mailto:a@b.co']);
+    expect(links.text).toContain('bad');
+    expect(links.text).toContain('data');
+  });
+
   it('builds the prompt and cleans the reply', () => {
     expect(buildPrompt('  make it a list ', 'a, b')).toBe(
       'Instruction: make it a list\n\nPassage:\n<<<\na, b\n>>>',
     );
     expect(cleanReply('```markdown\r\n- a\r\n- b\r\n```')).toBe('- a\n- b');
+    expect(cleanReply('```md\n# T\n```')).toBe('# T');
+    // An untagged fence is a code block, and stays one.
+    expect(cleanReply('```\nconst x = 1;\n```')).toBe('```\nconst x = 1;\n```');
+    // Two code blocks keep all their fences.
+    const two = '```\na\n```\n\nThen:\n\n```\nb\n```';
+    expect(cleanReply(two)).toBe(two);
+    // A wrapper with a fence inside is ambiguous: left as it is.
+    const nested = '```markdown\nIntro\n```\ncode\n```\n```';
+    expect(cleanReply(nested)).toBe(nested);
     expect(cleanReply('<<<\n# Title\n>>>')).toBe('# Title');
     expect(cleanReply('  plain  ')).toBe('plain');
     // A fence inside the reply stays.

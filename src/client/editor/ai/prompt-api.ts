@@ -7,6 +7,7 @@
  *     // 'unavailable' | 'downloadable' | 'downloading' | 'available'
  *   const model = await LanguageModel.create({ ...options, initialPrompts, monitor, signal });
  *     // monitor(m): m fires 'downloadprogress' with `loaded` from 0 to 1
+ *   await model.measureInputUsage(text) // against model.inputQuota - model.inputUsage
  *   const reply = await model.prompt(text, { signal });
  *   model.destroy();
  *
@@ -42,6 +43,11 @@ export interface ModelCreateOptions extends ModelOptions {
 
 export interface ModelSession {
   prompt(input: string, options?: { signal?: AbortSignal }): Promise<string>;
+  /** How much of the context window `input` would take, in the model's units. */
+  measureInputUsage?(input: string, options?: { signal?: AbortSignal }): Promise<number>;
+  /** The context window, in the same units (the initial prompts already use some). */
+  inputQuota?: number;
+  inputUsage?: number;
   destroy(): void;
 }
 

@@ -87,7 +87,8 @@ playground needs: no toolbar is always there.
     is writing…" in violet. It opens a panel above the dock: an input with a 1px `--ai`
     border, the spark and a dark Ask button (Stop while a request runs); suggestion chips
     that only fill the input; and a quiet line saying what happens ("Rewrites this block ·
-    runs on this device", "Rewrites 3 blocks", "Writes into the empty line", the download
+    runs on this device", "Rewrites the whole list", "Rewrites 3 blocks", "Writes into the
+    empty line", the download
     with a violet meter, "jot AI is writing… Esc to cancel", or an error in `--bad`).
     The target blocks carry `--ai-tint` (`::highlight(jot-ai-target)`) while the panel is
     open or a request runs. Without the model, the panel holds only "Needs Chrome's

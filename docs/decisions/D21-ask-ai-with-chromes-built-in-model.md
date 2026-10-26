@@ -24,24 +24,32 @@ the web. The example's demo collaborators already write through in-tab peers (D2
   whether the model is there (local); suggestions only fill the field. Creating the model,
   which may start its download, happens on Ask, a user activation.
 - **What it applies to:** the top-level blocks the selection touches, or the block with the
-  caret, tinted while the field is open (`::highlight(jot-ai-target)`). The target is kept
+  caret (a caret in a list item takes the whole list, and the field says so), tinted while
+  the field is open or its request runs (`::highlight(jot-ai-target)`). The target is kept
   as the page binding's Yjs cursor, so it survives concurrent edits and resolves in another
   editor. Tables are refused (Markdown can't carry them here).
 - **Markdown both ways,** with `@lexical/markdown` and the editor's own transformers: the
   target is exported as Markdown, the reply is parsed with `$generateNodesFromMarkdownString`
-  and replaces the target blocks. The passage is capped at 6,000 characters and the reply
-  at 20,000.
+  and replaces the target blocks. A code fence around the reply is unwrapped only when it
+  is tagged `markdown` and holds no other fence; links keep only http, https and mailto
+  targets. The passage must fit the model's context window (`measureInputUsage()` against
+  `inputQuota`, with a 12,000-character ceiling); the reply is capped at 20,000 characters
+  and refused when the note has no room for it.
 - **jot AI writes as its own in-tab peer** (D20): a registry entry of kind `ai` with
   `askedBy` the person, named "jot AI" in violet (`--peer-2`), one per asker
-  (`ai-<person id>`) so blame names the right one. Its caret moves to the target while it
-  thinks and stays where it wrote; it leaves the note a minute after its last request,
+  (`ai-<person id>`) so blame names the right one. It joins once the model is ready (not
+  during a download), its caret moves to the target while it thinks and stays where it
+  wrote; it leaves the note a minute after its last request,
   and joins again, with a new client id, for the next one. Its
   edit goes through its own binding, which keeps characters a rewrite leaves unchanged, so
-  blame credits jot AI with exactly what it changed. The asker gets a registry entry if
-  they have none yet, so "asked by" can name them.
+  blame credits jot AI with exactly what it changed. When jot AI writes, the asker gets a
+  registry entry if they have none yet, recorded as this browser's own session, so "asked
+  by" names them, as "You" in their own tab.
 - **One request at a time; Esc or Stop cancels** it (the `AbortSignal` reaches `create`
-  and `prompt`) and nothing is written. If the target's text changed while the model was
-  thinking, nothing is written and the field says so.
+  and `prompt`) and nothing is written. jot AI reads the target from its own editor when
+  it sends it, as Markdown for the model and as a lossless snapshot (every node's JSON);
+  if the snapshot differs when the reply comes (text, formats such as underline, alignment,
+  spaces), nothing is written and the field says so.
 
 ## Consequences
 

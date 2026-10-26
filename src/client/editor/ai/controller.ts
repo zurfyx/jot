@@ -3,7 +3,7 @@
  * selected blocks (or the block with the caret), written into the note by
  * jot AI: an in-tab peer of its own (D20), so the edit reaches everyone
  * through the relay and blame names jot AI, asked by this person. It joins
- * for a request and leaves a minute after it.
+ * once the model is ready and leaves a minute after its last request.
  *
  * Nothing leaves the page, and nothing is sent to the model unless the
  * person presses Ask. One request at a time; `cancel` (Esc) stops it.
@@ -12,15 +12,18 @@ import { type ReadonlySignal, signal } from '@lexical/extension';
 import type { YBinding, YCursor } from '@lexical/y';
 import type { Awareness } from '@y/protocols/awareness';
 import type * as Y from '@y/y';
+import { $isListNode } from '@lexical/list';
 import type { LexicalEditor } from 'lexical';
 
-import { localPersonId, readRegistry, writeEntry } from '../blame/registry';
+import { NOTE_MAX_BYTES } from '../../../shared/limits';
+import { localPersonId, ownClientIds, readRegistry, writeLocalEntry } from '../blame/registry';
 import { createInTabPeer, type InTabPeer, type PeerPerson } from '../peers/peer';
 import { localUser, type PeerUser } from '../presence';
 import type { NoteSession } from '../session';
 import {
   $blocksToMarkdown,
   $replaceBlocks,
+  $snapshotBlocks,
   $targetBetween,
   buildPrompt,
   cleanReply,
@@ -44,9 +47,16 @@ export const JOT_AI_NAME = 'jot AI';
 export const JOT_AI_COLOR = 2;
 /**
  * jot AI stays this long after writing, its caret where it wrote, then leaves
- * the note (a peer reconciles a second editor on every change; D20).
+ * the note (a peer mirrors every change to the note while it lives; D20).
  */
 export const AI_LINGER_MS = 60_000;
+/**
+ * Room a reply needs in the note: its Markdown twice over (Yjs structure,
+ * attributes and the registry) plus a margin.
+ */
+export function roomFor(markdown: string): number {
+  return new TextEncoder().encode(markdown).byteLength * 2 + 2048;
+}
 
 export const MESSAGES = {
   unavailable: "Needs Chrome's built-in AI (Gemini Nano). Open jot in Chrome on desktop.",
@@ -55,6 +65,7 @@ export const MESSAGES = {
   table: "jot AI can't rewrite tables yet. Select text outside the table.",
   tooLong: 'That is more text than the on-device model can take. Select fewer blocks.',
   readOnly: "This note can't be edited right now.",
+  full: 'This note is too full for what jot AI wrote.',
   empty: 'jot AI had nothing to write. Try another instruction.',
   changed: 'The text changed while jot AI was thinking. Ask again.',
   failed: "jot AI couldn't answer. Try again.",
@@ -71,6 +82,8 @@ export interface TargetInfo {
   blocks: number;
   /** The one block is empty: jot AI writes into it. */
   empty: boolean;
+  /** The one block is a list: a caret in any item rewrites all of it. */
+  list: boolean;
   problem: Target['problem'];
 }
 
@@ -81,8 +94,10 @@ export interface AiHost {
   editor: LexicalEditor;
   binding: YBinding;
   connection?: ReadonlySignal<string>;
-  /** The note takes edits now (editable, and not full). */
+  /** The note takes edits now (editable, and not full). Peers are gated on it too. */
   writable(): boolean;
+  /** Bytes the note can still grow by before its cap; unlimited when absent. */
+  room?(): number;
 }
 
 export interface AiDeps {
@@ -103,7 +118,7 @@ export interface AiState {
   written: ReadonlySignal<number>;
   /** Asks the browser whether the model is there (local; sends nothing). */
   refresh(): Promise<void>;
-  /** Takes the page's selection as the target of the next request. */
+  /** Takes the page's selection as the target of the next request (the field opened). */
   capture(): void;
   /** Sends the instruction and the target to the model. Resolves true once jot AI wrote. */
   ask(instruction: string): Promise<boolean>;
@@ -111,7 +126,10 @@ export interface AiState {
   cancel(): void;
   /** Clears an error. */
   dismiss(): void;
-  /** The field closed: forgets the target, unless a request is running on it. */
+  /**
+   * The field closed: forgets the target now, or, while a request runs on
+   * it, as soon as that request settles.
+   */
   release(): void;
   /** Leaving the page: cancels, and jot AI leaves the note at once (its writes stay). */
   stop(): void;
@@ -126,6 +144,7 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
   const targetInfo = signal<TargetInfo | null>(null);
   const written = signal(0);
   let running: AbortController | null = null;
+  let released = false;
   let peer: InTabPeer | null = null;
   let lingering: ReturnType<typeof setTimeout> | null = null;
 
@@ -150,10 +169,9 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       }
     }, deps.lingerMs ?? AI_LINGER_MS);
   };
-
-  const fail = (message: string) => {
-    phase.value = { kind: 'error', message };
-    return false;
+  const forgetTarget = () => {
+    target.value = null;
+    targetInfo.value = null;
   };
 
   /** The target as the page's editor has it now. */
@@ -164,10 +182,12 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       if (found === null) {
         return null;
       }
+      const only = found.blocks.length === 1 ? found.blocks[0]! : null;
       return {
         problem: found.problem,
         blocks: found.blocks.length,
-        empty: found.blocks.length === 1 && found.blocks[0]!.getTextContent().trim() === '',
+        empty: only !== null && only.getTextContent().trim() === '',
+        list: only !== null && $isListNode(only),
         markdown: found.problem === 'none' ? $blocksToMarkdown(found.blocks) : '',
       };
     });
@@ -191,18 +211,14 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
     return peer;
   };
 
-  /** Blame's "asked by" needs the asker in the registry, even before they type. */
+  /**
+   * Blame's "asked by" needs the asker in the registry, as this browser's own
+   * session, even before they have typed anything.
+   */
   const registerAsker = () => {
     const { doc } = host;
-    if (!readRegistry(doc).clients.has(doc.clientID)) {
-      const { name, color } = deps.user();
-      writeEntry(doc, doc.clientID, {
-        personId: deps.personId(),
-        name,
-        color,
-        kind: 'person',
-        seen: Math.floor(Date.now() / 1000),
-      });
+    if (!ownClientIds().has(doc.clientID) || !readRegistry(doc).clients.has(doc.clientID)) {
+      writeLocalEntry(doc, deps.personId(), deps.user());
     }
   };
 
@@ -211,6 +227,136 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
     // A download that started meanwhile knows better.
     if (running === null || result === 'available') {
       availability.value = result;
+    }
+  };
+
+  /** What `ask` resolves to, once the request is over. */
+  const settle = (controller: AbortController, outcome: AiPhase): void => {
+    if (running !== controller) {
+      // Cancelled: `cancel` already set the phase, and a newer request may own it now.
+      return;
+    }
+    running = null;
+    phase.value = outcome;
+    if (released) {
+      released = false;
+      forgetTarget();
+    }
+  };
+
+  const run = async (controller: AbortController, cursor: YCursor, text: string) => {
+    const { signal: abort } = controller;
+    const check = () => {
+      if (abort.aborted || running !== controller) {
+        throw new Cancelled();
+      }
+    };
+    const api = deps.api()!;
+    let model: ModelSession | null = null;
+    try {
+      model = await api.create({
+        ...MODEL_OPTIONS,
+        initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
+        signal: abort,
+        monitor(monitor) {
+          monitor.addEventListener('downloadprogress', (event) => {
+            if (running === controller && phase.peek().kind === 'downloading') {
+              phase.value = { kind: 'downloading', progress: progressOf(event) };
+            }
+          });
+        },
+      });
+      check();
+      availability.value = 'available';
+      phase.value = { kind: 'thinking' };
+      if (!host.writable()) {
+        return MESSAGES.readOnly;
+      }
+
+      // The model is ready: jot AI joins, its caret on the blocks it works on,
+      // and reads them from its own editor: the Markdown for the model, and a
+      // lossless snapshot to tell, before writing, whether anyone changed them.
+      const ai = joinPeer();
+      let sent: { markdown: string; snapshot: string } | null = null;
+      ai.edit(() => {
+        const points = ai.binding.$resolveCursor(cursor);
+        const found = points && $targetBetween(points.anchor, points.focus);
+        if (found !== null && found.problem === 'none' && found.blocks.length > 0) {
+          sent = {
+            markdown: $blocksToMarkdown(found.blocks),
+            snapshot: $snapshotBlocks(found.blocks),
+          };
+          found.blocks[0]!.selectStart();
+        }
+      });
+      const read = sent as { markdown: string; snapshot: string } | null;
+      if (read === null) {
+        return MESSAGES.changed;
+      }
+      const prompt = buildPrompt(text, read.markdown);
+      if (read.markdown.length > MAX_PASSAGE) {
+        return MESSAGES.tooLong;
+      }
+      if (typeof model.measureInputUsage === 'function' && typeof model.inputQuota === 'number') {
+        const usage = await model.measureInputUsage(prompt, { signal: abort });
+        check();
+        if (usage > model.inputQuota - (model.inputUsage ?? 0)) {
+          return MESSAGES.tooLong;
+        }
+      }
+
+      const reply = await model.prompt(prompt, { signal: abort });
+      check();
+      const markdown = cleanReply(reply);
+      if (markdown === '') {
+        return MESSAGES.empty;
+      }
+      if (!host.writable()) {
+        return MESSAGES.readOnly;
+      }
+      if (host.room !== undefined && host.room() < roomFor(markdown)) {
+        return MESSAGES.full;
+      }
+      let outcome: 'written' | 'changed' | 'empty' = 'changed';
+      const ok = ai.edit(() => {
+        const points = ai.binding.$resolveCursor(cursor);
+        const found = points && $targetBetween(points.anchor, points.focus);
+        if (
+          found === null ||
+          found.problem !== 'none' ||
+          $snapshotBlocks(found.blocks) !== read.snapshot
+        ) {
+          outcome = 'changed';
+          return;
+        }
+        const last = $replaceBlocks(found.blocks, markdown);
+        if (last === null) {
+          outcome = 'empty';
+          return;
+        }
+        last.selectEnd();
+        outcome = 'written';
+      });
+      if (!ok) {
+        return host.writable() ? MESSAGES.failed : MESSAGES.readOnly;
+      }
+      switch (outcome as 'written' | 'changed' | 'empty') {
+        case 'written':
+          registerAsker();
+          written.value += 1;
+          forgetTarget();
+          return null;
+        case 'empty':
+          return MESSAGES.empty;
+        case 'changed':
+          return MESSAGES.changed;
+      }
+    } finally {
+      try {
+        model?.destroy();
+      } catch {
+        // Already gone.
+      }
     }
   };
 
@@ -223,15 +369,23 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
     refresh,
     capture() {
       if (running !== null) {
+        // The field reopened on the running request: keep its target.
+        released = false;
         return;
       }
+      released = false;
       const cursor = host.binding.getCursor();
       target.value = cursor;
       let info: TargetInfo | null = null;
       if (cursor !== null) {
         try {
           const read = readTarget(cursor);
-          info = read && { blocks: read.blocks, empty: read.empty, problem: read.problem };
+          info = read && {
+            blocks: read.blocks,
+            empty: read.empty,
+            list: read.list,
+            problem: read.problem,
+          };
         } catch {
           info = null;
         }
@@ -246,12 +400,15 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       if (text === '' || running !== null) {
         return false;
       }
+      const fail = (message: string) => {
+        phase.value = { kind: 'error', message };
+        return false;
+      };
       if (availability.peek() === 'checking') {
         await refresh();
       }
       const status = availability.peek();
-      const api = deps.api();
-      if (api === null || status === 'missing' || status === 'unavailable') {
+      if (deps.api() === null || status === 'missing' || status === 'unavailable') {
         return fail(MESSAGES.unavailable);
       }
       const cursor = target.peek();
@@ -261,126 +418,56 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       if (!host.writable()) {
         return fail(MESSAGES.readOnly);
       }
-      const sent = readTarget(cursor);
-      if (sent === null) {
+      // Early answers from the page's own editor; jot AI reads the target again
+      // once the model is ready.
+      let early: ReturnType<typeof readTarget>;
+      try {
+        early = readTarget(cursor);
+      } catch {
+        early = null;
+      }
+      if (early === null) {
         return fail(MESSAGES.noTarget);
       }
-      if (sent.problem !== 'none') {
+      if (early.problem !== 'none') {
         return fail(MESSAGES.table);
       }
-      if (sent.markdown.length > MAX_PASSAGE) {
+      if (early.markdown.length > MAX_PASSAGE) {
         return fail(MESSAGES.tooLong);
       }
 
       const controller = new AbortController();
-      const { signal: abort } = controller;
       running = controller;
       phase.value =
         status === 'available' ? { kind: 'thinking' } : { kind: 'downloading', progress: null };
-      const check = () => {
-        if (abort.aborted) {
-          throw new Cancelled();
-        }
-      };
-
-      let model: ModelSession | null = null;
+      let message: string | null;
       try {
-        const ai = joinPeer();
-        // jot AI's caret goes to the blocks it is working on (a selection: nothing is written).
-        ai.edit(() => {
-          const points = ai.binding.$resolveCursor(cursor);
-          const found = points && $targetBetween(points.anchor, points.focus);
-          found?.blocks[0]?.selectStart();
-        });
-
-        model = await api.create({
-          ...MODEL_OPTIONS,
-          initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
-          signal: abort,
-          monitor(monitor) {
-            monitor.addEventListener('downloadprogress', (event) => {
-              if (running === controller && phase.peek().kind === 'downloading') {
-                phase.value = { kind: 'downloading', progress: progressOf(event) };
-              }
-            });
-          },
-        });
-        check();
-        availability.value = 'available';
-        phase.value = { kind: 'thinking' };
-        const reply = await model.prompt(buildPrompt(text, sent.markdown), { signal: abort });
-        check();
-
-        const markdown = cleanReply(reply);
-        if (markdown === '') {
-          return fail(MESSAGES.empty);
-        }
-        if (!host.writable()) {
-          return fail(MESSAGES.readOnly);
-        }
-        let outcome: 'written' | 'gone' | 'changed' | 'empty' = 'gone';
-        const ok = ai.edit(() => {
-          const points = ai.binding.$resolveCursor(cursor);
-          const found = points && $targetBetween(points.anchor, points.focus);
-          if (found === null || found.problem !== 'none') {
-            outcome = 'gone';
-            return;
-          }
-          if ($blocksToMarkdown(found.blocks) !== sent.markdown) {
-            outcome = 'changed';
-            return;
-          }
-          const last = $replaceBlocks(found.blocks, markdown);
-          if (last === null) {
-            outcome = 'empty';
-            return;
-          }
-          last.selectEnd();
-          outcome = 'written';
-        });
-        if (!ok) {
-          return fail(MESSAGES.failed);
-        }
-        switch (outcome as 'written' | 'gone' | 'changed' | 'empty') {
-          case 'written':
-            registerAsker();
-            written.value += 1;
-            target.value = null;
-            targetInfo.value = null;
-            phase.value = { kind: 'idle' };
-            return true;
-          case 'empty':
-            return fail(MESSAGES.empty);
-          case 'gone':
-          case 'changed':
-            return fail(MESSAGES.changed);
-        }
+        message = await run(controller, cursor, text);
       } catch (error) {
-        if (abort.aborted) {
-          phase.value = { kind: 'idle' };
+        if (error instanceof Cancelled || controller.signal.aborted) {
+          // `cancel` set the phase; only a request still current resets it.
+          settle(controller, { kind: 'idle' });
           return false;
         }
         console.warn('jot: Ask AI failed', error);
-        return fail(MESSAGES.failed);
+        message = MESSAGES.failed;
       } finally {
-        try {
-          model?.destroy();
-        } catch {
-          // Already gone.
-        }
-        if (running === controller) {
-          running = null;
-        }
-        if (peer !== null && running === null) {
+        if (peer !== null && (running === null || running === controller)) {
           linger();
         }
       }
+      settle(controller, message === null ? { kind: 'idle' } : { kind: 'error', message });
+      return message === null;
     },
     cancel() {
       if (running !== null) {
         running.abort();
         running = null;
         phase.value = { kind: 'idle' };
+        if (released) {
+          released = false;
+          forgetTarget();
+        }
       }
     },
     dismiss() {
@@ -389,18 +476,21 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       }
     },
     release() {
-      if (running === null) {
-        target.value = null;
-        targetInfo.value = null;
-        if (phase.peek().kind === 'error') {
-          phase.value = { kind: 'idle' };
-        }
+      if (running !== null) {
+        released = true;
+        return;
+      }
+      forgetTarget();
+      if (phase.peek().kind === 'error') {
+        phase.value = { kind: 'idle' };
       }
     },
     stop() {
       running?.abort();
       running = null;
+      released = false;
       phase.value = { kind: 'idle' };
+      forgetTarget();
       leave();
     },
   };
@@ -424,7 +514,11 @@ export function aiState(session: NoteSession): AiState {
         editor: session.editor,
         binding: session.binding,
         connection: session.connection,
-        writable: () => session.editor.isEditable() && session.cap.peek() !== 'full',
+        writable: () =>
+          session.editor.isEditable() &&
+          session.status.peek() === 'active' &&
+          session.cap.peek() !== 'full',
+        room: () => NOTE_MAX_BYTES - session.bytes.peek(),
       },
       { api: languageModel, personId: once(localPersonId), user: localUser },
     );

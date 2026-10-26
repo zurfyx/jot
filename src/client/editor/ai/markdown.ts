@@ -9,6 +9,7 @@ import {
   $convertSelectionToMarkdownString,
   $generateNodesFromMarkdownString,
 } from '@lexical/markdown';
+import { $isLinkNode } from '@lexical/link';
 import { $isTableNode } from '@lexical/table';
 import {
   $createParagraphNode,
@@ -16,15 +17,21 @@ import {
   $getRoot,
   $isElementNode,
   $isRootNode,
+  $isTextNode,
   type ElementNode,
   type LexicalNode,
   type PointType,
 } from 'lexical';
 
+import { normalizeLinkUrl } from '../../../shared/links';
 import { MARKDOWN_TRANSFORMERS } from '../extensions';
 
-/** The longest passage sent to the model, in characters (Gemini Nano's context is small). */
-export const MAX_PASSAGE = 6000;
+/**
+ * A hard ceiling on the passage, in characters. The real limit is the model's
+ * context window, checked with `measureInputUsage()` against `inputQuota`
+ * where the browser offers them.
+ */
+export const MAX_PASSAGE = 12_000;
 /** The longest reply written into the note, in characters (the note's 2 MB counts). */
 export const MAX_REPLY = 20_000;
 
@@ -43,13 +50,15 @@ export function buildPrompt(instruction: string, markdown: string): string {
 }
 
 /**
- * The reply as Markdown to write: trimmed, without a code fence wrapping the
- * whole reply or the passage markers echoed back, and capped.
+ * The reply as Markdown to write: trimmed, without the passage markers echoed
+ * back, and capped. A fence is unwrapped only when it is unambiguously a
+ * wrapper: tagged `markdown` or `md`, around the whole reply, with no other
+ * fence inside. An untagged fence is a code block, and stays one.
  */
 export function cleanReply(reply: string): string {
   let text = reply.replace(/\r\n?/g, '\n').trim();
-  const fenced = /^```(?:markdown|md)?[ \t]*\n([\s\S]*?)\n```$/i.exec(text);
-  if (fenced !== null) {
+  const fenced = /^```(?:markdown|md)[ \t]*\n([\s\S]*)\n```$/i.exec(text);
+  if (fenced !== null && !/^[ \t]*```/m.test(fenced[1]!)) {
     text = fenced[1]!.trim();
   }
   text = text
@@ -62,7 +71,7 @@ export function cleanReply(reply: string): string {
 export type TargetProblem = 'none' | 'table';
 
 export interface Target {
-  /** Top-level blocks, in order. */
+  /** Top-level blocks, in order. A caret in a list item takes the whole list. */
   blocks: ElementNode[];
   /** Why jot AI can't rewrite them, or 'none'. */
   problem: TargetProblem;
@@ -118,16 +127,58 @@ export function $blocksToMarkdown(blocks: readonly ElementNode[]): string {
   // A selection over the blocks, start to end, only to export them: it is
   // never set on the editor.
   const selection = $createRangeSelection();
+  // Text points only on text nodes: a block may start or end with a line
+  // break (Shift+Enter, a code block's blank line), which takes element points.
   const start = first.getFirstDescendant();
   const end = last.getLastDescendant();
-  if (start !== null && end !== null && !$isElementNode(start) && !$isElementNode(end)) {
+  if ($isTextNode(start)) {
     selection.anchor.set(start.getKey(), 0, 'text');
-    selection.focus.set(end.getKey(), end.getTextContentSize(), 'text');
   } else {
     selection.anchor.set(first.getKey(), 0, 'element');
+  }
+  if ($isTextNode(end)) {
+    selection.focus.set(end.getKey(), end.getTextContentSize(), 'text');
+  } else {
     selection.focus.set(last.getKey(), last.getChildrenSize(), 'element');
   }
   return $convertSelectionToMarkdownString(MARKDOWN_TRANSFORMERS, selection).trim();
+}
+
+/**
+ * A lossless picture of the blocks (every node's JSON: text, formats, styles,
+ * alignment, indents), to tell whether anything changed since. Markdown can't:
+ * it drops underline, alignment and runs of spaces.
+ */
+export function $snapshotBlocks(blocks: readonly ElementNode[]): string {
+  const walk = (node: LexicalNode): unknown => {
+    const json = node.getLatest().exportJSON() as Record<string, unknown>;
+    if ($isElementNode(node)) {
+      json.children = node.getChildren().map(walk);
+    }
+    return json;
+  };
+  return JSON.stringify(blocks.map(walk));
+}
+
+/** Links the model wrote keep only http, https and mailto targets; others become their text. */
+function $sanitizeLinks(node: LexicalNode): void {
+  if (!$isElementNode(node)) {
+    return;
+  }
+  for (const child of node.getChildren()) {
+    $sanitizeLinks(child);
+  }
+  if ($isLinkNode(node)) {
+    const url = normalizeLinkUrl(node.getURL());
+    if (url === null) {
+      for (const child of node.getChildren()) {
+        node.insertBefore(child);
+      }
+      node.remove();
+    } else if (url !== node.getURL()) {
+      node.setURL(url);
+    }
+  }
 }
 
 /**
@@ -159,6 +210,9 @@ export function $replaceBlocks(
   }
   if (nodes.length === 0 || nodes.every((node) => node.getTextContent().trim() === '')) {
     return null;
+  }
+  for (const node of nodes) {
+    $sanitizeLinks(node);
   }
   for (const node of nodes) {
     first.insertBefore(node);

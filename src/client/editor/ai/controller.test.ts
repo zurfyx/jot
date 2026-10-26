@@ -3,6 +3,7 @@ import {
   getExtensionDependencyFromEditor,
   signal,
 } from '@lexical/extension';
+import { $createListItemNode, $createListNode } from '@lexical/list';
 import { YCollabExtension } from '@lexical/y';
 import { Awareness } from '@y/protocols/awareness';
 import * as Y from '@y/y';
@@ -13,18 +14,26 @@ import {
   configExtension,
   defineExtension,
   type ElementNode,
+  type LexicalEditor,
+  type TextNode,
 } from 'lexical';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { computeBlame } from '../blame/attribution';
-import { readRegistry } from '../blame/registry';
+import { ownClientIds, readRegistry, writeEntry } from '../blame/registry';
 import { jotEditorExtension } from '../extensions';
 import { type AiState, createAiState, JOT_AI_NAME, MESSAGES } from './controller';
 import type { LanguageModelApi, ModelAvailability, ModelCreateOptions } from './prompt-api';
 
-/** The page's side: a synced document with two paragraphs, its editor and presence. */
-function createHost() {
+/**
+ * The page's side: a synced document with two paragraphs (or, given `from`,
+ * someone else's note as it is), its editor and presence.
+ */
+function createHost(from?: Y.Doc) {
   const doc = new Y.Doc();
+  if (from !== undefined) {
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(from));
+  }
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'test/ai-host',
@@ -33,6 +42,29 @@ function createHost() {
   );
   const { binding } = getExtensionDependencyFromEditor(editor, YCollabExtension).output;
   const awareness = new Awareness(doc);
+  if (from === undefined) {
+    seedTwoParagraphs(editor);
+  }
+  let writable = true;
+  let room = Infinity;
+  return {
+    doc,
+    editor,
+    binding,
+    awareness,
+    connection: signal('connected'),
+    writable: () => writable,
+    room: () => room,
+    setWritable(value: boolean) {
+      writable = value;
+    },
+    setRoom(value: number) {
+      room = value;
+    },
+  };
+}
+
+function seedTwoParagraphs(editor: LexicalEditor) {
   editor.update(
     () =>
       $getRoot()
@@ -43,18 +75,6 @@ function createHost() {
         ),
     { discrete: true },
   );
-  let writable = true;
-  return {
-    doc,
-    editor,
-    binding,
-    awareness,
-    connection: signal('connected'),
-    writable: () => writable,
-    setWritable(value: boolean) {
-      writable = value;
-    },
-  };
 }
 
 type Host = ReturnType<typeof createHost>;
@@ -63,6 +83,7 @@ type Host = ReturnType<typeof createHost>;
 function fakeModel(
   reply: (input: string, signal?: AbortSignal) => Promise<string>,
   availability: ModelAvailability = 'available',
+  extra: { gate?: Promise<void>; usage?: number; quota?: number } = {},
 ) {
   const calls = { availability: 0, create: [] as ModelCreateOptions[], prompts: [] as string[] };
   let destroyed = 0;
@@ -71,8 +92,9 @@ function fakeModel(
       calls.availability += 1;
       return Promise.resolve(availability);
     },
-    create(options = {}) {
+    async create(options = {}) {
       calls.create.push(options);
+      await extra.gate;
       const monitor = new EventTarget();
       options.monitor?.(monitor);
       if (availability !== 'available') {
@@ -80,15 +102,22 @@ function fakeModel(
         progress.loaded = 0.5;
         monitor.dispatchEvent(progress);
       }
-      return Promise.resolve({
-        prompt(input, { signal } = {}) {
+      return {
+        prompt(input: string, { signal }: { signal?: AbortSignal } = {}) {
           calls.prompts.push(input);
           return reply(input, signal);
         },
+        ...(extra.quota === undefined
+          ? {}
+          : {
+              inputQuota: extra.quota,
+              inputUsage: 0,
+              measureInputUsage: () => Promise.resolve(extra.usage ?? 0),
+            }),
         destroy() {
           destroyed += 1;
         },
-      });
+      };
     },
   };
   return { api, calls, destroyed: () => destroyed };
@@ -101,15 +130,26 @@ function hanging(_input: string, signal?: AbortSignal): Promise<string> {
   });
 }
 
+/** localStorage, for the registry's record of this browser's own client ids. */
+beforeEach(() => {
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key),
+  });
+});
+
 const cleanups: (() => void)[] = [];
 afterEach(() => {
+  vi.unstubAllGlobals();
   for (const cleanup of cleanups.splice(0)) {
     cleanup();
   }
 });
 
-function setup(api: LanguageModelApi | null, lingerMs?: number) {
-  const host = createHost();
+function setup(api: LanguageModelApi | null, lingerMs?: number, from?: Y.Doc) {
+  const host = createHost(from);
   const state = createAiState(host, {
     lingerMs,
     api: () => api,
@@ -151,7 +191,12 @@ describe('Ask AI', () => {
     await state.refresh();
     caretInSecond(host, state);
     expect(state.availability.value).toBe('available');
-    expect(state.targetInfo.value).toEqual({ blocks: 1, empty: false, problem: 'none' });
+    expect(state.targetInfo.value).toEqual({
+      blocks: 1,
+      empty: false,
+      list: false,
+      problem: 'none',
+    });
     expect(model.calls.create).toHaveLength(0);
     expect(model.calls.prompts).toHaveLength(0);
 
@@ -200,6 +245,176 @@ describe('Ask AI', () => {
     expect(byName.Gerard).toBeGreaterThan(20);
   });
 
+  it("names its asker on someone else's note, before they have typed anything", async () => {
+    // Ana's note, with her registry entry, as Gerard's page receives it.
+    const ana = createHost();
+    writeEntry(ana.doc, ana.doc.clientID, {
+      personId: 'ana-456',
+      name: 'Ana',
+      color: 1,
+      kind: 'person',
+      seen: Math.floor(Date.now() / 1000),
+    });
+    cleanups.push(() => {
+      ana.editor.dispose();
+      ana.doc.destroy();
+    });
+    const model = fakeModel(() => Promise.resolve('Demos and lunch.'));
+    const { host, state } = setup(model.api, undefined, ana.doc);
+    await state.refresh();
+    caretInSecond(host, state);
+    expect(ownClientIds().has(host.doc.clientID)).toBe(false);
+    expect(await state.ask('Shorter')).toBe(true);
+
+    // The asker's session is this browser's own, so its tab reads it as "you".
+    expect(ownClientIds().has(host.doc.clientID)).toBe(true);
+    const { people } = readRegistry(host.doc, {
+      personId: 'gerard-123',
+      clients: ownClientIds(),
+    });
+    const ai = people.get('ai-gerard-123');
+    expect(ai?.askedBy).toBe('gerard-123');
+    expect(people.get(ai!.askedBy!)).toMatchObject({ name: 'Gerard', kind: 'person' });
+    expect(people.get('ana-456')).toMatchObject({ name: 'Ana' });
+  });
+
+  it('says the whole list when the caret is in one of its items', () => {
+    const { host, state } = setup(fakeModel(() => Promise.resolve('x')).api);
+    host.editor.update(
+      () => {
+        const list = $createListNode('bullet').append(
+          $createListItemNode().append($createTextNode('One')),
+          $createListItemNode().append($createTextNode('Two')),
+        );
+        $getRoot().append(list);
+        list.getLastDescendant()!.selectEnd();
+      },
+      { discrete: true },
+    );
+    state.capture();
+    expect(state.targetInfo.value).toEqual({
+      blocks: 1,
+      empty: false,
+      list: true,
+      problem: 'none',
+    });
+  });
+
+  it('writes nothing when a change Markdown cannot see happened meanwhile', async () => {
+    let answer: (text: string) => void = () => undefined;
+    const model = fakeModel(
+      () =>
+        new Promise<string>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const { host, state } = setup(model.api);
+    await state.refresh();
+    caretInSecond(host, state);
+    const asked = state.ask('Make it a list');
+    await vi.waitFor(() => expect(model.calls.prompts).toHaveLength(1));
+    // Underline, which the Markdown sent to the model doesn't carry.
+    host.editor.update(
+      () => {
+        const text = $getRoot().getChildAtIndex<ElementNode>(1)!.getFirstDescendant()!;
+        (text as TextNode).toggleFormat('underline');
+      },
+      { discrete: true },
+    );
+    answer('- Demos');
+    expect(await asked).toBe(false);
+    expect(state.phase.value).toEqual({ kind: 'error', message: MESSAGES.changed });
+    expect(texts(host)[1]).toBe('paragraph:Demos, lunch, hack session');
+  });
+
+  it('joins the note only once the model is ready', async () => {
+    let ready: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const model = fakeModel(() => Promise.resolve('Demos.'), 'downloadable', { gate });
+    const { host, state } = setup(model.api);
+    await state.refresh();
+    caretInSecond(host, state);
+    const asked = state.ask('Shorter');
+    await vi.waitFor(() => expect(model.calls.create).toHaveLength(1));
+    // Downloading: jot AI isn't on the note yet.
+    expect(state.phase.value.kind).toBe('downloading');
+    expect(host.awareness.getStates().size).toBe(1);
+    ready();
+    expect(await asked).toBe(true);
+    expect(host.awareness.getStates().size).toBe(2);
+  });
+
+  it("a cancelled request doesn't reset a newer one", async () => {
+    const model = fakeModel(hanging);
+    const { host, state } = setup(model.api);
+    await state.refresh();
+    caretInSecond(host, state);
+    const first = state.ask('One');
+    await vi.waitFor(() => expect(model.calls.prompts).toHaveLength(1));
+    state.cancel();
+    const second = state.ask('Two');
+    expect(await first).toBe(false);
+    await vi.waitFor(() => expect(model.calls.prompts).toHaveLength(2));
+    expect(state.phase.value).toEqual({ kind: 'thinking' });
+    state.cancel();
+    expect(await second).toBe(false);
+  });
+
+  it('forgets the target when a request settles after the field closed', async () => {
+    let fail: (error: Error) => void = () => undefined;
+    const model = fakeModel((input, signal) =>
+      input.includes('fail')
+        ? new Promise<string>((_resolve, reject) => {
+            fail = reject;
+          })
+        : hanging(input, signal),
+    );
+    const { host, state } = setup(model.api);
+    await state.refresh();
+
+    // Closed, then cancelled.
+    caretInSecond(host, state);
+    const cancelled = state.ask('Make it a list');
+    await vi.waitFor(() => expect(model.calls.prompts).toHaveLength(1));
+    state.release();
+    expect(state.target.value).not.toBeNull();
+    state.cancel();
+    expect(await cancelled).toBe(false);
+    expect(state.target.value).toBeNull();
+
+    // Closed, then failed.
+    caretInSecond(host, state);
+    const failed = state.ask('fail please');
+    await vi.waitFor(() => expect(model.calls.prompts).toHaveLength(2));
+    state.release();
+    fail(new Error('model crashed'));
+    expect(await failed).toBe(false);
+    expect(state.phase.value).toEqual({ kind: 'error', message: MESSAGES.failed });
+    expect(state.target.value).toBeNull();
+    expect(state.targetInfo.value).toBeNull();
+  });
+
+  it('refuses a reply the note has no room for, and a passage over the context window', async () => {
+    const model = fakeModel(() => Promise.resolve('x'.repeat(5000)));
+    const { host, state } = setup(model.api);
+    await state.refresh();
+    caretInSecond(host, state);
+    host.setRoom(4000);
+    expect(await state.ask('Longer')).toBe(false);
+    expect(state.phase.value).toEqual({ kind: 'error', message: MESSAGES.full });
+    expect(texts(host)[1]).toBe('paragraph:Demos, lunch, hack session');
+
+    const small = fakeModel(() => Promise.resolve('y'), 'available', { usage: 900, quota: 500 });
+    const other = setup(small.api);
+    await other.state.refresh();
+    caretInSecond(other.host, other.state);
+    expect(await other.state.ask('Shorter')).toBe(false);
+    expect(other.state.phase.value).toEqual({ kind: 'error', message: MESSAGES.tooLong });
+    expect(small.calls.prompts).toHaveLength(0);
+  });
+
   it('writes into an empty block', async () => {
     const model = fakeModel(() => Promise.resolve('```markdown\n# Lunch spots\n```'));
     const { host, state } = setup(model.api);
@@ -212,7 +427,12 @@ describe('Ask AI', () => {
       { discrete: true },
     );
     state.capture();
-    expect(state.targetInfo.value).toEqual({ blocks: 1, empty: true, problem: 'none' });
+    expect(state.targetInfo.value).toEqual({
+      blocks: 1,
+      empty: true,
+      list: false,
+      problem: 'none',
+    });
     expect(await state.ask('A heading for lunch')).toBe(true);
     expect(model.calls.prompts[0]).toContain('<<<\n\n>>>');
     expect(texts(host)).toEqual([

@@ -5,9 +5,9 @@ import { Icon } from '../icons';
 import { usePopover } from '../menu';
 import type { NoteSession } from '../session';
 import { useEditable, useSignal } from '../useSignal';
-import { type AiPhase, type AiState, aiState, MESSAGES, type TargetInfo } from './controller';
+import { type AiPhase, type AiState, aiState, MESSAGES } from './controller';
+import { metaLine } from './copy';
 import { $targetBetween } from './markdown';
-import type { AiAvailability } from './prompt-api';
 
 /** The highlight that marks the blocks a request applies to. */
 export const TARGET_HIGHLIGHT = 'jot-ai-target';
@@ -63,8 +63,9 @@ export function AskAIDockItem({ session }: { session: NoteSession }) {
         data-testid="ask-ai"
         onMouseDown={(event) => event.preventDefault()}
         onClick={(event) => {
-          if (open !== 'ask' && !busy) {
-            // The page's selection, before the field takes the focus.
+          if (open !== 'ask') {
+            // The page's selection, before the field takes the focus (a
+            // running request keeps its own).
             ai.capture();
           }
           if (open !== 'ask') {
@@ -79,45 +80,6 @@ export function AskAIDockItem({ session }: { session: NoteSession }) {
       {open === 'ask' && <AskPanel ai={ai} />}
     </span>
   );
-}
-
-function describeTarget(info: TargetInfo | null): string {
-  if (info === null) {
-    return MESSAGES.noTarget;
-  }
-  if (info.problem === 'table') {
-    return MESSAGES.table;
-  }
-  if (info.empty) {
-    return 'Writes into the empty line';
-  }
-  return info.blocks === 1 ? 'Rewrites this block' : `Rewrites ${info.blocks} blocks`;
-}
-
-function metaLine(
-  phase: AiPhase,
-  availability: AiAvailability | 'checking',
-  info: TargetInfo | null,
-): string {
-  switch (phase.kind) {
-    case 'error':
-      return phase.message;
-    case 'downloading':
-      return phase.progress === null
-        ? 'Downloading Gemini Nano… Esc to cancel'
-        : `Downloading Gemini Nano · ${Math.round(phase.progress * 100)}% · Esc to cancel`;
-    case 'thinking':
-      return 'jot AI is writing… Esc to cancel';
-    case 'idle': {
-      const target = describeTarget(info);
-      if (info === null || info.problem !== 'none') {
-        return target;
-      }
-      return availability === 'available'
-        ? `${target} · runs on this device`
-        : `${target} · Gemini Nano downloads to this device on your first Ask`;
-    }
-  }
 }
 
 function AskPanel({ ai }: { ai: AiState }) {
@@ -217,9 +179,7 @@ function AskPanel({ ai }: { ai: AiState }) {
         aria-live="polite"
         data-testid="ask-meta"
       >
-        {availability === 'checking' && phase.kind === 'idle'
-          ? "Looking for Chrome's built-in AI…"
-          : metaLine(phase, availability, info)}
+        {metaLine(phase, availability, info)}
       </p>
       {phase.kind === 'downloading' && (
         <div className="meter ask-meter" aria-hidden="true">

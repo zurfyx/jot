@@ -7,6 +7,8 @@ interface FakeModel {
   reply?: string;
   /** The prompt waits until it is aborted. */
   hang?: boolean;
+  /** The prompt fails after a moment. */
+  fail?: boolean;
 }
 
 interface ModelLog {
@@ -52,7 +54,10 @@ async function withFakeModel(context: BrowserContext, model: FakeModel): Promise
                   });
                 });
               }
-              await wait(300);
+              await wait(options.fail ? 800 : 300);
+              if (options.fail) {
+                throw new Error('The model crashed');
+              }
               return options.reply ?? '';
             },
             destroy() {},
@@ -164,6 +169,75 @@ test('jot AI rewrites the current block as its own peer, attributed to it in bla
   await page.mouse.move(box!.x + 10, box!.y + box!.height / 2);
   await expect(page.getByTestId('blame-card')).toContainText('jot AI');
   await expect(page.getByTestId('blame-card')).toContainText('asked by You');
+});
+
+test("asking on someone else's note before typing still names the asker", async ({
+  context,
+  otherContext,
+}) => {
+  const id = freshNoteId();
+  await context.addInitScript(() => localStorage.setItem('jot:name', 'Gerard'));
+  const gerard = await context.newPage();
+  await otherContext.addInitScript(() => localStorage.setItem('jot:name', 'Ana'));
+  const ana = await withFakeModel(otherContext, { reply: 'Roadmap, team lunch, hacking' });
+  await openNote(gerard, id);
+  await writeTwoLines(gerard);
+  await openNote(ana, id);
+  await expect(editor(ana)).toContainText('Demos, lunch, hack session');
+
+  // Ana only clicks into the line and asks: she has typed nothing.
+  await editor(ana).getByText('Demos, lunch, hack session').click();
+  await askButton(ana).click();
+  await ana.getByTestId('ask-input').fill('Rename the items');
+  await ana.getByTestId('ask-submit').click();
+  await expect(editor(ana)).toContainText('Roadmap, team lunch, hacking');
+  await expect(editor(gerard)).toContainText('Roadmap, team lunch, hacking');
+
+  for (const [page, names, asker] of [
+    [ana, ['Gerard', 'jot AI'], 'You'],
+    [gerard, ['You', 'jot AI'], 'Ana'],
+  ] as const) {
+    await page.getByTestId('dock').getByRole('button', { name: 'More' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Show blame' }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('blame-name')).toHaveText([...names]);
+    const box = await editor(page).getByText('Roadmap, team lunch, hacking').boundingBox();
+    await page.mouse.move(box!.x + 10, box!.y + box!.height / 2);
+    await expect(page.getByTestId('blame-card')).toContainText(`asked by ${asker}`);
+  }
+});
+
+test('the target tint goes when a request settles after the field closed', async ({ context }) => {
+  const page = await withFakeModel(context, { hang: true });
+  await openNote(page, freshNoteId());
+  await writeTwoLines(page);
+  const tinted = () => page.evaluate(() => CSS.highlights.has('jot-ai-target'));
+
+  await askButton(page).click();
+  await page.getByTestId('ask-input').fill('Make it a list');
+  await page.getByTestId('ask-submit').click();
+  await expect(askButton(page)).toHaveText('jot AI is writing…');
+  // Closing the field leaves the request running on its blocks.
+  await editor(page).getByText('Plan').click();
+  await expect(page.getByTestId('ask-panel')).toHaveCount(0);
+  expect(await tinted()).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(askButton(page)).toHaveText('Ask AI…');
+  await expect.poll(tinted).toBe(false);
+});
+
+test('the target tint goes when a closed request fails', async ({ context }) => {
+  const page = await withFakeModel(context, { fail: true });
+  await openNote(page, freshNoteId());
+  await writeTwoLines(page);
+  await askButton(page).click();
+  await page.getByTestId('ask-input').fill('Make it a list');
+  await page.getByTestId('ask-submit').click();
+  await editor(page).getByText('Plan').click();
+  await expect(page.getByTestId('ask-panel')).toHaveCount(0);
+  await expect(askButton(page)).toHaveText('Ask AI…');
+  await expect.poll(() => page.evaluate(() => CSS.highlights.has('jot-ai-target'))).toBe(false);
+  await expect(editor(page)).toContainText('Demos, lunch, hack session');
 });
 
 test('without the built-in model, Ask AI only explains what it needs', async ({ page }) => {

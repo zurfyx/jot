@@ -208,22 +208,28 @@ Work offline, edits waiting and "merged".
 - `ai/` (D21), all in the browser:
   - `prompt-api.ts`: Chrome's Prompt API, typed locally (`LanguageModel.availability()`,
     `create({ expectedInputs, expectedOutputs, initialPrompts, monitor, signal })`,
-    `prompt(text, { signal })`, `destroy()`), and `checkAvailability()`, which never
-    throws.
+    `measureInputUsage()` and `inputQuota` where offered, `prompt(text, { signal })`,
+    `destroy()`), and `checkAvailability()`, which never throws.
   - `markdown.ts`: the target (the top-level blocks between two points, tables refused),
-    its Markdown (`$convertSelectionToMarkdownString` over whole blocks, with the
-    editor's transformers), the prompt, the reply cleaned of a wrapping fence, and
-    `$replaceBlocks` (`$generateNodesFromMarkdownString`, inserted before the first target,
-    then the targets removed).
+    its Markdown (`$convertSelectionToMarkdownString` over whole blocks, text points only
+    on text nodes, so blocks that start or end with a line break export too), its lossless
+    snapshot (every node's JSON), the prompt, the reply cleaned of an unambiguous
+    `markdown` fence, and `$replaceBlocks` (`$generateNodesFromMarkdownString`, links
+    other than http, https and mailto unwrapped, inserted before the first target, then
+    the targets removed).
   - `controller.ts`: `aiState(session)`. Opening the field captures the page binding's
-    `getCursor()` as the target. Ask exports the target from the page's editor, has jot AI
-    join as an in-tab peer (kind `ai`, `askedBy`, one per asker) with its caret at the
-    target, creates the model and prompts it under one `AbortController`, then, inside
-    jot AI's editor, resolves the same cursor, checks the target's Markdown is still what
-    was sent, and replaces it. jot AI follows the peer rules: a fresh client id each time
+    `getCursor()` as the target. Ask checks the target in the page's editor, creates the
+    model under one `AbortController`, then has jot AI join as an in-tab peer (kind `ai`,
+    `askedBy`, one per asker) with its caret at the target; jot AI reads the target's
+    Markdown and snapshot from its own editor, the prompt is measured against the context
+    window and sent, and, inside jot AI's editor, the same cursor is resolved again, the
+    snapshot compared, the room in the note checked, and the target replaced. A request
+    that settles after the field closed forgets its target (and its tint); a cancelled
+    request never touches the state of a newer one. jot AI follows the peer rules: a fresh client id each time
     it joins, its registry entry with its first change (moving its caret writes nothing),
     and nothing written unless the note takes edits (the session's `writable()`); the
-    asker gets an entry when jot AI writes, so "asked by" can name them. One request at
+    asker gets an entry when jot AI writes (`writeLocalEntry`, which also records the client
+    id as this browser's), so "asked by" names them. One request at
     a time; `cancel()` aborts it; jot AI leaves a minute after its last request, or with
     the page.
   - `AskAI.tsx`: the dock item and its panel (`dockStart`), and the surface hook that tints
