@@ -18,4 +18,22 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
   "observability": { "enabled": true },
+  "env": {
+    // PR previews (D10). CI builds with CLOUDFLARE_ENV=preview, then
+    // scripts/preview-config.mjs writes the config it deploys as jot-pr-<n> on
+    // workers.dev, and refuses anything below it does not expect. Routes are
+    // inheritable, so `routes: []` keeps a preview off jot.rovira.sh. Its own
+    // binding and migration give it its own Durable Object namespace: never add
+    // a `script_name` or a transferred class, which would reach production.
+    "preview": {
+      "name": "jot-preview",
+      "routes": [],
+      "workers_dev": true,
+      "preview_urls": false,
+      "durable_objects": {
+        "bindings": [{ "name": "NOTES", "class_name": "NoteRoom" }],
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NoteRoom"] }],
+    },
+  },
 }

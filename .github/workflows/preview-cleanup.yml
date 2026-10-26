@@ -1,0 +1,103 @@
+name: Preview cleanup
+
+# Deletes PR previews (D10). A closed pull request, merged or not, gets its
+# Worker, jot-pr-<number>, deleted and its sticky comment marked removed; a
+# weekly sweep deletes any jot-pr-* Worker whose PR is no longer open, in case
+# a close was missed.
+#
+# pull_request_target, not pull_request: it runs even when the PR conflicts
+# with main or targets another branch, and it runs main's copy of this file.
+# That is safe here: it never checks out or runs the PR's code, and the only
+# input it takes from the PR is the number.
+on:
+  pull_request_target:
+    types: [closed]
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    name: delete preview
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == 'zurfyx/jot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Only for the sticky preview comment.
+      pull-requests: write
+    # Shared with ci.yml's preview job: a deploy still in flight is cancelled,
+    # and one that starts later finds the PR closed and skips.
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      # main, never the PR: only wrangler is needed, at the version main pins.
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: scripts/remove-preview.sh "$PR"
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+  sweep:
+    name: sweep previews
+    if: >-
+      github.event_name != 'pull_request_target' &&
+      github.repository == 'zurfyx/jot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: preview-sweep
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Delete previews of closed pull requests
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          workers=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" |
+            jq -r '.result[].id | select(test("^jot-pr-[0-9]+$"))')
+          for worker in $workers; do
+            pr=${worker#jot-pr-}
+            # Unknown state (an API error) keeps the preview: only a PR seen
+            # closed loses it.
+            if ! state=$(gh api "repos/$GH_REPO/pulls/$pr" --jq .state); then
+              echo "Could not read PR #$pr; keeping $worker."
+              continue
+            fi
+            if [ "$state" = closed ]; then
+              scripts/remove-preview.sh "$pr"
+            else
+              echo "PR #$pr is $state; keeping $worker."
+            fi
+          done
