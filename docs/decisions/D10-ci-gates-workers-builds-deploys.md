@@ -46,13 +46,13 @@ Workflow hygiene, after the OWASP and GitHub hardening guides:
 
 ## Seeing builds and deploys
 
-- **On GitHub:** the Cloudflare Workers and Pages GitHub App adds a check run, `Workers Builds:
-jot`, to each commit it builds, and comments on the pull request with the build status
-  and the Preview URL, updating the comment on each push. The check is not required; CI's
-  three are.
+- **On GitHub:** the Cloudflare Workers and Pages GitHub App adds a check run,
+  `Workers Builds: jot`, to each commit it builds, beside CI's checks on the pull request.
+  Its Details link opens that build's log in the Cloudflare dashboard. For a commit already
+  on a pull request it also comments the build status and the Preview URL. The check is not
+  required; CI's three are.
 - **In Cloudflare:** Workers & Pages > `jot` > Deployments for production, and the Preview
-  dropdown for each branch's Preview, with its deployments, logs and metrics. Build logs
-  are under the Worker's Builds view, linked from each check run's Details.
+  dropdown for each branch's Preview, with its builds, deployments, logs and metrics.
 
 ## The trust boundary
 

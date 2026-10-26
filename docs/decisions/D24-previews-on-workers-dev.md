@@ -30,9 +30,10 @@ Status: `DECIDED`
   the top level; each Preview runs them into its own new namespace. No `script_name`, ever:
   it would point a Preview at production's notes. No routes or crons in the block: those
   always target production.
-- **Noindex.** Cloudflare adds `X-Robots-Tag: noindex` to workers.dev Preview URLs. The
-  Worker also marks every response it serves `noindex, nofollow` when `JOT_ENV` is
-  `preview`, so the rule holds wherever a Preview is served from (D17 covers notes and the
+- **Noindex.** Cloudflare sets `X-Robots-Tag: noindex` on every workers.dev Preview
+  response, replacing any value the Worker sent. The Worker still marks every response it
+  serves `noindex, nofollow` when `JOT_ENV` is `preview`, so the rule holds if a Preview is
+  ever served from a custom domain, which Cloudflare does not mark (D17 covers notes and the
   API in production).
 
 ## Why
