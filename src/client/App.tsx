@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
-import { NotePage } from './editor/NotePage';
 import { Landing } from './landing/Landing';
 import { matchRoute, redirect, usePathname } from './router';
+
+// The editor, Lexical and Yjs load only on a note page, so the landing page stays light.
+const NotePage = lazy(() => import('./editor/NotePage'));
 
 export function App() {
   const route = matchRoute(usePathname());
@@ -24,7 +26,11 @@ export function App() {
   }, [invalid]);
 
   if (route.name === 'note' && !invalid) {
-    return <NotePage key={route.id} id={route.id} />;
+    return (
+      <Suspense fallback={null}>
+        <NotePage key={route.id} id={route.id} />
+      </Suspense>
+    );
   }
   return <Landing />;
 }

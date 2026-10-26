@@ -138,12 +138,19 @@ export function createNoteSession(id: string): NoteSession {
   // socket instead of closing a connecting one.
   const connectTimer = setTimeout(() => provider.connect());
 
-  // A full note, or a layout this version cannot write, is read only.
-  const stopReadOnly = cap.subscribe((value) => {
-    if (value === 'full' && editor.isEditable()) {
+  // A full note is read only. The binding sets the editor's editable state
+  // whenever it re-reads its status, so hold it read only from a listener.
+  const holdReadOnly = () => {
+    if (cap.peek() === 'full' && editor.isEditable()) {
       editor.setEditable(false);
     }
-  });
+  };
+  const stopCap = cap.subscribe(holdReadOnly);
+  const stopEditable = editor.registerEditableListener(holdReadOnly);
+  const stopReadOnly = () => {
+    stopCap();
+    stopEditable();
+  };
 
   return {
     id,

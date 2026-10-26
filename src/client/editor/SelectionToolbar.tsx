@@ -1,4 +1,4 @@
-import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
+import { $isLinkNode, $toggleLink, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { $createHeadingNode, $isHeadingNode } from '@lexical/rich-text';
 import { $setBlocksType } from '@lexical/selection';
 import { $findMatchingParent } from '@lexical/utils';
@@ -6,6 +6,8 @@ import {
   $createParagraphNode,
   $getSelection,
   $isRangeSelection,
+  $setSelection,
+  type BaseSelection,
   FORMAT_TEXT_COMMAND,
   type LexicalNode,
   type TextFormatType,
@@ -40,6 +42,8 @@ export function SelectionToolbar({ session }: { session: NoteSession }) {
   const [linking, setLinking] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The link field takes focus, so the selection it applies to is kept here.
+  const savedSelection = useRef<BaseSelection | null>(null);
 
   useEffect(() => {
     const update = () => {
@@ -129,12 +133,21 @@ export function SelectionToolbar({ session }: { session: NoteSession }) {
         );
       }
     });
+  const startLink = () => {
+    savedSelection.current = editor.getEditorState().read(() => $getSelection()?.clone() ?? null);
+    setLinking(true);
+  };
   const submitLink = (event: FormEvent) => {
     event.preventDefault();
     const url = normalizeLinkUrl(inputRef.current?.value ?? '');
-    if (url !== null) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
+    const selection = savedSelection.current;
+    if (url !== null && selection !== null) {
+      editor.update(() => {
+        $setSelection(selection.clone());
+        $toggleLink(url);
+      });
     }
+    savedSelection.current = null;
     setLinking(false);
     editor.focus();
   };
@@ -153,7 +166,7 @@ export function SelectionToolbar({ session }: { session: NoteSession }) {
       }}
     >
       {linking ? (
-        <form className="toolbar-link" onSubmit={submitLink}>
+        <form className="toolbar-link" onSubmit={submitLink} noValidate>
           <input
             ref={inputRef}
             type="url"
@@ -180,7 +193,7 @@ export function SelectionToolbar({ session }: { session: NoteSession }) {
             label={state.link ? 'Remove link' : 'Link'}
             active={state.link}
             onClick={() =>
-              state.link ? editor.dispatchCommand(TOGGLE_LINK_COMMAND, null) : setLinking(true)
+              state.link ? editor.dispatchCommand(TOGGLE_LINK_COMMAND, null) : startLink()
             }
           >
             Link

@@ -8,4 +8,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react(), cloudflare()],
   server: { port: 5173, strictPort: true },
+  // The note page chunk carries Lexical and Yjs (about 220 kB gzipped); the
+  // landing page loads without it.
+  build: { chunkSizeWarningLimit: 800 },
 });

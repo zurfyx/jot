@@ -1,5 +1,5 @@
 import { $getRoot, $isElementNode } from 'lexical';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { generateNoteId, notePath } from '../../shared/ids';
 import { navigate } from '../router';
@@ -11,7 +11,7 @@ import { ShareButton } from './ShareButton';
 import { StatusPill } from './StatusPill';
 import { useSignal } from './useSignal';
 
-export function NotePage({ id }: { id: string }) {
+export default function NotePage({ id }: { id: string }) {
   const [session, setSession] = useState<NoteSession | null>(null);
 
   useEffect(() => {
@@ -44,6 +44,7 @@ function NoteBody({ session }: { session: NoteSession }) {
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
   const empty = useEmptyAndTitle(session);
+  const editable = useEditable(session);
 
   useEffect(() => {
     const { editor } = session;
@@ -95,8 +96,9 @@ function NoteBody({ session }: { session: NoteSession }) {
         <div
           className="jot-editor"
           ref={rootRef}
-          contentEditable
+          contentEditable={editable}
           suppressContentEditableWarning
+          aria-readonly={!editable}
           role="textbox"
           aria-multiline="true"
           aria-label="Note"
@@ -107,6 +109,15 @@ function NoteBody({ session }: { session: NoteSession }) {
       </div>
       <SelectionToolbar session={session} />
     </>
+  );
+}
+
+/** Lexical tracks editability; the root element's attribute follows it. */
+function useEditable(session: NoteSession): boolean {
+  const { editor } = session;
+  return useSyncExternalStore(
+    (onChange) => editor.registerEditableListener(onChange),
+    () => editor.isEditable(),
   );
 }
 

@@ -525,10 +525,14 @@ button {
   animation: fade-in var(--enter) var(--ease);
 }
 
+/* Read only and full stay in view while the page scrolls. */
 .note-banner {
+  position: sticky;
+  top: 60px;
+  z-index: 10;
   padding: 8px 12px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, var(--bg));
   color: var(--warn);
 }
 
@@ -563,7 +567,8 @@ button {
   min-height: 50vh;
   outline: none;
   color: var(--ink);
-  font-size: 16.5px;
+  /* 17px Geist in the 616px text column keeps lines near 70 characters. */
+  font-size: 17px;
   line-height: 1.65;
   caret-color: var(--accent);
   overflow-wrap: break-word;
