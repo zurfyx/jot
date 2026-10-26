@@ -76,8 +76,9 @@ playground needs: no toolbar is always there.
     Quote, Code, each with its markdown shortcut as a hint) and a row of inline formats
     (bold, italic, underline, strikethrough, inline code, link). Pointer presses keep the
     editor's focus and selection.
-  - **⋯** opens Show blame (a switch), Note info (with the size), Work offline (a switch),
-    Copy link (⌘⇧C), New note and Dark theme (a switch).
+  - **⋯** opens Show blame (a switch), Replay demo (only in an example's own tab), Note
+    info (with the size), Work offline (a switch), Copy link (⌘⇧C), New note and Dark
+    theme (a switch).
   - **Note info:** the Yjs size as "238 KB of 2 MB" with a meter, "Here now" (colour, name,
     editing or idle), and "Kept until <date> · 90 days after the last visit".
   - Menus open above the dock, move with the arrow keys and close on Escape or a press
@@ -94,6 +95,13 @@ playground needs: no toolbar is always there.
     last active 5 min ago", and for AI "· asked by <name>";
   - the person in this browser is "You". Two people with one colour are kept apart: the
     smaller share takes the next free colour.
+- **The example note** (D20) is the editor page with one addition: a slim banner above the
+  title, "**Example note** · Ana and jot AI are demos in your browser", with two quiet
+  buttons, Copy link and Start blank. It is a bordered, softly shadowed pill as wide as its
+  content, wrapping on a phone. The demo collaborators are "Ana (demo)" in orange
+  (`--peer-1`) and "jot AI (demo)" in violet (`--peer-2`): their carets, avatars, blame
+  bars and underlines use those colours. Their edits are content, not motion: under
+  reduced motion the whole demo lands at once.
 - A new note shows the placeholder "Untitled" and "Start writing. Anyone with this link can
   edit." (a draft: "It stays on this device until you press Share."). ⌘K opens a command
   menu that performs actions.
