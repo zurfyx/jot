@@ -26,6 +26,7 @@ export interface BlameLine {
 
 const LINE_MARKER = '¶';
 const RUN_TERMINATOR = '¦';
+const MOVE = '↷';
 
 type Json = Record<string, unknown>;
 
@@ -48,6 +49,8 @@ function personOf(op: Json): string | null {
 
 class LineBuilder {
   readonly lines: BlameLine[] = [];
+  /** A move record (`↷`) was seen: storage order is not the shown order. */
+  moves = false;
   private text = '';
   private runs: BlameRun[] = [];
   private readable = true;
@@ -132,8 +135,10 @@ function walkContainer(node: Json, out: LineBuilder, depth: number): void {
         } else {
           walkInline(item, out, depth + 1);
         }
+      } else if (name === MOVE) {
+        // Moves and joins carry no text; moves.ts finds the lines they touch.
+        out.moves = true;
       }
-      // Move records (`↷`) and anything else carry no text.
     }
   }
   if (out.pending) {
@@ -172,18 +177,23 @@ function walkInline(node: Json, out: LineBuilder, depth: number): void {
 
 /**
  * The lines of a `lexical-y` root's deep delta (its `toJSON()`), in storage
- * order. Never throws; a malformed delta gives fewer or unreadable lines.
+ * order, and whether it holds move records. Never throws; a malformed delta
+ * gives fewer or unreadable lines.
  */
-export function linesFromDelta(delta: unknown): BlameLine[] {
+export function readDelta(delta: unknown): { lines: BlameLine[]; moves: boolean } {
   const out = new LineBuilder();
   try {
     if (isObject(delta)) {
       walkContainer(delta, out, 0);
     }
   } catch {
-    return out.lines;
+    // What was read so far stands.
   }
-  return out.lines;
+  return { lines: out.lines, moves: out.moves };
+}
+
+export function linesFromDelta(delta: unknown): BlameLine[] {
+  return readDelta(delta).lines;
 }
 
 /** Characters per person over every line (unattributed text is left out). */
@@ -219,46 +229,51 @@ export function mainAuthor(line: BlameLine): string | null {
 }
 
 /**
- * Pairs Lexical's lines with blame's: in order while the texts agree, then,
- * for lines left over (a peer moved a block, so storage order differs), the
- * first unused blame line with the same text. Returns, per Lexical line, the
- * index of its blame line or -1. Lines whose text no blame line has stay -1.
+ * Pairs Lexical's lines with blame's, never guessing. Only readable blame
+ * lines take part (moved and joined ones are not). A line whose text is
+ * unique on both sides pairs wherever it is; a text that appears more than
+ * once pairs only in order, when both sides hold it the same number of times
+ * and the lines line up exactly. Returns, per Lexical line, the index of its
+ * blame line or -1 (left unpainted).
  */
 export function matchLines(lexical: readonly string[], blame: readonly BlameLine[]): number[] {
   const result = new Array<number>(lexical.length).fill(-1);
+  const lexicalCount = new Map<string, number>();
+  for (const text of lexical) {
+    lexicalCount.set(text, (lexicalCount.get(text) ?? 0) + 1);
+  }
+  const blameCount = new Map<string, number>();
+  const uniqueAt = new Map<string, number>();
+  blame.forEach((line, k) => {
+    if (line.readable) {
+      blameCount.set(line.text, (blameCount.get(line.text) ?? 0) + 1);
+      uniqueAt.set(line.text, k);
+    }
+  });
   const used = new Uint8Array(blame.length);
   let j = 0;
   for (let i = 0; i < lexical.length; i++) {
     const text = lexical[i]!;
-    // Look a few lines ahead, so one odd line does not derail the rest.
-    for (let k = j; k < Math.min(blame.length, j + 8); k++) {
-      if (!used[k] && blame[k]!.readable && blame[k]!.text === text) {
-        result[i] = k;
-        used[k] = 1;
-        j = k + 1;
-        break;
-      }
+    const inLexical = lexicalCount.get(text) ?? 0;
+    const inBlame = blameCount.get(text) ?? 0;
+    if (inLexical === 1 && inBlame === 1) {
+      const k = uniqueAt.get(text)!;
+      result[i] = k;
+      used[k] = 1;
+      j = Math.max(j, k + 1);
+      continue;
     }
-  }
-  if (result.includes(-1)) {
-    const byText = new Map<string, number[]>();
-    for (let k = blame.length - 1; k >= 0; k--) {
-      if (!used[k] && blame[k]!.readable) {
-        const list = byText.get(blame[k]!.text);
-        if (list === undefined) {
-          byText.set(blame[k]!.text, [k]);
-        } else {
-          list.push(k);
-        }
-      }
+    if (inLexical !== inBlame || inBlame === 0) {
+      continue;
     }
-    for (let i = 0; i < lexical.length; i++) {
-      if (result[i] === -1) {
-        const k = byText.get(lexical[i]!)?.pop();
-        if (k !== undefined) {
-          result[i] = k;
-        }
-      }
+    // A repeated text: only the next readable line, in order.
+    while (j < blame.length && (used[j] || !blame[j]!.readable)) {
+      j++;
+    }
+    if (j < blame.length && blame[j]!.text === text) {
+      result[i] = j;
+      used[j] = 1;
+      j++;
     }
   }
   return result;

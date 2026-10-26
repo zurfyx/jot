@@ -139,25 +139,34 @@ Work offline, edits waiting and "merged".
   is the first.
 - `blame/` (D19), all in the browser:
   - `registry.ts`: the `jot-people` root. `trackLocalPerson` writes this tab's entry
-    (person id, name, colour, kind, last seen) on its first local edit and refreshes it at
-    most once a minute; its transactions carry the `jot-people` origin, which the session
-    does not count as edits waiting. `readRegistry` parses entries as untrusted input.
+    (person id, name, colour, kind, last seen) on its first local edit, an insert or a
+    deletion, refreshes it at most every ten minutes, and remembers the tab's client id
+    in `jot:clients`; its transactions carry the `jot-people` origin, which the session
+    does not count as edits waiting. `readRegistry` parses entries as untrusted input,
+    ignores a last-seen time from the future, and decides "you" by this browser's client
+    ids.
   - `attribution.ts`: builds a `ContentMap` from the doc's insert set, one
     `createIdMapFromIdSet` per person, and renders `lexical-y` with
     `toDelta({ deep: true, renderer: createAttributionsRenderer(map) })`.
   - `lines.ts`: walks that delta into lines of runs `{ length, personId }` (shares, main
-    author per line), and pairs them with Lexical's lines, in order, then by text for moved
-    blocks. Unknown shapes mark a line unreadable; nothing throws.
+    author per line), and pairs them with Lexical's lines without guessing: unique texts
+    anywhere, repeated texts only in order and in equal numbers. Unknown shapes mark a
+    line unreadable; nothing throws.
+  - `moves.ts`: when the delta holds layout 2 move records, walks the stored items to mark
+    the lines a record's range covers (and a join's own line) unreadable, or every line if
+    the walk and the delta disagree.
   - `lexical.ts`, `paint.ts`, `highlights.ts`: Lexical's lines (blocks with inline
-    children, by DFS), their elements by `getElementByKey`, run offsets mapped to `Range`s
-    over text nodes with a TreeWalker (a `<br>` counts as a line break), and one
-    `Highlight` per person, `jot-blame-N`, styled by a constructed style sheet. A line whose
-    text doesn't match its element is skipped.
-  - `Blame.tsx`: Show blame in ⋯, the chip and legend, and the surface layer: the margin
-    bars and names, and the hover card (`caretPositionFromPoint`, checked against the
-    character's box). It recomputes 150 ms after the last document update and relays out
-    on resize, only while blame shows; with blame off only the registry check runs per
-    transaction. After a Work offline spell is confirmed, it shows blame for four seconds.
+    children, by DFS), their elements by `getElementByKey`, run offsets mapped to
+    `StaticRange`s over text nodes in one sweep (a TreeWalker; a `<br>` counts as a line
+    break), and one `Highlight` per person, `jot-blame-N`, styled by a constructed style
+    sheet. A line whose text doesn't match its element is skipped.
+  - `Blame.tsx`, `schedule.ts`: Show blame in ⋯, the chip and legend, and the surface
+    layer: the margin bars and names, and the hover card (`caretPositionFromPoint`, checked
+    against the character's box). It recomputes 150 ms after the last document update and
+    at least once a second while updates keep coming, and relays out on resize, only while
+    blame shows; with blame off only the registry check runs per transaction. After a Work
+    offline spell is confirmed, it shows blame for four seconds (`state.ts` batches the
+    switch, so turning blame on during that flash keeps what it shows).
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the

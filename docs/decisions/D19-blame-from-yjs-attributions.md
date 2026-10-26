@@ -19,11 +19,15 @@ every tab a new client id, so a client id alone is not a person.
   is `{ p, n, c, k, a?, s }`: the person id, name, colour index, kind (`person`, `demo` or
   `ai`), for AI the person id of who asked, and the last-seen time in Unix seconds.
 - **Identity.** Each browser keeps a stable person id (`jot:person` in localStorage) beside
-  the name and colour presence already keeps. The registry maps every client id to its
-  person, and blame groups by person.
-- **Writes.** A session writes its own entry on its first local edit, and refreshes `s` at
-  most once a minute while editing. A visit that only reads writes nothing, so reading a
-  note never grows it. These writes are not counted as edits waiting.
+  the name and colour presence already keeps, and the client ids its sessions registered
+  (`jot:clients`, the last 100). The registry maps every client id to its person, and
+  blame groups by person. "You" is decided by client id, never by the doc: an entry for
+  one of this browser's client ids is always you, and one claiming your person id from
+  any other client id is a separate person.
+- **Writes.** A session writes its own entry on its first local edit (an insert or a
+  deletion), and refreshes `s` at most every ten minutes while editing. A visit that only
+  reads writes nothing, so reading a note never grows it. These writes are not counted as
+  edits waiting.
 - **Attributions.** `createInsertSetFromStructStore` (deleted items left out), split by
   client and grouped by person; per person, `createIdMapFromIdSet` with the attribute
   `createContentAttribute('insert', personId)`; then `createContentMap(inserts, deletes)`.
@@ -33,20 +37,38 @@ every tab a new client id, so a client id alone is not a person.
   Clients missing from the registry stay unattributed.
 - **Deleted text is not shown.** jot garbage-collects deleted content to stay under 2 MB
   (D05); showing it would need gc off and history that grows fast.
-- **Painting** never touches Lexical's DOM. Lines are matched in document order to
-  Lexical's line elements (a DFS over the editor state for blocks whose children are
-  inline, then `editor.getElementByKey`), with a fallback by text for blocks a peer moved.
-  A line whose text doesn't match its element is skipped. Underlines use the CSS Custom
-  Highlight API, one `Highlight` per person; the margin is an overlay beside the column.
+- **Moves and joins: never guess.** `toDelta` renders storage order, but a layout 2 move
+  record (`↷`) shows its range elsewhere, and a join shows pieces of other lines inside
+  one. When the delta holds a record, a walk of the stored items finds every line a
+  record's range covers (and the line a join shows in) and marks it unreadable; if that
+  walk disagrees with the delta at all, every line is. Those lines are left unpainted.
+- **Painting** never touches Lexical's DOM. Lexical's lines (a DFS over the editor state
+  for blocks whose children are inline, then `editor.getElementByKey`) are paired with
+  the readable blame lines: a text unique on both sides pairs wherever it is; a repeated
+  text pairs only in order, when both sides hold it equally often and the lines line up.
+  Anything else, and a line whose text doesn't match its element, is skipped. Underlines
+  use the CSS Custom Highlight API, one `Highlight` of `StaticRange`s per person; the
+  margin is an overlay beside the column.
 - **Cost.** With blame off, the only work per transaction is the registry check (a few
-  comparisons). With blame on, it recomputes 150 ms after the last document update.
+  comparisons). With blame on, it recomputes 150 ms after the last document update, and
+  at least once a second while updates keep coming; mapping runs to text nodes is one
+  sweep per line.
 
 ## Consequences
 
-- The registry counts towards the 2 MB cap: about 60 bytes per writing tab, plus a small
-  overwrite a minute while someone edits (the old values are garbage-collected).
-- Names are whatever people chose in their browser; anyone can claim any name, as with
-  presence (D12). Registry values are parsed as untrusted input.
+- The registry counts towards the 2 MB cap: about 85 bytes per writing tab, and about 26
+  bytes per refresh, which stay: the old value's content is garbage-collected, but its
+  tombstone and the split it makes in the writer's run of items do not go away. At one
+  refresh per ten minutes of editing, that is about 160 bytes per person per hour.
+- There are no accounts, so impersonation can't be prevented. Names are whatever people
+  chose in their browser, and anyone can write an entry with someone else's person id and
+  a fresh `seen`, renaming them in blame until their next refresh (or for as long as the
+  impostor keeps refreshing). Registry values are parsed as untrusted input; a `seen`
+  more than five minutes in the future counts as never seen, so a forgery can't outrank
+  honest entries for good, and nobody else's text can show as "You".
+- Blame is missing, never wrong, where it can't be sure: lines a peer moved or joined
+  (and, after a move, repeated texts such as two lines that both read "same") go
+  unpainted until they are edited into unique text or the record's range is deleted.
 - Text written before a client registered (or by older clients) shows no author.
 - Colours are random per browser, so two people can pick the same one; blame gives the
   smaller share the next free colour, so its colours can differ from the avatars'.

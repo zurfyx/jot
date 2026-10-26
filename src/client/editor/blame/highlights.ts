@@ -22,7 +22,7 @@ export interface Painter {
   /** `people` in a stable order; index N paints as `jot-blame-N`. */
   paint(
     people: readonly { id: string; color: number }[],
-    ranges: Map<string, Range[]>,
+    ranges: Map<string, StaticRange[]>,
     focus: string | null,
   ): void;
   clear(): void;
@@ -44,7 +44,7 @@ export function createPainter(): Painter {
   };
   const paintNow = (
     people: readonly { id: string; color: number }[],
-    ranges: Map<string, Range[]>,
+    ranges: Map<string, StaticRange[]>,
     focus: string | null,
   ) => {
     clear();

@@ -11,8 +11,9 @@ import { DEFAULT_ROOT_NAME } from '@lexical/y';
 import * as Y from '@y/y';
 
 import { PEER_COLORS } from '../presence';
-import { type BlameLine, linesFromDelta, sharesOf } from './lines';
-import { type BlamePerson, readRegistry } from './registry';
+import { type BlameLine, readDelta, sharesOf } from './lines';
+import { markMovedLines } from './moves';
+import { type BlamePerson, type LocalIdentity, localIdentity, readRegistry } from './registry';
 
 export interface BlameSnapshot {
   lines: BlameLine[];
@@ -53,12 +54,17 @@ export function buildContentMap(doc: Y.Doc, clients: Map<number, string>) {
 }
 
 /** Blame for the note as it is now. Never throws. */
-export function computeBlame(doc: Y.Doc): BlameSnapshot {
+export function computeBlame(doc: Y.Doc, identity: LocalIdentity = localIdentity()): BlameSnapshot {
   try {
-    const { clients, people } = readRegistry(doc);
+    const { clients, people } = readRegistry(doc, identity);
     const renderer = Y.createAttributionsRenderer(buildContentMap(doc, clients));
-    const delta = doc.get(DEFAULT_ROOT_NAME).toDelta({ deep: true, renderer });
-    const lines = linesFromDelta((delta as { toJSON(): unknown }).toJSON());
+    const root = doc.get(DEFAULT_ROOT_NAME);
+    const delta = root.toDelta({ deep: true, renderer });
+    const { lines, moves } = readDelta((delta as { toJSON(): unknown }).toJSON());
+    if (moves) {
+      // Lines a peer moved or joined are not where storage has them: skip them.
+      markMovedLines(doc, root, lines);
+    }
     let total = 0;
     const shares: BlameSnapshot['shares'] = [];
     for (const [personId, chars] of sharesOf(lines)) {

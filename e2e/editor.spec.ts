@@ -33,15 +33,18 @@ test('two pages on one note type and converge', async ({ context }) => {
   await b.keyboard.press('ControlOrMeta+End');
   await b.keyboard.press('Enter');
   await b.keyboard.type('Second line from B');
+  // A appends after B's line, so wait for it to arrive first.
+  await expect(editor(a)).toContainText('Second line from B');
   await a.keyboard.press('ControlOrMeta+End');
   await a.keyboard.press('Enter');
   await a.keyboard.type('Third line from A');
 
   await expect(editor(a)).toContainText('Second line from B');
   await expect(editor(b)).toContainText('Third line from A');
+  // The expected value is read inside the poll: both sides must end up equal.
   await expect
-    .poll(async () => [await editor(a).innerText(), await editor(b).innerText()])
-    .toEqual([await editor(b).innerText(), await editor(a).innerText()]);
+    .poll(async () => (await editor(a).innerText()) === (await editor(b).innerText()))
+    .toBe(true);
   await expect(a).toHaveTitle('Launch plan · jot');
 
   // B sees A's caret, labelled with A's name.

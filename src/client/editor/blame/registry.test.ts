@@ -6,6 +6,7 @@ import {
   parseEntry,
   readRegistry,
   REGISTRY_ORIGIN,
+  SEEN_ALLOWANCE_S,
   SEEN_REFRESH_MS,
   trackLocalPerson,
   writeEntry,
@@ -66,6 +67,68 @@ describe('readRegistry', () => {
   });
 });
 
+describe('readRegistry against strangers', () => {
+  const now = 1_800_000_000_000;
+  const me = { personId: 'me-123456', clients: new Set([10, 11]) };
+
+  it('ignores a last-seen time from the future, so a forged entry can’t name someone for good', () => {
+    const doc = new Y.Doc();
+    writeEntry(doc, 1, {
+      personId: 'ana',
+      name: 'Ana',
+      color: 1,
+      kind: 'person',
+      seen: 1_799_999_000,
+    });
+    writeEntry(doc, 2, { personId: 'ana', name: 'Not Ana', color: 4, kind: 'person', seen: 9e12 });
+    const { people } = readRegistry(doc, me, now);
+    expect(people.get('ana')).toMatchObject({ name: 'Ana', seen: 1_799_999_000 });
+    // Within the allowance (a clock a little ahead) is fine.
+    writeEntry(doc, 3, {
+      personId: 'ana',
+      name: 'Ana, renamed',
+      color: 1,
+      kind: 'person',
+      seen: now / 1000 + SEEN_ALLOWANCE_S,
+    });
+    expect(readRegistry(doc, me, now).people.get('ana')!.name).toBe('Ana, renamed');
+  });
+
+  it('is you only for your own sessions’ client ids', () => {
+    const doc = new Y.Doc();
+    writeEntry(doc, 10, {
+      personId: 'me-123456',
+      name: 'Gerard',
+      color: 0,
+      kind: 'person',
+      seen: 1,
+    });
+    // A stranger claims your person id...
+    writeEntry(doc, 99, {
+      personId: 'me-123456',
+      name: 'Gerard',
+      color: 0,
+      kind: 'person',
+      seen: 2,
+    });
+    // ...and overwrites one of your sessions' entries with someone else.
+    writeEntry(doc, 11, {
+      personId: 'ana',
+      name: 'Ana',
+      color: 1,
+      kind: 'ai',
+      a: 'x',
+      seen: 3,
+    } as never);
+    const { clients, people } = readRegistry(doc, me, now);
+    expect(clients.get(10)).toBe('me-123456');
+    expect(clients.get(11)).toBe('me-123456');
+    expect(clients.get(99)).toBe('~99');
+    expect(people.get('~99')!.name).toBe('Gerard');
+    expect(people.get('me-123456')!.kind).toBe('person');
+  });
+});
+
 describe('trackLocalPerson', () => {
   let now = 1_800_000_000_000;
   beforeEach(() => {
@@ -121,6 +184,22 @@ describe('trackLocalPerson', () => {
     await Promise.resolve();
     expect(count()).toBe(2);
     expect(readRegistry(doc).people.get('me-123456')!.seen).toBe(Math.floor(now / 1000));
+  });
+
+  it('counts deleting as editing', async () => {
+    const doc = new Y.Doc();
+    const remote = new Y.Doc();
+    remote.get('lexical-y').insert(0, 'from someone else');
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(remote), 'provider');
+    const count = writes(doc);
+    trackLocalPerson(doc, user, 'me-123456');
+    doc.get('lexical-y').delete(0, 5);
+    await Promise.resolve();
+    expect(count()).toBe(1);
+    now += SEEN_REFRESH_MS;
+    doc.get('lexical-y').delete(0, 1);
+    await Promise.resolve();
+    expect(count()).toBe(2);
   });
 
   it('stops writing once stopped', async () => {

@@ -24,14 +24,14 @@ export interface PaintedLine {
 
 export interface PaintPlan {
   /** Ranges per person, in document order. */
-  ranges: Map<string, Range[]>;
+  ranges: Map<string, StaticRange[]>;
   /** Attributed spans per text node, for the hover card. */
   spans: Map<Text, TextSpan[]>;
   /** Matched lines, in document order. */
   lines: PaintedLine[];
 }
 
-interface Segment {
+export interface Segment {
   /** Null for a line break (`<br>`), which counts one character. */
   node: Text | null;
   start: number;
@@ -71,53 +71,65 @@ export function segmentsFor(element: HTMLElement, text: string): Segment[] | nul
   return segments;
 }
 
-/** A Range over [start, end) of the line, or null where it covers only line breaks. */
-function rangeFor(segments: Segment[], start: number, end: number): Range | null {
-  let first: { node: Text; offset: number } | null = null;
-  let last: { node: Text; offset: number } | null = null;
-  for (const segment of segments) {
-    if (segment.node === null) {
+/**
+ * Maps a line's runs onto its segments in one sweep (runs and segments are
+ * both in order), filling the plan's ranges and hover spans.
+ */
+export function mapRuns(plan: PaintPlan, segments: Segment[], runs: readonly BlameRun[]): void {
+  let cursor = 0;
+  let offset = 0;
+  for (const run of runs) {
+    const start = offset;
+    const end = start + run.length;
+    offset = end;
+    // Segments wholly before this run are behind every later run too.
+    while (
+      cursor < segments.length &&
+      segments[cursor]!.start + segments[cursor]!.length <= start
+    ) {
+      cursor++;
+    }
+    if (run.personId === null) {
       continue;
     }
-    const from = Math.max(start, segment.start);
-    const to = Math.min(end, segment.start + segment.length);
-    if (from >= to) {
-      continue;
-    }
-    first ??= { node: segment.node, offset: from - segment.start };
-    last = { node: segment.node, offset: to - segment.start };
-  }
-  if (first === null || last === null) {
-    return null;
-  }
-  const range = new Range();
-  range.setStart(first.node, first.offset);
-  range.setEnd(last.node, last.offset);
-  return range;
-}
-
-/** Records the spans of one run on each text node it crosses. */
-function addSpans(
-  spans: Map<Text, TextSpan[]>,
-  segments: Segment[],
-  start: number,
-  end: number,
-  personId: string,
-): void {
-  for (const segment of segments) {
-    if (segment.node === null) {
-      continue;
-    }
-    const from = Math.max(start, segment.start);
-    const to = Math.min(end, segment.start + segment.length);
-    if (from < to) {
-      let list = spans.get(segment.node);
-      if (list === undefined) {
-        list = [];
-        spans.set(segment.node, list);
+    let first: { node: Text; offset: number } | null = null;
+    let last: { node: Text; offset: number } | null = null;
+    for (let i = cursor; i < segments.length && segments[i]!.start < end; i++) {
+      const segment = segments[i]!;
+      if (segment.node === null) {
+        continue;
       }
-      list.push({ start: from - segment.start, end: to - segment.start, personId });
+      const from = Math.max(start, segment.start) - segment.start;
+      const to = Math.min(end, segment.start + segment.length) - segment.start;
+      if (from >= to) {
+        continue;
+      }
+      first ??= { node: segment.node, offset: from };
+      last = { node: segment.node, offset: to };
+      let spans = plan.spans.get(segment.node);
+      if (spans === undefined) {
+        spans = [];
+        plan.spans.set(segment.node, spans);
+      }
+      spans.push({ start: from, end: to, personId: run.personId });
     }
+    if (first === null || last === null) {
+      continue;
+    }
+    // Static: highlights don't make the browser track every DOM change; the
+    // next recompute (at most a second away) replaces them.
+    const range = new StaticRange({
+      startContainer: first.node,
+      startOffset: first.offset,
+      endContainer: last.node,
+      endOffset: last.offset,
+    });
+    let ranges = plan.ranges.get(run.personId);
+    if (ranges === undefined) {
+      ranges = [];
+      plan.ranges.set(run.personId, ranges);
+    }
+    ranges.push(range);
   }
 }
 
@@ -131,25 +143,7 @@ export function planLine(
   if (segments === null) {
     return false;
   }
-  let offset = 0;
-  for (const run of runs) {
-    const start = offset;
-    offset += run.length;
-    if (run.personId === null) {
-      continue;
-    }
-    const range = rangeFor(segments, start, offset);
-    if (range === null) {
-      continue;
-    }
-    let list = plan.ranges.get(run.personId);
-    if (list === undefined) {
-      list = [];
-      plan.ranges.set(run.personId, list);
-    }
-    list.push(range);
-    addSpans(plan.spans, segments, start, offset, run.personId);
-  }
+  mapRuns(plan, segments, runs);
   return true;
 }
 

@@ -24,10 +24,19 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   a list, typing inside someone else's line), matching Lexical's lines; shares in
   characters; unregistered clients stay unattributed; two people with one colour are
   kept apart; nested blocks and inline nodes in hand-built deltas; malformed deltas never
-  throw; line matching skips unknown lines and finds moved ones;
+  throw; line matching skips unknown lines, never pairs repeated text out of order, and
+  finds unique moved ones;
+- blame and moves: when Bea moves her line "same" above Ana's "same", neither is painted
+  (never the wrong person); a line joined from a moved range ("onefour") is skipped while
+  the others keep their authors; a walk that disagrees with the delta marks every line;
+- painting: runs map onto text nodes and line breaks in one sweep, linear on long lines;
+  the recompute debounce still runs at least once a second while updates keep coming;
 - the people registry: entries parsed defensively, the newest entry names a person, a
-  tab writes its entry on its first edit (not on remote updates) and refreshes it at most
-  once a minute; blame's flash after a reconnect, and a choice made during it;
+  last-seen time from the future is ignored, "you" only for this browser's client ids
+  (a stranger claiming your person id is someone else); a tab writes its entry on its
+  first edit or deletion (not on remote updates) and refreshes it at most every ten
+  minutes; blame's flash after a reconnect, a choice made during it keeps the snapshot
+  and focus, and a restarted flash;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations resolve to `/new`, the two-windows phases and steps, and
@@ -102,7 +111,7 @@ Durable Objects, over real WebSockets.
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
 - blame, with two people in separate browser contexts: off, nothing is painted; on,
-  `CSS.highlights` holds one highlight per person over exactly the text each typed, the
+  `CSS.highlights` holds one highlight of `StaticRange`s per person over exactly the text each typed, the
   margin names both ("You" for oneself), the legend shows character shares, a name
   focuses that person, Hide blame clears it all; hovering text shows who wrote it; the
   registry on the server holds the writer's entry and none for a reader; reconnecting

@@ -109,9 +109,14 @@ test('Note info shows the size, who is here and how long the note is kept', asyn
   await expect(info.locator('.note-info-people li').first()).toContainText('editing');
   await expect(info).toContainText('90 days after the last visit');
 
-  // The pill carries the same size.
-  const pillSize = (await a.getByTestId('status-pill').innerText()).replace('Synced · ', '');
-  await expect(info.getByTestId('note-info-size')).toHaveText(pillSize);
+  // The pill carries the same size (read together: a save or the people
+  // registry can change it while the test runs).
+  await expect
+    .poll(async () => {
+      const pill = (await a.getByTestId('status-pill').innerText()).replace('Synced · ', '');
+      return pill === (await info.getByTestId('note-info-size').innerText());
+    })
+    .toBe(true);
 });
 
 test('⌘⇧C copies the note link', async ({ context, page }) => {

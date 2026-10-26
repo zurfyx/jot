@@ -30,7 +30,18 @@ function highlightedText(page: Page) {
         .filter(([name]) => name.startsWith('jot-blame-'))
         .map(([name, highlight]) => [
           name,
-          [...highlight].map((range) => (range instanceof Range ? range.toString() : '')).join('|'),
+          [...highlight]
+            .map((range) => {
+              // Blame paints StaticRanges; read each one through a live Range.
+              if (!(range instanceof StaticRange)) {
+                return `not static: ${String(range)}`;
+              }
+              const live = new Range();
+              live.setStart(range.startContainer, range.startOffset);
+              live.setEnd(range.endContainer, range.endOffset);
+              return live.toString();
+            })
+            .join('|'),
         ]),
     ),
   );

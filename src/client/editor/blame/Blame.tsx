@@ -10,10 +10,13 @@ import { type BlameSnapshot, computeBlame } from './attribution';
 import { createPainter } from './highlights';
 import { marginGroups, type PaintPlan, planPaint, spanAt } from './paint';
 import { type BlamePerson, localPersonId, trackLocalPerson } from './registry';
+import { debounceWithMaxWait } from './schedule';
 import { blameState } from './state';
 
 /** Recompute this long after the last document update, while blame shows. */
 export const BLAME_DEBOUNCE_MS = 150;
+/** ...and at least this often while updates keep coming (someone typing). */
+export const BLAME_MAX_WAIT_MS = 1000;
 
 const self = { id: '' };
 function isSelf(person: BlamePerson): boolean {
@@ -232,7 +235,6 @@ function BlameLayer({
     let plan: PaintPlan | null = null;
     let snapshot: BlameSnapshot | null = null;
     let order: BlamePerson[] = [];
-    let timer: ReturnType<typeof setTimeout> | null = null;
     let frame = 0;
     let stopped = false;
 
@@ -269,7 +271,6 @@ function BlameLayer({
       }
     };
     const compute = () => {
-      timer = null;
       if (stopped) {
         return;
       }
@@ -281,12 +282,8 @@ function BlameLayer({
       paint();
       scheduleLayout();
     };
-    const scheduleCompute = () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-      }
-      timer = setTimeout(compute, BLAME_DEBOUNCE_MS);
-    };
+    const debounced = debounceWithMaxWait(compute, BLAME_DEBOUNCE_MS, BLAME_MAX_WAIT_MS);
+    const scheduleCompute = () => debounced.schedule();
 
     compute();
     doc.on('update', scheduleCompute);
@@ -351,9 +348,7 @@ function BlameLayer({
 
     return () => {
       stopped = true;
-      if (timer !== null) {
-        clearTimeout(timer);
-      }
+      debounced.cancel();
       cancelAnimationFrame(frame);
       cancelAnimationFrame(hoverFrame);
       doc.off('update', scheduleCompute);

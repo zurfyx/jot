@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@lexical/extension';
+import { batch, computed, type ReadonlySignal, signal } from '@lexical/extension';
 
 import { MERGED_FLASH_MS, type NoteSession } from '../session';
 import { type BlameSnapshot, EMPTY_SNAPSHOT } from './attribution';
@@ -59,9 +59,12 @@ export function createBlameState(flashMs = MERGED_FLASH_MS): BlameState {
     focus,
     snapshot,
     setOn(value) {
-      // A choice made during a flash replaces it.
-      stopFlash();
-      on.value = value;
+      // A choice made during a flash replaces it; in one batch, so blame
+      // never hides in between (that would drop its snapshot and focus).
+      batch(() => {
+        stopFlash();
+        on.value = value;
+      });
     },
     setFocus(personId) {
       focus.value = personId;
@@ -75,8 +78,10 @@ export function createBlameState(flashMs = MERGED_FLASH_MS): BlameState {
       if (on.peek()) {
         return;
       }
-      stopFlash();
-      flashing.value = true;
+      batch(() => {
+        stopFlash();
+        flashing.value = true;
+      });
       flashTimer = setTimeout(() => {
         flashTimer = null;
         flashing.value = false;
