@@ -1,0 +1,78 @@
+name: Preview cleanup
+
+# Deletes a pull request's preview Worker, jot-pr-<number>, when the PR is
+# merged or closed (D10), and marks its sticky comment.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    name: delete preview
+    if: github.event.pull_request.head.repo.full_name == 'zurfyx/jot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Only for the sticky preview comment.
+      pull-requests: write
+    # Shared with ci.yml's preview job: a deploy still in flight is cancelled,
+    # and one that starts later finds the PR closed and skips.
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      PR: ${{ github.event.pull_request.number }}
+      WORKER: jot-pr-${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # main, not the PR: only wrangler is needed, at the version main pins.
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Delete the preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$WORKER" =~ ^jot-pr-[0-9]+$ ]]; then
+            echo "Refusing to delete '$WORKER': not a preview Worker name." >&2
+            exit 1
+          fi
+          wrangler="$GITHUB_WORKSPACE/node_modules/.bin/wrangler"
+          # Run outside the checkout, where no wrangler config can be found,
+          # so the Worker name comes from --name alone and can never fall back
+          # to production's `jot`.
+          cd "$RUNNER_TEMP"
+          if out=$("$wrangler" delete --name "$WORKER" --force 2>&1); then
+            echo "$out"
+            echo "Deleted $WORKER." >> "$GITHUB_STEP_SUMMARY"
+          elif grep -q 'code: 10090' <<< "$out"; then
+            # 10090: the Worker does not exist (the PR never deployed one).
+            echo "$out"
+            echo "$WORKER does not exist; nothing to delete." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "$out" >&2
+            exit 1
+          fi
+      - name: Update the preview comment
+        run: |
+          set -euo pipefail
+          id=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- jot-preview -->"))) | .id' | head -n1)
+          if [ -n "$id" ]; then
+            body="<!-- jot-preview -->
+          **Preview:** removed. Worker \`$WORKER\` and its notes were deleted when this PR closed."
+            gh api -X PATCH "repos/$GH_REPO/issues/comments/$id" -f body="$body" > /dev/null
+          fi

@@ -14,8 +14,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # static, test and e2e are the required status checks on main (D08). Rename
-# one only together with the branch protection rule. deploy is not a check:
-# it runs only on pushes to main, after the three pass.
+# one only together with the branch protection rule. deploy and preview are
+# not checks: deploy runs only on pushes to main, after the three pass;
+# preview runs only on same-repo pull requests, after static and test.
 jobs:
   static:
     name: static
@@ -89,12 +90,9 @@ jobs:
     # green CI, are skipped, since deploying them would put OLDER code in
     # production after newer code.
     #
-    # Secrets: this job is the only one that reads them, and it never runs on
-    # pull_request, so no PR run (same-repo or fork) can reach them. The
-    # repository check keeps a fork's own Actions from attempting a deploy.
-    #
-    # No PR previews: Cloudflare does not generate Workers preview URLs for
-    # Workers that use Durable Objects (D10).
+    # Secrets: only this job and preview read them. This one never runs on
+    # pull_request; preview never runs for a fork's PR. The repository check
+    # keeps a fork's own Actions from attempting a deploy.
     name: deploy
     needs: [static, test, e2e]
     if: >-
@@ -150,3 +148,111 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
           command: deploy
+
+  preview:
+    # PR previews (D10). Cloudflare's version preview URLs do not support
+    # Workers with Durable Objects, so each pull request deploys as its own
+    # Worker, jot-pr-<number>, on workers.dev, built with the `preview`
+    # environment in wrangler.jsonc: no routes, so it never touches
+    # jot.rovira.sh, and its own Durable Object namespace, so preview notes
+    # never reach production. preview-cleanup.yml deletes it when the PR
+    # closes.
+    #
+    # Only pull requests from this repository: a fork's PR never gets a
+    # preview, and GitHub withholds the secrets from it anyway.
+    name: preview
+    needs: [static, test]
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == 'zurfyx/jot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Only for the sticky preview comment.
+      pull-requests: write
+    # Shared with preview-cleanup.yml, which cancels a deploy in flight. Never
+    # cancelled from here, so a deploy cannot cancel the cleanup; superseded
+    # runs are already cancelled by the workflow's own concurrency.
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      PR: ${{ github.event.pull_request.number }}
+      WORKER: jot-pr-${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check the pull request is still open
+        id: open
+        run: |
+          set -euo pipefail
+          # A run that finishes after the PR closed would otherwise redeploy a
+          # Worker the cleanup already deleted, and nothing would remove it.
+          state=$(gh pr view "$PR" --json state --jq .state)
+          echo "PR #$PR is $state."
+          if [ "$state" = OPEN ]; then open=true; else open=false; fi
+          echo "open=$open" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        if: steps.open.outputs.open == 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.open.outputs.open == 'true'
+      - uses: actions/setup-node@v5
+        if: steps.open.outputs.open == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.open.outputs.open == 'true'
+      # The Vite plugin resolves the wrangler environment at build time and
+      # writes it into dist/jot/wrangler.json, which wrangler deploy reads.
+      - run: pnpm build
+        if: steps.open.outputs.open == 'true'
+        env:
+          CLOUDFLARE_ENV: preview
+      - name: Check the built config is the preview environment
+        if: steps.open.outputs.open == 'true'
+        run: |
+          node -e '
+            const c = require("./dist/jot/wrangler.json");
+            const ok =
+              c.targetEnvironment === "preview" &&
+              c.workers_dev === true &&
+              (c.routes ?? []).length === 0 &&
+              !c.route &&
+              c.durable_objects.bindings.every((b) => !b.script_name);
+            if (!ok) {
+              console.error("Not the preview config:", c);
+              process.exit(1);
+            }
+          '
+      - uses: cloudflare/wrangler-action@v3
+        id: deploy
+        if: steps.open.outputs.open == 'true'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          command: deploy --name ${{ env.WORKER }}
+      - name: Comment the preview URL
+        if: steps.open.outputs.open == 'true'
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$URL" ]; then
+            echo "wrangler printed no deployment URL." >&2
+            exit 1
+          fi
+          body="<!-- jot-preview -->
+          **Preview:** $URL
+
+          Worker \`$WORKER\`, built from $HEAD_SHA merged into \`main\`. Its notes live in their own Durable Object namespace, apart from production. Deleted when this PR closes."
+          id=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- jot-preview -->"))) | .id' | head -n1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GH_REPO/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh pr comment "$PR" --body "$body"
+          fi
+          echo "Preview: $URL" >> "$GITHUB_STEP_SUMMARY"

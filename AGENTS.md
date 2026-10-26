@@ -54,7 +54,8 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
 - Workflow (D08): branch per unit of work, PR to `main`, never commit to `main` directly.
   Required checks: `static`, `test`, `e2e`. Squash merge. Commits: concise imperative
   subject, authored by the repo owner, no AI trailers.
-- Never deploy by hand. A green `main` deploys itself (D10).
+- Never deploy by hand. A green `main` deploys itself, and each same-repo PR deploys a preview
+  Worker, `jot-pr-<number>`, linked in a PR comment (D10).
 
 ## Verification
 
