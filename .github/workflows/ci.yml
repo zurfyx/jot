@@ -13,8 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-# Job names are the required status checks on main (D08). Rename one only
-# together with the branch protection rule.
+# static, test and e2e are the required status checks on main (D08). Rename
+# one only together with the branch protection rule. deploy is not a check:
+# it runs only on pushes to main, after the three pass.
 jobs:
   static:
     name: static
@@ -53,8 +54,17 @@ jobs:
   e2e:
     # Playwright against the local dev server: the real Worker and Durable
     # Object in workerd, real WebSockets, two pages typing into one note.
+    #
+    # Runs in the official Playwright image, which already carries Chromium and
+    # its system libraries, so the job skips the slow apt install. The tag must
+    # match the exact @playwright/test version in package.json; bump both
+    # together. --user 1001 matches the runner's uid, as the Playwright docs
+    # recommend, so the mounted workspace and caches stay writable.
     name: e2e
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -63,7 +73,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -71,3 +80,73 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  deploy:
+    # Deploy-on-green (D10): production is "the latest green tip of main", not
+    # "every green commit". A push to main that passes the three checks above
+    # deploys that commit to Cloudflare, but only if it is still the tip of
+    # main: intermediate commits of a fast merge train, and re-runs of old
+    # green CI, are skipped, since deploying them would put OLDER code in
+    # production after newer code.
+    #
+    # Secrets: this job is the only one that reads them, and it never runs on
+    # pull_request, so no PR run (same-repo or fork) can reach them. The
+    # repository check keeps a fork's own Actions from attempting a deploy.
+    #
+    # No PR previews: Cloudflare does not generate Workers preview URLs for
+    # Workers that use Durable Objects (D10).
+    name: deploy
+    needs: [static, test, e2e]
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'zurfyx/jot'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://jot.rovira.sh
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check the commit is still the tip of main
+        id: tip
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Deploys happen only for the CURRENT tip of main. A re-run of an
+          # old green CI run, or an intermediate commit of a fast merge
+          # train, would otherwise deploy OLD code over newer code. Skipping
+          # here is deliberate policy: production is "latest green main",
+          # not "every green commit".
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$SHA" ]; then
+            echo "sha $SHA is not the current tip of origin/main: skipping (stale re-run or superseded commit)."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.tip.outputs.deploy == 'true'
+      - uses: actions/setup-node@v5
+        if: steps.tip.outputs.deploy == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.tip.outputs.deploy == 'true'
+      # The Vite plugin builds the client and the Worker together; wrangler
+      # deploy then reads the built output.
+      - run: pnpm build
+        if: steps.tip.outputs.deploy == 'true'
+      - uses: cloudflare/wrangler-action@v3
+        if: steps.tip.outputs.deploy == 'true'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          command: deploy

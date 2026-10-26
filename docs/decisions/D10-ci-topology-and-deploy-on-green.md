@@ -4,18 +4,34 @@ Status: `DECIDED`
 
 ## Decision
 
-- **`ci.yml`** runs on pushes to `main` and on pull requests, with `contents: read`, and
-  cancels superseded runs except on `main`. Three jobs, which are the required checks:
-  - `static`: lint, typecheck, format check, build;
-  - `test`: Vitest, unit and workers;
-  - `e2e`: Playwright Chromium against the dev server, uploading traces on failure.
-- **`deploy.yml`** runs on `workflow_run` of CI and deploys only when the run succeeded, its
-  branch is `main`, its head repository is this repository (a fork PR from a branch named
-  `main` must never deploy), and its sha is still the tip of `origin/main` (stale re-runs
-  and superseded commits are skipped). It checks out that sha, installs, builds, and runs
+One workflow, **`ci.yml`**, runs on pushes to `main` and on pull requests, with
+`contents: read`, and cancels superseded runs except on `main`. It has four jobs:
+
+- `static`: lint, typecheck, format check, build;
+- `test`: Vitest, unit and workers;
+- `e2e`: Playwright Chromium against the dev server, uploading traces on failure. It runs in
+  the official `mcr.microsoft.com/playwright` image whose tag matches the exact
+  `@playwright/test` version, so Chromium and its system libraries come with the image and
+  the job installs no browser. `@playwright/test` is pinned exactly; the image tag and the
+  pin move together.
+- `deploy`: `needs` the other three and runs only on a push to `main` in `zurfyx/jot`. It
+  deploys only if its sha is still the tip of `origin/main`, so stale re-runs and the
+  intermediate commits of a fast merge train are skipped: production is the latest green
+  tip of `main`, not every green commit. It checks out that sha, installs, builds, and runs
   `cloudflare/wrangler-action@v3` with `deploy`, using the `CLOUDFLARE_API_TOKEN` and
-  `CLOUDFLARE_ACCOUNT_ID` secrets. Concurrency group `deploy`, never cancelled.
-- No account id in `wrangler.jsonc`; CI provides it.
+  `CLOUDFLARE_ACCOUNT_ID` secrets. It deploys to the `production` environment
+  (`https://jot.rovira.sh`), in concurrency group `deploy`, never cancelled.
+
+`static`, `test` and `e2e` are the required checks (D08). `deploy` is not: on a pull request
+it shows as skipped.
+
+The deploy job is the only one that reads secrets, and it never runs on `pull_request`, so
+no PR run, from this repository or a fork, can reach them. Keeping the deploy in the same
+workflow, rather than a separate `workflow_run` workflow, means a deploy run exists only for
+pushes to `main`, sits next to the checks that gate it, and adds no skipped check to `main`
+for every PR's CI run.
+
+No account id in `wrangler.jsonc`; CI provides it.
 
 ## No PR previews
 
