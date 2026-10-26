@@ -2,6 +2,7 @@ import { $getRoot, $isElementNode } from 'lexical';
 import { useEffect, useRef, useState } from 'react';
 
 import { copyNoteLink, startNewNote } from './actions';
+import { registerClickToFocus } from './clickToFocus';
 import { CommandMenu } from './CommandMenu';
 import { Dock, isMac } from './Dock';
 import { NOTE_FEATURES } from './features';
@@ -16,6 +17,7 @@ import { useEditable, useSignal } from './useSignal';
 /** A note page: note `id`, shared through the relay (D23). */
 export default function NotePage({ id }: { id: string }) {
   const [session, setSession] = useState<NoteSession | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // The session is an external system (socket, document, editor) whose
@@ -49,8 +51,17 @@ export default function NotePage({ id }: { id: string }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [session]);
 
+  // A click on the blank page puts the caret in the note.
+  useEffect(() => {
+    const page = pageRef.current;
+    if (session === null || page === null) {
+      return;
+    }
+    return registerClickToFocus(page, session.editor);
+  }, [session]);
+
   return (
-    <div className="note-page">
+    <div className="note-page" ref={pageRef}>
       <header className="note-chrome">
         {session && (
           <>

@@ -86,6 +86,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   to-do and row, jot AI's list and "your" words, three authors in blame; `resetDemo` puts
   the seed back and a replay reaches the same end; steps whose part was edited away are
   skipped; an abort stops it;
+- a click on the blank page: below the text it aims at the end of the note (a note
+  without blocks too), beside a line at the nearest point inside it, above the title
+  into the first line, and the point stays inside even a box narrower than its insets;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations (`/new` and the example's route), the two-windows
@@ -159,6 +162,11 @@ Durable Objects, over real WebSockets.
   nor does an emptied example note with its banner; a note taller than the window does,
   and scrolled to the bottom its last line clears the dock; typing forty lines keeps the
   caret line above the dock after every line;
+- a click on the blank page writes, at 1440 and 390px: below an empty note it focuses the
+  editor without scrolling; below the text the typing lands at the end of the last line;
+  in the margin beside a line, in that line; a tap below the text on a touch screen writes
+  at the end; a press outside an open menu only closes it (the caret stays put), a click
+  beside the dock writes, and a drag from the text onto the blank page keeps its selection;
 - markdown shortcuts, and Aa's Bold and Link (no toolbar appears over a selection);
 - the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items (Show blame first),
   Escape, the Dark theme switch, and arrow keys in ⋯;
