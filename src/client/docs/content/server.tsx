@@ -69,6 +69,10 @@ export function Relay() {
         Each note is one Durable Object: a single-threaded room that holds the Yjs document in
         memory, relays updates between sockets, and saves the state as one SQLite row. The relay is
         Yjs 14 too (<code>@y/y</code>, not yrs), so the server reads exactly what the clients write.
+        Its document has Yjs's format cleanup turned off (<code>doc.cleanupFormatting = false</code>
+        ), as <code>@lexical/y</code> requires of any server that stores state: with it on, the room
+        would delete format items the clients keep, such as those around text someone deleted, and
+        send the deletions out as an edit of its own.
       </p>
       <RelayDiagram />
       <h2>Routing</h2>

@@ -76,6 +76,10 @@ function painted(editor: LexicalEditor, doc: Y.Doc) {
 }
 
 describe('blame and moved lines', () => {
+  // Layout 1 writes a moved line as a deletion and an insertion: the mover
+  // writes it again, so blame names the mover, and the delta's order is
+  // Lexical's. Move records (`↷`) only come from layout 2 notes, which this
+  // version of the binding opens read only (moves.ts still guards those).
   it('never swaps authors when a peer moves a line with the same text as another', () => {
     const { anaDoc, beaDoc, ana, joinBea } = pair();
     ana.update(() => $getRoot().clear().append(paragraph('Title'), paragraph('same')), {
@@ -89,7 +93,7 @@ describe('blame and moved lines', () => {
       ['same', 'bea'],
     ]);
 
-    // Bea moves her line above Ana's: a layout 2 move record.
+    // Bea moves her line above Ana's.
     bea.update(
       () => {
         const [, anas, beas] = $getRoot().getChildren();
@@ -97,22 +101,20 @@ describe('blame and moved lines', () => {
       },
       { discrete: true },
     );
-    expect(beaDoc.get('lexical-y').toString()).toContain('↷');
-    // Lexical now shows Bea's "same" first. Blame can't tell the two apart
-    // safely, so it paints neither, rather than the wrong person.
+    expect(beaDoc.get('lexical-y').toString()).not.toContain('↷');
     for (const [editor, doc] of [
       [bea, beaDoc],
       [ana, anaDoc],
     ] as const) {
       expect(painted(editor, doc)).toEqual([
         ['Title', 'ana'],
-        ['same', null],
-        ['same', null],
+        ['same', 'bea'],
+        ['same', 'ana'],
       ]);
     }
   });
 
-  it('skips a joined line made of pieces from a moved range', () => {
+  it('names the main author of a line joined from a moved one', () => {
     const { beaDoc, ana, joinBea } = pair();
     ana.update(
       () =>
@@ -122,7 +124,7 @@ describe('blame and moved lines', () => {
       { discrete: true },
     );
     const bea = joinBea();
-    // Bea moves "four" up under "one"...
+    // Bea moves "four" up under "one", writing it again...
     bea.update(
       () => {
         const [, two, , four] = $getRoot().getChildren();
@@ -140,9 +142,8 @@ describe('blame and moved lines', () => {
       },
       { discrete: true },
     );
-    expect(beaDoc.get('lexical-y').toString()).toContain('j=1');
     expect(painted(bea, beaDoc)).toEqual([
-      ['onefour', null],
+      ['onefour', 'bea'],
       ['two', 'ana'],
       ['three', 'ana'],
     ]);
@@ -164,7 +165,7 @@ describe('blame and moved lines', () => {
       { discrete: true },
     );
     expect(painted(bea, beaDoc)).toEqual([
-      ['delta', null],
+      ['delta', 'bea'],
       ['alpha', 'ana'],
       ['beta', 'ana'],
       ['gamma', 'ana'],

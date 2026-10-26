@@ -18,7 +18,7 @@ import {
  * `@y/websocket`.
  */
 export class TestClient {
-  readonly doc = new Y.Doc();
+  readonly doc = TestClient.createDoc();
   readonly socket: WebSocket;
   synced = false;
   lastStatus: { bytes: number; rejected: boolean } | null = null;
@@ -45,6 +45,13 @@ export class TestClient {
         this.send(encoding.toUint8Array(encoder));
       }
     });
+  }
+
+  /** Format cleanup off, as @lexical/y keeps it in its containers on clients. */
+  private static createDoc(): Y.Doc {
+    const doc = new Y.Doc();
+    doc.cleanupFormatting = false;
+    return doc;
   }
 
   static async connect(noteId: string): Promise<TestClient> {

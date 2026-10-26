@@ -37,7 +37,10 @@ A SQLite-backed Durable Object per note (`new_sqlite_classes`), addressed by
 `idFromName(noteId)`. It is a Yjs 14 relay written with `@y/y`, the same library as the
 clients (D03).
 
-- **Memory.** The constructor loads the stored state into a fresh gc-on `Y.Doc`. Sockets are
+- **Memory.** The constructor loads the stored state into a fresh gc-on `Y.Doc` with Yjs's
+  format cleanup off (`cleanupFormatting = false`), as `@lexical/y` requires of a server that
+  stores state: otherwise the room would delete format items the clients keep and send the
+  deletions out as its own edit. Sockets are
   accepted with the Hibernation API, so an idle note is evicted from memory while its
   sockets stay open; the next message runs the constructor again, which reloads the
   document. Each socket's awareness client ids and clocks ride in its attachment, so a
@@ -163,9 +166,11 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
     author per line), and pairs them with Lexical's lines without guessing: unique texts
     anywhere, repeated texts only in order and in equal numbers. Unknown shapes mark a
     line unreadable; nothing throws.
-  - `moves.ts`: when the delta holds layout 2 move records, walks the stored items to mark
-    the lines a record's range covers (and a join's own line) unreadable, or every line if
-    the walk and the delta disagree.
+  - `moves.ts`: layout 1 writes a moved line as a deletion and an insertion, so the delta
+    is in Lexical's order and the mover is named. A note written by an earlier build in
+    layout 2 can hold move records (`↷`); it opens read only, and when its delta holds them
+    this walk of the stored items marks the lines a record's range covers (and a join's own
+    line) unreadable, or every line if the walk and the delta disagree.
   - `lexical.ts`, `paint.ts`, `highlights.ts`: Lexical's lines (blocks with inline
     children, by DFS), their elements by `getElementByKey`, run offsets mapped to
     `StaticRange`s over text nodes in one sweep (a TreeWalker; a `<br>` counts as a line

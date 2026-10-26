@@ -239,9 +239,10 @@ describe('Ask AI', () => {
     const { shares } = computeBlame(host.doc);
     const byName = Object.fromEntries(shares.map(({ person, chars }) => [person.name, chars]));
     // The page typed nothing itself in this test: its lines came from the setup,
-    // under its own client id, now registered as Gerard (the asker).
+    // under its own client id, now registered as Gerard (the asker). A rewrite
+    // replaces whole words, so jot AI is credited with "lunch and a" alone.
     expect(byName[JOT_AI_NAME]).toBeGreaterThan(0);
-    expect(byName[JOT_AI_NAME]).toBeLessThan('and a '.length + 2);
+    expect(byName[JOT_AI_NAME]).toBeLessThanOrEqual('lunch and a'.length);
     expect(byName.Gerard).toBeGreaterThan(20);
   });
 

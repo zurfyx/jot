@@ -23,8 +23,9 @@ export function ContentInYjs() {
       <h2>Reading the tree</h2>
       <ul>
         <li>
-          <b>The root's attributes:</b> <code>lexical-y</code> is the layout version, and{' '}
-          <code>k:&lt;type&gt;</code> records how each element type is stored, on its first write.
+          <b>The root's attributes:</b> <code>lexical-y:1</code> = <code>true</code> records the
+          layout version the note needs, and <code>k:&lt;type&gt;</code> records how each element
+          type is stored, on its first write.
         </li>
         <li>
           <b>Text</b> carries its formats: <code>f:bold</code>, <code>f:italic</code>. A link is a

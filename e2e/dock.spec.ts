@@ -132,7 +132,7 @@ test('Aa is disabled on a read-only note', async ({ page, baseURL }) => {
   const id = freshNoteId();
   await writeRawNote(baseURL!, id, (doc) => {
     const root = doc.get('lexical-y');
-    root.setAttr('lexical-y', 99);
+    root.setAttr('lexical-y:99', true);
     root.insert(0, 'From the future');
   });
   await page.goto(`/n/${id}`);
@@ -152,7 +152,7 @@ test('a note that turns read only closes an open Aa menu', async ({ page, baseUR
   await expect(menu).toBeVisible();
 
   // Another client marks the note with a layout this version can't write.
-  await writeRawNote(baseURL!, id, (doc) => doc.get('lexical-y').setAttr('lexical-y', 99));
+  await writeRawNote(baseURL!, id, (doc) => doc.get('lexical-y').setAttr('lexical-y:99', true));
   await expect(page.getByTestId('status-pill')).toHaveText('Read only');
   await expect(menu).toBeHidden();
   await expect(aa).toBeDisabled();

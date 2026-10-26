@@ -90,6 +90,10 @@ export class NoteRoom extends DurableObject<Env> {
   private resetDoc(): void {
     this.doc?.destroy();
     this.doc = new Y.Doc({ gc: true });
+    // Yjs's format cleanup would delete format items the clients keep (around
+    // deleted text, say) and send those deletions out as the room's own edit:
+    // @lexical/y requires a relay to turn it off before it applies updates.
+    this.doc.cleanupFormatting = false;
     this.size = 0;
     this.pending = 0;
     this.doc.on('update', (update: Uint8Array) => {
