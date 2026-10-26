@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 
 import { Code } from '../Code';
-import { LEXICAL_Y_DOCS, SNIPPETS } from '../sources';
+import { LEXICAL_Y_WIRE_FORMAT, SNIPPETS } from '../sources';
 import { DocLink, PageHeader, Source } from '../ui';
 
 // Lexical and Yjs load only when this page is opened.
@@ -59,14 +59,17 @@ export function ContentInYjs() {
         class declares in <code>$config()</code>, first match wins: a block with inline children is
         a <b>line</b>; an inline element with <code>mergeAdjacent</code> is a <b>format</b>; a block
         whose children are only lines, with <code>mergeAdjacent</code>, is a <b>group</b>; anything
-        else is <b>nested</b>. <code>describeStorage()</code> prints the result for your editor.
+        else is <b>nested</b>. The first three also need everything the class stores to be in its
+        schema and NodeState, since a marker or a format can only carry those. A class that doesn't
+        qualify falls back to nested, which stores the node as its own Yjs node and is always safe.{' '}
+        <code>describeStorage()</code> prints the result for your editor.
       </p>
       <Code source={SNIPPETS.inspect} />
       <p>
         These names are frozen as layout 1. Changing one makes a new layout version, which older
         clients open read only. The full wire format is in the{' '}
-        <a href={LEXICAL_Y_DOCS}>
-          <code>@lexical/y</code> docs
+        <a href={LEXICAL_Y_WIRE_FORMAT}>
+          <code>@lexical/y</code> README
         </a>
         .
       </p>
@@ -164,7 +167,10 @@ export function Offline() {
           The client answers with <b>sync step 2</b>: every update past that vector, its offline
           edits included. It sends its own step 1, and the server answers the same way.
         </li>
-        <li>The server applies the client's updates and broadcasts them to everyone else.</li>
+        <li>
+          The server applies the client's updates and sends them to every socket, the sender's
+          included: <code>@y/websocket</code> takes its own updates coming back as confirmation.
+        </li>
       </ol>
       <p>
         When the browser says the network is back, jot doesn't wait for the next retry, unless you

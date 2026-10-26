@@ -4,7 +4,8 @@ import { $createHeadingNode, RichTextExtension } from '@lexical/rich-text';
 import { editYState, type HeadlessYConfig, readYState, seedYState } from '@lexical/y/headless';
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 
-// The same extensions as the browsers' editors, so the server writes what they read.
+// Use your clients' extensions, all of them. With fewer (these two alone), editYState
+// refuses, read only, any note holding a node it doesn't register: a link, a table…
 const config: HeadlessYConfig = { extensions: [RichTextExtension, ListExtension] };
 
 /** A new note's state: content-hashed, so seeding it twice merges into one copy. */

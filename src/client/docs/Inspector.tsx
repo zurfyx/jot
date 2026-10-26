@@ -1,4 +1,4 @@
-import { buildEditorFromExtensions } from '@lexical/extension';
+import { buildEditorFromExtensions, TabIndentationExtension } from '@lexical/extension';
 import { $createListItemNode, $createListNode } from '@lexical/list';
 import { $createHeadingNode } from '@lexical/rich-text';
 import { YCollabExtension } from '@lexical/y';
@@ -84,6 +84,8 @@ export default function Inspector() {
         name: 'jot/docs-inspector',
         dependencies: [
           jotEditorExtension,
+          // Tab leaves the inspector, as it would any small field on a page.
+          configExtension(TabIndentationExtension, { disabled: true }),
           // A local document is synced from the start: initialize at once.
           configExtension(YCollabExtension, { doc, synced: true }),
         ],
@@ -92,6 +94,7 @@ export default function Inspector() {
     created.setRootElement(rootRef.current);
     created.update($seed, { discrete: true });
 
+    // The rows follow the document: every content change is a Yjs update.
     let frame = 0;
     const refresh = () => {
       if (frame === 0) {
@@ -102,8 +105,8 @@ export default function Inspector() {
       }
     };
     doc.on('update', refresh);
+    // The caret only picks the active row: cheap, with no new snapshot.
     const stopUpdates = created.registerUpdateListener(({ editorState }) => {
-      refresh();
       setLead('caret');
       // The line the caret is in, so typing shows its row.
       setCaretKey(
@@ -130,10 +133,11 @@ export default function Inspector() {
   const caretLine = caret === -1 ? null : caret;
   const active = lead === 'pointer' ? (hover ?? caretLine) : (caretLine ?? hover);
 
+  // Any pointer move takes the lead back from the caret, even over the same line.
   const setHover = (line: number | null) => {
+    setLead('pointer');
     if (line !== hover) {
       setHoverState(line);
-      setLead('pointer');
     }
   };
 
@@ -161,8 +165,18 @@ export default function Inspector() {
       });
     };
     measure();
+    // Line heights change when Geist arrives, and with the window's width.
+    let live = true;
+    void document.fonts?.ready.then(() => {
+      if (live) {
+        measure();
+      }
+    });
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    return () => {
+      live = false;
+      window.removeEventListener('resize', measure);
+    };
   }, [active, editor, state]);
 
   const onEditorHover = (event: MouseEvent) => {
@@ -265,7 +279,7 @@ function TreeRow({
       style={indent}
       data-testid="inspector-row"
       data-line={row.line}
-      onMouseEnter={() => onHover(row.line)}
+      onMouseMove={() => onHover(row.line)}
     >
       <Segments segments={row.segments} /> <span className="insp-marker">¶</span>{' '}
       {row.marker.length > 0 ? (

@@ -225,11 +225,12 @@ export function Size() {
       <h2>Measuring</h2>
       <p>
         A note's size is the length of <code>Y.encodeStateAsUpdate(doc)</code>: the whole state, as
-        stored. The relay reports its stored size in a message of jot's own (type 64) on connect,
-        after each save, and when it refuses an update. The client also measures its own copy a
-        second after changes and when the server confirms its edits, which covers edits the server
-        hasn't seen yet, and goes by the larger of the two (
-        <Source path="src/client/editor/session.ts">session.ts</Source>).
+        stored. The relay reports it in a message of jot's own (type 64). After each save, and when
+        it refuses an update, the figure is measured. On connect it's an upper bound: the size at
+        the last measure plus the bytes applied since, which can run ahead of the truth during the
+        two seconds before a save. The client also measures its own copy a second after changes and
+        when the server confirms its edits, which covers edits the server hasn't seen yet, and goes
+        by the larger of the two (<Source path="src/client/editor/session.ts">session.ts</Source>).
       </p>
       <p>
         The status pill shows it ("Synced · 238 KB"), and ⋯ → Note info shows it against the cap

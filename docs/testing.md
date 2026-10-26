@@ -90,7 +90,10 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - the docs: routes, the page order and Previous and Next, and that every landing page link
   names a docs page; the highlighter keeps every character; excerpts cut whole
   declarations and fail on a missing one; the inspector's rows for headings, lists, bold,
-  links, line breaks and tables, paired with Lexical's line elements;
+  links, line breaks and tables, paired with Lexical's line elements; the binding's links
+  name the pinned Lexical commit; and the chunk boundaries, from the source's static
+  imports: the landing page reaches no docs or editor code, and the docs reach no Lexical
+  or Yjs outside the lazy inspector;
 - the docs' snippets do what the pages say: the merge converges, the headless seed is
   deterministic and reads back as Markdown, the registry maps clients to people whose runs
   jot's content map attributes, and the in-tab peer writes as its own client and follows the
@@ -195,9 +198,9 @@ Durable Objects, over real WebSockets.
 - the docs: every page renders with no em dashes; code blocks have their file name, a
   GitHub link and a working Copy; the nav, Previous and Next and in-page links move without
   a reload; an unknown page goes to `/docs`; the landing page links open them; on a phone,
-  Pages opens the nav; the landing page loads no docs code and the docs load no Lexical
-  outside the inspector; the inspector shows the tree, follows typing and markdown
-  shortcuts, and pairs lines and rows on hover and with the caret.
+  Pages opens the nav; the inspector shows the tree, follows typing and markdown
+  shortcuts, pairs lines and rows on hover and with the caret (whichever moved last, so a
+  pointer move after typing takes the lead back), and Tab leaves it.
 
 Traces are kept on failure and uploaded by CI. In sandboxed macOS shells that can't run
 Chromium's multi-process mode, set `JOT_E2E_SINGLE_PROCESS=1`. `JOT_E2E_PORT` moves the

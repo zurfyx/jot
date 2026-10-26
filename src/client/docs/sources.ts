@@ -23,9 +23,16 @@ import pkg from '../../../package.json';
 import { excerpt } from './excerpt';
 
 export const REPO_URL = 'https://github.com/zurfyx/jot';
-export const LEXICAL_Y_DOCS = 'https://lexical.dev/docs/collaboration/y';
-export const LEXICAL_Y_SERVER_DOCS = 'https://lexical.dev/docs/collaboration/y-server';
-export const LEXICAL_Y_API = 'https://lexical.dev/docs/api/modules/lexical_y';
+/** The Lexical commit jot pins (D04), from package.json. */
+export const LEXICAL_SHA = /@([0-9a-f]{40})$/.exec(pkg.dependencies['@lexical/y'])?.[1] ?? 'main';
+const LEXICAL_Y_TREE = `https://github.com/facebook/lexical/tree/${LEXICAL_SHA}/packages/lexical-y`;
+const LEXICAL_Y_BLOB = `https://github.com/facebook/lexical/blob/${LEXICAL_SHA}/packages/lexical-y`;
+/** `@lexical/y`'s README at that commit: setup, storage and the wire format. */
+export const LEXICAL_Y_README = `${LEXICAL_Y_BLOB}/README.md`;
+export const LEXICAL_Y_WIRE_FORMAT = `${LEXICAL_Y_README}#wire-format-layout-1`;
+/** The binding's source at that commit: its exports are the API. */
+export const LEXICAL_Y_SOURCE = `${LEXICAL_Y_TREE}/src`;
+export const LEXICAL_Y_HEADLESS = `${LEXICAL_Y_BLOB}/src/headless.ts`;
 export const YJS_URL = 'https://github.com/yjs/yjs';
 
 export function sourceUrl(path: string, lines?: [number, number]): string {

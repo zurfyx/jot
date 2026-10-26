@@ -1,6 +1,6 @@
 import { Code } from '../Code';
 import { DOCS_PAGES, docsPath } from '../pages';
-import { LEXICAL_Y_API, LEXICAL_Y_DOCS, REPO_URL, SNIPPETS } from '../sources';
+import { LEXICAL_Y_README, LEXICAL_Y_SOURCE, REPO_URL, SNIPPETS } from '../sources';
 import { Callout, DocLink, followLink, PageHeader, Source } from '../ui';
 
 const TOPICS = ['quick-start', 'content-in-yjs', 'blame', 'offline', 'relay', 'ai'];
@@ -23,7 +23,10 @@ export function Welcome() {
           jot is a small, real app on <code>@lexical/y</code>, Lexical's collaboration binding for
           Yjs 14. These pages show the few pieces of code that matter, with links to{' '}
           <a href={REPO_URL}>the source on GitHub</a> and to{' '}
-          <a href={LEXICAL_Y_DOCS}>lexical.dev</a> for the full API.
+          <a href={LEXICAL_Y_README}>
+            <code>@lexical/y</code>'s README
+          </a>{' '}
+          for the full API.
         </p>
       </header>
       <ul className="docs-topics">
@@ -73,6 +76,14 @@ export function QuickStart() {
         integration.
       </p>
       <Code source={SNIPPETS.quickStart} />
+      <p>
+        Any Yjs 14 provider works with the binding. This one talks to jot's relay, which speaks the
+        y-websocket protocol plus one message of its own (type 64, the note's stored size and
+        whether an update was refused). A stock <code>@y/websocket</code> provider doesn't know that
+        type: it misreads the rest of the frame and throws, so the snippet reads it. The room must
+        be a jot note id, 22 base64url characters: the relay answers anything else with a 400, and
+        the provider would retry forever.
+      </p>
       <Callout title="Why wait for the first sync?">
         Initializing earlier would write an empty note on top of content you haven't received yet.
         After the sync, <code>initialize()</code> reads the note, or seeds an empty one. The seed's
@@ -91,9 +102,11 @@ export function QuickStart() {
       </p>
       <p>
         The extension's output also has a <code>status</code> signal: <code>'pending'</code> until
-        the first sync, then <code>'active'</code>, or <code>'readonly'</code> when the note was
-        written in a newer layout than this binding writes. jot then says "Read only" and keeps the
-        note readable.
+        the first sync, then <code>'active'</code>, or <code>'readonly'</code> when the binding
+        can't write the note safely: a newer layout, content with no layout record, node types the
+        editor doesn't register, a type recorded with a storage kind this editor can't use, or an
+        older layout's root that needs converting. jot then says "Read only" and keeps the note
+        readable.
       </p>
       <h2>Install</h2>
       <Code source={SNIPPETS.install} />
@@ -106,7 +119,7 @@ export function QuickStart() {
       </p>
       <p>
         Next, see <DocLink slug="content-in-yjs">how the note is stored</DocLink>, or read the{' '}
-        <a href={LEXICAL_Y_API}>API reference</a>.
+        <a href={LEXICAL_Y_SOURCE}>binding's source</a>.
       </p>
     </>
   );

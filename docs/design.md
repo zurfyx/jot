@@ -162,8 +162,8 @@ their tints for the home's hero and the diagram (`--docs-tint-*`), the inspector
 highlight (`--docs-hl`), callouts (`--docs-callout-*`, `--docs-warn-*`) and light code
 blocks (`--docs-code-*`).
 
-- **Header:** "jot docs", then Guides, API (lexical.dev) and GitHub. Under 860px the nav
-  folds behind a Pages button.
+- **Header:** "jot docs", then Guides, API (`@lexical/y`'s README at the pinned Lexical
+  commit) and GitHub. Under 860px the nav folds behind a Pages button.
 - **Nav:** a left column grouped Start, Concepts, Features and Server, each page marked
   with a person's colour; the current page has the hover fill.
 - **Pages:** a 720px column (prose capped near 68 characters), a breadcrumb, the title,

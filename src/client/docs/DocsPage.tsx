@@ -8,7 +8,7 @@ import { ContentInYjs, Offline, Presence } from './content/concepts';
 import { Relay, ServerSideEditing } from './content/server';
 import { QuickStart, Welcome } from './content/start';
 import { DOCS_GROUPS, DOCS_PAGES, docsPath, findDocsPage, neighbours } from './pages';
-import { LEXICAL_Y_API, REPO_URL } from './sources';
+import { LEXICAL_Y_README, REPO_URL } from './sources';
 import { followLink } from './ui';
 
 const CONTENT: Record<string, ComponentType> = {
@@ -60,7 +60,7 @@ export default function DocsPage({ slug }: { slug: string }) {
           <a href="/docs" onClick={(event) => followLink(event, '/docs')}>
             Guides
           </a>
-          <a href={LEXICAL_Y_API}>API</a>
+          <a href={LEXICAL_Y_README}>API</a>
           <a href={REPO_URL}>GitHub</a>
         </nav>
         <button

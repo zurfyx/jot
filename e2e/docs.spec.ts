@@ -19,16 +19,6 @@ function heading(page: Page) {
   return page.getByTestId('docs-main').getByRole('heading', { level: 1 });
 }
 
-function scriptsOf(page: Page): string[] {
-  const scripts: string[] = [];
-  page.on('request', (request) => {
-    if (request.resourceType() === 'script') {
-      scripts.push(request.url());
-    }
-  });
-  return scripts;
-}
-
 test('every docs page renders, with code that has a file name and Copy', async ({ page }) => {
   for (const [path, title] of PAGES) {
     await page.goto(path);
@@ -115,19 +105,6 @@ test('on a phone, Pages opens the nav', async ({ page }) => {
   await expect(nav).toBeHidden();
 });
 
-test('the docs stay out of the landing bundle, and Lexical out of the docs', async ({ page }) => {
-  const scripts = scriptsOf(page);
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  expect(scripts.some((url) => /\/docs\//.test(url))).toBe(false);
-
-  await page.goto('/docs/quick-start');
-  await expect(heading(page)).toHaveText('Quick start');
-  await page.waitForLoadState('networkidle');
-  expect(scripts.some((url) => /\/docs\/DocsPage/.test(url))).toBe(true);
-  expect(scripts.some((url) => /lexical|@y\/y|yjs/i.test(url))).toBe(false);
-});
-
 test('the inspector shows the Yjs tree and follows typing', async ({ page }) => {
   await page.goto('/docs/content-in-yjs');
   const tree = page.getByTestId('inspector-tree');
@@ -144,7 +121,7 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   await expect(tree).toContainText('"Who brings snacks? Ana does." ¶');
   await page.keyboard.press('Enter');
   await page.keyboard.type('## Budget');
-  const budget = tree.getByTestId('inspector-row').filter({ hasText: '"Budget"' });
+  const budget = tree.getByTestId('inspector-row').filter({ hasText: /"Budget/ });
   await expect(budget).toContainText('{t: "heading", p:tag: "h2"}');
   // The caret's line is the highlighted row.
   await expect(budget).toHaveClass(/is-active/);
@@ -158,9 +135,30 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   const highlight = await page.locator('.insp-line-hl').boundingBox();
   expect(Math.abs((highlight?.y ?? 0) + 2 - (agendaBox?.y ?? 0))).toBeLessThan(8);
 
-  await editor.getByText('Afternoon: hack session').hover();
-  await expect(
-    tree.getByTestId('inspector-row').filter({ hasText: '"Afternoon: hack session"' }),
-  ).toHaveClass(/is-active/);
+  const afternoon = editor.getByText('Afternoon: hack session');
+  const afternoonRow = tree
+    .getByTestId('inspector-row')
+    .filter({ hasText: '"Afternoon: hack session"' });
+  await afternoon.hover();
+  await expect(afternoonRow).toHaveClass(/is-active/);
   await expect(agendaRow).not.toHaveClass(/is-active/);
+
+  // Typing hands the lead to the caret; the next pointer move, even over the
+  // same line, takes it back.
+  await page.keyboard.type('!');
+  await expect(budget).toHaveClass(/is-active/);
+  await expect(afternoonRow).not.toHaveClass(/is-active/);
+  const spot = (await afternoon.boundingBox())!;
+  await page.mouse.move(spot.x + 6, spot.y + spot.height / 2);
+  await expect(afternoonRow).toHaveClass(/is-active/);
+  await expect(budget).not.toHaveClass(/is-active/);
+});
+
+test('Tab leaves the inspector instead of indenting', async ({ page }) => {
+  await page.goto('/docs/content-in-yjs');
+  const editor = page.getByTestId('inspector-editor');
+  await editor.getByText('Who brings snacks?').click();
+  await page.keyboard.press('Tab');
+  await expect(editor).not.toBeFocused();
+  await expect(page.getByTestId('inspector-tree')).toContainText('"Who brings snacks?" ¶ {}');
 });

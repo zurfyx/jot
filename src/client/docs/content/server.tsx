@@ -6,7 +6,7 @@ import {
   MESSAGE_SYNC,
 } from '../../../shared/protocol';
 import { Code } from '../Code';
-import { LEXICAL_Y_SERVER_DOCS, SNIPPETS } from '../sources';
+import { LEXICAL_Y_HEADLESS, SNIPPETS } from '../sources';
 import { DocLink, PageHeader, Source } from '../ui';
 
 const MESSAGES: [number, string, string, string][] = [
@@ -173,7 +173,10 @@ export function ServerSideEditing() {
         from the server, a room would pass <code>Y.encodeStateAsUpdate(this.doc)</code> to{' '}
         <code>editYState</code> and apply the update it returns to its document. The room's update
         handler then broadcasts it to every socket, like a client's. See{' '}
-        <a href={LEXICAL_Y_SERVER_DOCS}>Server-side editing on lexical.dev</a> for the full API.
+        <a href={LEXICAL_Y_HEADLESS}>
+          <code>headless.ts</code>
+        </a>{' '}
+        at the Lexical commit jot pins for the full API.
       </p>
     </>
   );

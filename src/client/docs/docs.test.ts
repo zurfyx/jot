@@ -5,7 +5,7 @@ import { matchRoute } from '../router';
 import { excerpt } from './excerpt';
 import { highlight } from './highlight';
 import { DOCS_GROUPS, DOCS_PAGES, docsPath, findDocsPage, neighbours } from './pages';
-import { SNIPPETS, sourceUrl } from './sources';
+import { LEXICAL_SHA, LEXICAL_Y_README, SNIPPETS, sourceUrl } from './sources';
 
 describe('the docs pages', () => {
   it('route /docs and /docs/<slug>', () => {
@@ -90,6 +90,14 @@ describe('the code blocks', () => {
       expect(source.code.trim()).not.toBe('');
       expect(source.code).not.toMatch(/—/);
     }
+  });
+
+  it('link the binding at the Lexical commit jot pins', () => {
+    expect(LEXICAL_SHA).toMatch(/^[0-9a-f]{40}$/);
+    expect(LEXICAL_Y_README).toBe(
+      `https://github.com/facebook/lexical/blob/${LEXICAL_SHA}/packages/lexical-y/README.md`,
+    );
+    expect(SNIPPETS.quickStart.code).toContain('provider.messageHandlers[MESSAGE_NOTE_STATUS]');
   });
 
   it('install the same packages jot does', () => {
