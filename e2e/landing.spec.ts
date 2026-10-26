@@ -270,6 +270,126 @@ for (const width of [1440, 390]) {
   });
 }
 
+/**
+ * Holds every view transition at its start: once it is ready, its animations
+ * are paused, so a test can read the pseudo-elements, then let it finish.
+ */
+async function holdViewTransitions(page: Page) {
+  await page.addInitScript(() => {
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = (update) => {
+      const transition = start(update);
+      transition.ready.then(
+        () => {
+          for (const animation of document.getAnimations()) {
+            if (String((animation.effect as KeyframeEffect).pseudoElement).includes('view-')) {
+              animation.pause();
+            }
+          }
+          document.documentElement.dataset.vt = 'held';
+        },
+        () => undefined,
+      );
+      return transition;
+    };
+  });
+}
+
+function releaseViewTransitions(page: Page) {
+  return page.evaluate(() => {
+    for (const animation of document.getAnimations()) {
+      animation.finish();
+    }
+  });
+}
+
+for (const trigger of ['new-note-card', 'example-card', 'start-button'] as const) {
+  test(`opening from the ${trigger} grows the card into the page`, async ({ page }) => {
+    await holdViewTransitions(page);
+    await page.goto('/');
+    const card = trigger === 'example-card' ? 'example-card' : 'new-note-card';
+    const cardWidth = await page
+      .getByTestId(card)
+      .evaluate((el) => (el as HTMLElement).offsetWidth);
+    if (trigger === 'start-button') {
+      await page
+        .getByRole('button', { name: /^Start a new note/ })
+        .first()
+        .click();
+    } else {
+      await page
+        .getByTestId(trigger)
+        .click({ position: await visiblePoint(page, trigger), force: true });
+    }
+    await expect(page.locator('html[data-vt="held"]')).toBeAttached({ timeout: 15_000 });
+
+    const shared = await page.evaluate(() => {
+      const style = (pseudo: string) => {
+        const s = getComputedStyle(document.documentElement, pseudo);
+        return { width: s.width, height: s.height, fit: s.objectFit, position: s.objectPosition };
+      };
+      const group = document
+        .getAnimations()
+        .find(
+          (animation) =>
+            (animation.effect as KeyframeEffect).pseudoElement ===
+            '::view-transition-group(jot-note)',
+        );
+      const frames = (group?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
+      return {
+        group: style('::view-transition-group(jot-note)'),
+        old: style('::view-transition-old(jot-note)'),
+        new: style('::view-transition-new(jot-note)'),
+        duration: group?.effect?.getTiming().duration,
+        from: frames[0]?.width,
+        to: frames.at(-1)?.width,
+        viewport: `${document.documentElement.clientWidth}px`,
+      };
+    });
+    // The group runs from the card's box to the page's...
+    expect(shared.duration).toBe(450);
+    expect(parseFloat(String(shared.from))).toBeCloseTo(cardWidth, 0);
+    expect(shared.to).toBe(shared.viewport);
+    // ...and both pictures fill it, never pinned to its top-left corner.
+    for (const picture of [shared.old, shared.new]) {
+      expect(picture.width).toBe(shared.group.width);
+      expect(picture.height).toBe(shared.group.height);
+      expect(picture.fit).toBe('cover');
+      expect(picture.position).not.toMatch(/^0(%|px)? 0(%|px)?$/);
+    }
+
+    await releaseViewTransitions(page);
+    await expectNotePage(page, trigger === 'example-card' ? 'example' : 'new');
+  });
+}
+
+test('under reduced motion, opening a card is a short cross-fade', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await holdViewTransitions(page);
+  await page.goto('/');
+  await page.getByTestId('new-note-card').click({
+    position: await visiblePoint(page, 'new-note-card'),
+    force: true,
+  });
+  await expect(page.locator('html[data-vt="held"]')).toBeAttached({ timeout: 15_000 });
+  const animations = await page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((animation) =>
+        String((animation.effect as KeyframeEffect).pseudoElement).includes('view-'),
+      )
+      .map((animation) => ({
+        pseudo: (animation.effect as KeyframeEffect).pseudoElement,
+        duration: animation.effect?.getTiming().duration,
+      })),
+  );
+  expect(animations.length).toBeGreaterThan(0);
+  expect(animations.every(({ pseudo }) => !pseudo?.includes('jot-note'))).toBe(true);
+  expect(animations.every(({ duration }) => duration === 150)).toBe(true);
+  await releaseViewTransitions(page);
+  await expectNotePage(page);
+});
+
 test('nothing moves under reduced motion; the final states show', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');

@@ -192,7 +192,11 @@ them off and shows the final state.
   Under reduced motion the example shows its finished text, the windows their last step,
   and the tabs stay put.
 - **Opening a note** from the landing page loads the editor chunk first, then runs a view
-  transition: the card grows into the note page in 550ms. Under reduced motion it is a
-  150ms cross-fade.
+  transition: the clicked card (the New note card for "Start a new note" and the keys, the
+  example card for the example) grows from where it sits into the note page in 450ms with
+  `cubic-bezier(0.2, 0, 0, 1)`, straightening and losing its rounded corners on the way.
+  Both pictures fill the growing sheet (cover, anchored top centre): the card's scales up
+  while the page's, on the page colour, fades in over it, and the rest of the landing page
+  fades out in 300ms. Under reduced motion it is a 150ms cross-fade.
 - Hover and focus states (links, the paste line, the tabs) change at once, without a
   colour transition.

@@ -130,8 +130,11 @@ Durable Objects, over real WebSockets.
   when one is chosen, and follow the arrow keys; the Blame tab's stage lays out as a narrow
   name column, a bar of at most 4px as tall as its row and flowing text (a paragraph on
   one or two lines, names never on the state pill or on each other) at 1440 and 390px;
-  under reduced motion nothing animates and the final states show; and it loads without
-  the editor chunk;
+  opening from the New note card, the example card and "Start a new note" runs a 450ms
+  view transition (held paused to read it) whose group starts at the card's width and
+  ends at the page's, with both pictures filling it (cover, never pinned top-left), and
+  under reduced motion only a 150ms cross-fade with no card named; under reduced motion
+  nothing animates and the final states show; and it loads without the editor chunk;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;

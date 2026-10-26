@@ -245,11 +245,18 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
 **The landing page** and the note page are separate chunks: the editor, Lexical and Yjs load
 only on a note page (`loadNote.ts`). The landing page prefetches that chunk when
 a person points at or focuses a start action, or holds ⌘ or Ctrl. Its start actions open a
-fresh `/n/<id>`: it loads the editor chunk, then navigates inside `document.startViewTransition`, so
-a cold start never freezes the page. The clicked card carries
-`view-transition-name: jot-note` in the old state and `#root` carries it in the new one, so
-the card grows into the note's page (the example card opens `/new?example`). Under reduced motion the pages cross-fade in 150ms;
-browsers without the API switch pages directly.
+fresh `/n/<id>` (the example ones `/new?example`) through `landing/open.ts`: it loads the
+editor chunk, then navigates inside `document.startViewTransition`, so a cold start never
+freezes the page. The card (the clicked one, or the New note card for the button and the
+keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
+`#root` carries it in the new one. `landing.css` styles the pair: the group animates from
+the card's box to the page's in 450ms; `::view-transition-old(jot-note)` and
+`::view-transition-new(jot-note)` fill it (`width` and `height` 100%, `object-fit: cover`,
+anchored top centre), the new one on `--bg` because the page's picture is otherwise
+transparent, with keyframes of jot's own in place of the browser's cross-fade (the card's
+picture stays opaque underneath while the page's fades in, so the landing page never shows
+through). Under reduced motion no card is named and the pages cross-fade in 150ms; browsers
+without the API switch pages directly.
 
 **The docs** (`docs/`, D22) are a third chunk: a table of contents (`pages.ts`), one
 component per page under `docs/content/`, and code blocks from real files imported with
