@@ -25,6 +25,7 @@ pnpm lint             # ESLint
 pnpm format:check     # Prettier
 pnpm test             # Vitest: unit (Node) + workers (workerd, real SQLite)
 pnpm e2e              # Playwright against its own dev server on :5174
+pnpm e2e:docker       # Playwright in CI's image, with the visual suite (screenshots)
 pnpm build            # client assets + Worker bundle in dist/
 pnpm exec wrangler deploy --dry-run   # after pnpm build: checks the deploy bundle
 pnpm bump-lexical <pr-or-sha>         # then pnpm install
@@ -49,8 +50,9 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
   read as if written fresh today. Git is the changelog.
 - Design: tokens in `src/client/styles.css` only, no raw colours elsewhere; one accent;
   motion only on state change, off under reduced motion (D07, `docs/design.md`).
-- **Every feature ships with tests**: unit or workers tests in Vitest, and a Playwright
-  spec for anything a person does in the browser.
+- **Every feature ships with tests**: unit or workers tests in Vitest, a Playwright
+  spec for anything a person does in the browser, and visual baselines (D27) for anything
+  it shows, taken with `pnpm e2e:docker e2e/visual --update-snapshots`.
 - Workflow (D08): branch per unit of work, PR to `main`, never commit to `main` directly.
   Required checks: `static`, `test`, `e2e`. Squash merge. Commits: concise imperative
   subject, authored by the repo owner, no AI trailers.
@@ -63,9 +65,9 @@ read` permissions, checkouts with `persist-credentials: false`. The `zizmor` CI 
 
 ## Verification
 
-- After UI changes: run `pnpm dev`, open the landing page and a note in light and dark, at
-  1440px and 390px wide, and look at them. Open the same note in two windows and type in
-  both.
+- After UI changes: run `pnpm e2e:docker e2e/visual` (docs/testing.md), then `pnpm dev`,
+  open the landing page and a note in light and dark, at 1440px and 390px wide, and look
+  at them. Open the same note in two windows and type in both.
 - After Worker changes: `pnpm test` (the workers project runs the Durable Object in
   workerd with real SQLite storage, eviction and alarms), then `pnpm e2e`.
 - Before a PR: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm e2e`

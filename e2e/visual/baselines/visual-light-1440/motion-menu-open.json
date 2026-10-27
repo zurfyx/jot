@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "CSSAnimation",
+    "target": "menu \"More\"",
+    "property": "opacity transform",
+    "duration": 220,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "none"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "button \"More\"",
+    "property": "background-color",
+    "duration": 120,
+    "delay": 0,
+    "easing": "ease-out",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  }
+]

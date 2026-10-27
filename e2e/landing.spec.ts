@@ -496,3 +496,9 @@ test('notes stay out of search engines and the landing page does not', async ({ 
     expect.arrayContaining(['User-agent: *', 'Disallow: /n/', 'Disallow: /api/']),
   );
 });
+
+test("the quick start's code is in Geist Mono, not the system's monospace", async ({ page }) => {
+  await page.goto('/');
+  const code = page.getByLabel('Quick start', { exact: true }).locator('code');
+  await expect(code).toHaveCSS('font-family', /^"Geist Mono Variable"/);
+});

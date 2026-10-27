@@ -162,3 +162,13 @@ test('Tab leaves the inspector instead of indenting', async ({ page }) => {
   await expect(editor).not.toBeFocused();
   await expect(page.getByTestId('inspector-tree')).toContainText('"Who brings snacks?" ¶ {}');
 });
+
+test('code in the docs is in Geist Mono, not the system monospace', async ({ page }) => {
+  await page.goto('/docs/quick-start');
+  const main = page.getByTestId('docs-main');
+  await expect(main.locator('pre code').first()).toHaveCSS('font-family', /^"Geist Mono Variable"/);
+  await expect(main.locator(':not(pre) > code').first()).toHaveCSS(
+    'font-family',
+    /^"Geist Mono Variable"/,
+  );
+});

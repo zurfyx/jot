@@ -4,3 +4,5 @@ dist/
 playwright-report/
 test-results/
 src/worker/worker-configuration.d.ts
+# Screenshot and motion baselines are compared byte for byte.
+e2e/visual/baselines/
