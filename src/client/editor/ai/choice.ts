@@ -75,6 +75,8 @@ function createAiModels(): AiModels {
     for (const id of MODEL_IDS) {
       const build = webllmBuild(id, found);
       if (build !== null) {
+        // A cancelled download's files may still be going.
+        await webllmEngine().cleared(build.id);
         next.set(build.id, await cacheState(build));
       }
     }

@@ -67,6 +67,35 @@ export class WebLLMEngine {
   private idle: ReturnType<typeof setTimeout> | null = null;
   /** The build the worker has in memory. */
   loaded: string | null = null;
+  /** Clearing a cancelled download's files, per build: a later load waits for it. */
+  private clearing = new Map<string, Promise<void>>();
+
+  /**
+   * Clears `id`'s files with `clear`, and makes every later load of `id` wait
+   * until that is done, so a retry's download is never deleted by the
+   * cleanup of the request it replaced.
+   */
+  clearAfterCancel(id: string, clear: () => Promise<void>): Promise<void> {
+    const before = this.clearing.get(id) ?? Promise.resolve();
+    const done = before.then(clear).catch(() => undefined);
+    this.clearing.set(id, done);
+    void done.then(() => {
+      if (this.clearing.get(id) === done) {
+        this.clearing.delete(id);
+      }
+    });
+    return done;
+  }
+
+  /** Resolves once no cleanup of `id` is pending. */
+  async cleared(id: string): Promise<void> {
+    let pending = this.clearing.get(id);
+    while (pending !== undefined) {
+      await pending;
+      const next = this.clearing.get(id);
+      pending = next === pending ? undefined : next;
+    }
+  }
 
   /** Whether a worker is running (for tests and the idle rule). */
   get running(): boolean {
@@ -283,6 +312,9 @@ export function webllmBackend(
     },
     async open({ system, signal, onProgress, consented }): Promise<AiSession> {
       let download = false;
+      // A cancelled download of this build may still be clearing its files.
+      await engine.cleared(build.id);
+      signal.throwIfAborted();
       if (engine.loaded !== build.id) {
         // Every file must be here, or the person must have agreed to fetch
         // what is missing: nothing downloads without a yes.
@@ -304,8 +336,9 @@ export function webllmBackend(
       } catch (error) {
         if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
           if (download) {
-            // A cancelled download leaves no partial files behind.
-            await cache.clear(build).catch(() => undefined);
+            // A cancelled download leaves no partial files behind; the next
+            // load of this build waits until they are gone.
+            void engine.clearAfterCancel(build.id, () => cache.clear(build));
           }
           throw error;
         }

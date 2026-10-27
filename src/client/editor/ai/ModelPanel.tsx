@@ -116,7 +116,7 @@ function ModelList({
 }: {
   device: Device;
   chosen: ModelId | null;
-  downloading: { model: string; progress: number | null } | null;
+  downloading: { model: string; loading: boolean; progress: number | null } | null;
   busy: boolean;
   deleting: ModelId | null;
   onDelete: (id: ModelId) => void;
@@ -132,7 +132,9 @@ function ModelList({
         const unsupported = state === 'unsupported';
         const inFlight = downloading !== null && downloading.model === info.name;
         const status = inFlight
-          ? `Downloading${downloading.progress === null ? '' : ` ${Math.round(downloading.progress * 100)}%`}`
+          ? `${downloading.loading ? 'Loading' : 'Downloading'}${
+              downloading.progress === null ? '' : ` ${Math.round(downloading.progress * 100)}%`
+            }`
           : STATE_TEXT[state];
         return (
           <div

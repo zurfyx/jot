@@ -44,7 +44,8 @@ them from Hugging Face into the browser's cache.
   stale yes asks again for the new model). The download shows its progress in the panel
   ("Downloading", then "Loading" once WebLLM loads the files onto the GPU; a cached model
   says "Loading" throughout); Esc or Stop cancels it, the worker stops, and the files it
-  had fetched are removed. Chrome's model keeps Chrome's own flow: its download starts on
+  had fetched are removed; a retry waits until they are, so the cleanup never deletes
+  the retry's download. Chrome's model keeps Chrome's own flow: its download starts on
   the first Ask.
 - **Downloaded means every file.** The page reads WebLLM's Cache Storage itself
   (`webllm/cache.ts`), without WebLLM: a build is downloaded only with its weights (the

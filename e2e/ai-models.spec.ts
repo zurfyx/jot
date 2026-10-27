@@ -21,6 +21,8 @@ interface FakeDevice {
   reply?: string;
   /** The download writes the first shard, then waits until the worker is stopped. */
   hangLoad?: boolean;
+  /** Milliseconds between progress reports (300 by default). */
+  stepMs?: number;
 }
 
 interface WorkerLog {
@@ -105,7 +107,8 @@ async function withDevice(context: BrowserContext, device: FakeDevice): Promise<
     };
 
     const log: WorkerLog = { spawned: 0, terminated: 0, sent: [], loads: [], prompts: [] };
-    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    /** The time between two progress reports, or before a reply. */
+    const step = () => new Promise((resolve) => setTimeout(resolve, options.stepMs ?? 300));
     Object.assign(window, {
       __webllm: log,
       __seed: seed,
@@ -139,7 +142,7 @@ async function withDevice(context: BrowserContext, device: FakeDevice): Promise<
                 if (!message.offline) {
                   // WebLLM fetches the shards into the cache, then loads them.
                   for (const progress of [0.25, 0.5]) {
-                    await wait(300);
+                    await step();
                     if (progress === 0.25) {
                       await seed(build, 'partial');
                     }
@@ -151,7 +154,7 @@ async function withDevice(context: BrowserContext, device: FakeDevice): Promise<
                   await seed(build, 'all');
                 }
                 for (const progress of [0.5, 1]) {
-                  await wait(300);
+                  await step();
                   emit({ id, type: 'progress', progress, stage: 'load' });
                 }
                 emit({ id, type: 'progress', progress: 1, stage: 'finish' });
@@ -160,7 +163,7 @@ async function withDevice(context: BrowserContext, device: FakeDevice): Promise<
               }
               case 'chat':
                 log.prompts.push(message.prompt!);
-                await wait(300);
+                await step();
                 emit({ id, type: 'done', value: { text: options.reply ?? '', finish: 'stop' } });
                 break;
             }
@@ -488,4 +491,21 @@ test('without WebGPU or built-in AI, Ask AI explains why and the setting agrees'
     await expect(panel.getByTestId(`model-${id}-state`)).toHaveText('Not supported on this device');
   }
   await expect(panel.getByRole('radio', { checked: true })).toHaveCount(0);
+});
+
+test('the setting says Downloading, then Loading, as the field does', async ({ context }) => {
+  const page = await withDevice(context, { reply: 'Demos.', stepMs: 1500 });
+  await openNote(page, freshNoteId());
+  await writeTwoLines(page);
+  await askButton(page).click();
+  await page.getByTestId('ask-input').fill('Shorter');
+  await page.getByTestId('ask-submit').click();
+  await page.getByTestId('ask-download').click();
+  await expect(page.getByTestId('ask-meta')).toHaveText(/^Downloading Qwen3 1\.7B/);
+  // The request keeps going while the setting is open.
+  const panel = await openModels(page);
+  const state = panel.getByTestId('model-large-state');
+  await expect(state).toHaveText(/^Downloading( \d+%)?$/);
+  await expect(state).toHaveText(/^Loading( \d+%)?$/, { timeout: 10_000 });
+  await expect(state).toHaveText('Ready', { timeout: 10_000 });
 });

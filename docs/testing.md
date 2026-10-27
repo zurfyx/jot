@@ -97,8 +97,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   and asks for consent; a yes downloads with "Downloading" while fetching and "Loading"
   once loading; a complete model loads offline as "Loading" from its first report; a
   `NeedsDownload` from the offline load asks for consent; cancelling a download stops the
-  worker and clears its files, cancelling a cached load keeps them; a reply interrupted on
-  abort keeps the model; a cut-off reply is refused; the worker stops five idle minutes
+  worker and clears its files, and a retry started at once waits for that cleanup (so it
+  never deletes the retry's download); cancelling a cached load keeps them; a reply
+  interrupted on abort keeps the model; a cut-off reply is refused; the worker stops five idle minutes
   after its last use (fake timers) and at once after a failed load. The controller, with a
   downloadable backend: it asks before downloading and Not now downloads nothing,
   downloads after a yes with progress and then writes, asks again (and downloads nothing)
@@ -259,7 +260,8 @@ Durable Objects, over real WebSockets.
   the new size; a model missing its WebGPU library is Partly downloaded and asks first, a
   partial download can be deleted, and every file makes it Downloaded; Chrome's ready
   model is the default with no download; without WebGPU or built-in AI the panel explains
-  why and every model reads Not supported;
+  why and every model reads Not supported; and the setting says "Downloading", then
+  "Loading", then "Ready" while a download runs, as the field does;
 - the ⌘K menu toggles the theme;
 - scrollbars, in light and dark: the page, the ⋯ menu, the docs nav and its code blocks
   compute a transparent track, a thin width and the theme's thumb; the landing page's dark

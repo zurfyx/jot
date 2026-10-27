@@ -23,6 +23,10 @@ function fakeWorker(
   options: {
     reply?: ChatResult;
     hangLoad?: boolean;
+    /** Only the first load hangs; later ones finish. */
+    hangFirstLoad?: boolean;
+    /** Called when a load finishes (WebLLM has written the files). */
+    onLoaded?: () => void;
     /** The load fails with this error name (the worker's offline guard says NeedsDownload). */
     failLoad?: string;
     /** Stages the load reports, in order. */
@@ -30,6 +34,7 @@ function fakeWorker(
   } = {},
 ) {
   const log = { sent: [] as ToWorker[], terminated: 0, spawned: 0 };
+  let loads = 0;
   const spawn = (): WorkerLike => {
     log.spawned += 1;
     const listeners: ((event: MessageEvent<FromWorker>) => void)[] = [];
@@ -55,7 +60,8 @@ function fakeWorker(
             }
             if (options.failLoad !== undefined) {
               emit({ id: message.id, type: 'error', name: options.failLoad, message: 'no' });
-            } else if (!options.hangLoad) {
+            } else if (!options.hangLoad && !(options.hangFirstLoad && loads++ === 0)) {
+              options.onLoaded?.();
               emit({ id: message.id, type: 'done', value: null });
             }
             break;
@@ -80,15 +86,15 @@ function fakeWorker(
 }
 
 /** Cache Storage as the backend sees it: a state per build, and clears. */
-function fakeCache(initial: CacheState) {
+function fakeCache(initial: CacheState, clearGate?: Promise<void>) {
   let state = initial;
   const cleared: string[] = [];
   const access: CacheAccess = {
     state: () => Promise.resolve(state),
-    clear: (build: WebLLMBuild) => {
+    clear: async (build: WebLLMBuild) => {
+      await clearGate;
       cleared.push(build.id);
       state = 'none';
-      return Promise.resolve();
     },
   };
   return {
@@ -105,10 +111,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function setup(worker: ReturnType<typeof fakeWorker>, cached: CacheState) {
+function setup(
+  worker: ReturnType<typeof fakeWorker>,
+  cached: CacheState,
+  clearGate?: Promise<void>,
+) {
   vi.stubGlobal('window', { __jotWebLLMWorker: worker.spawn });
   const engine = new WebLLMEngine();
-  const cache = fakeCache(cached);
+  const cache = fakeCache(cached, clearGate);
   const backend = webllmBackend(MODELS.small, SMALL, engine, cache.access);
   return { engine, backend, cache };
 }
@@ -190,6 +200,47 @@ describe('the WebLLM backend', () => {
     expect(worker.log.terminated).toBe(1);
     expect(engine.loaded).toBeNull();
     expect(cache.cleared).toEqual([SMALL.id]);
+  });
+
+  it("waits for a cancelled download's cleanup before a retry downloads, so it keeps the retry's files", async () => {
+    let finishClearing: () => void = () => undefined;
+    const clearGate = new Promise<void>((resolve) => {
+      finishClearing = resolve;
+    });
+    let cache: ReturnType<typeof fakeCache> | null = null;
+    const order: string[] = [];
+    const worker = fakeWorker({
+      hangFirstLoad: true,
+      onLoaded: () => {
+        order.push(cache!.cleared.length > 0 ? 'loaded after cleanup' : 'loaded before cleanup');
+        cache!.set('complete');
+      },
+    });
+    const made = setup(worker, 'none', clearGate);
+    cache = made.cache;
+    const { backend, engine } = made;
+    const first = open(backend, true);
+    await vi.waitFor(() =>
+      expect(worker.log.sent.filter((m) => m.type === 'load')).toHaveLength(1),
+    );
+    first.controller.abort();
+    await expect(first.opened).rejects.toMatchObject({ name: 'AbortError' });
+
+    // Retry at once: the cleanup is still running, so the retry waits for it.
+    const retry = open(backend, true);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(worker.log.sent.filter((m) => m.type === 'load')).toHaveLength(1);
+    expect(cache.cleared).toEqual([]);
+
+    finishClearing();
+    await retry.opened;
+    expect(order).toEqual(['loaded after cleanup']);
+    expect(cache.cleared).toEqual([SMALL.id]);
+    // The retry's download stays: nothing cleared it afterwards.
+    expect(await backend.availability()).toBe('available');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(cache.cleared).toEqual([SMALL.id]);
+    engine.stop();
   });
 
   it('keeps the files when a cached load is cancelled', async () => {
