@@ -24,6 +24,8 @@
   --shadow: rgb(0 0 0 / 0.16);
   --shadow-soft: rgb(0 0 0 / 0.1);
   --scrim: rgb(20 22 26 / 0.12);
+  /* Scrollbars: a thin translucent thumb on no track. */
+  --scrollbar: rgb(20 22 26 / 0.2);
   /* Collaborators' colours: identity, not status. */
   --peer-ink: #fff;
   --peer-0: #1a7f37;
@@ -61,6 +63,7 @@
   --shadow: rgb(0 0 0 / 0.5);
   --shadow-soft: rgb(0 0 0 / 0.4);
   --scrim: rgb(0 0 0 / 0.4);
+  --scrollbar: rgb(236 238 241 / 0.2);
   --peer-ink: #121316;
   --peer-0: #5fd07d;
   --peer-1: #fb923c;
@@ -105,6 +108,8 @@
   --code-ink: #e7e9ee;
   --code-keyword: #c4a1ff;
   --code-string: #7ee2a0;
+  /* The code block is dark in both themes: its scrollbar is always light. */
+  --code-scrollbar: rgb(231 233 238 / 0.24);
 }
 
 [data-theme='dark'] .landing {
@@ -173,6 +178,18 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * Scrollbars, as in Notion: no track, a thin thumb in the theme's colour.
+ * Every element resolves the tokens itself, so a scope that re-points them
+ * (the landing page's code block) gets its own thumb. No ::-webkit-scrollbar
+ * rules: in a Safari without scrollbar-color they would turn macOS overlay
+ * scrollbars into permanent classic ones that take width from the column.
+ */
+* {
+  scrollbar-color: var(--scrollbar) transparent;
+  scrollbar-width: thin;
 }
 
 body {

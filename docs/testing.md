@@ -219,6 +219,9 @@ Durable Objects, over real WebSockets.
   <name>" in the writer's; the target tint goes when a request settles (cancelled or
   failed) after the field closed;
 - the ⌘K menu toggles the theme;
+- scrollbars, in light and dark: the page, the ⋯ menu, the docs nav and its code blocks
+  compute a transparent track, a thin width and the theme's thumb; the landing page's dark
+  code block has the light thumb;
 - a note in a newer layout opens read only with its banner.
 - the docs: every page renders with no em dashes; code blocks have their file name, a
   GitHub link and a working Copy; the nav, Previous and Next and in-page links move without
