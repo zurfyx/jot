@@ -65,27 +65,37 @@ interface Motion {
 /** Every running animation and transition, described without class names. */
 function inventory(page: Page): Promise<Motion[]> {
   return page.evaluate(() => {
+    // A path up to the nearest named or landmark ancestor, so wrappers
+    // further up (providers, layout divs) never change a description.
+    const LANDMARKS = ['MAIN', 'HEADER', 'FOOTER', 'NAV', 'ASIDE', 'SECTION', 'DIALOG', 'BODY'];
     const describe = (element: Element): string => {
       const parts: string[] = [];
       let node: Element | null = element;
-      while (node !== null && node !== document.documentElement) {
+      while (node !== null) {
         const testid = node.getAttribute('data-testid');
         const role = node.getAttribute('role');
-        const label = node.getAttribute('aria-label');
+        const label =
+          node.getAttribute('aria-label') ??
+          document.getElementById(node.getAttribute('aria-labelledby') ?? '')?.textContent ??
+          null;
+        const tag = node.tagName.toLowerCase();
         if (testid !== null) {
           parts.unshift(`[${testid}]`);
           break;
         }
         if (label !== null) {
-          parts.unshift(`${role ?? node.tagName.toLowerCase()} "${label}"`);
+          parts.unshift(`${role ?? tag} "${label.trim()}"`);
           break;
         }
-        if (node.tagName === 'BUTTON' || node.tagName === 'A') {
+        if (tag === 'button' || tag === 'a') {
           const text = (node.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
-          parts.unshift(`${node.tagName.toLowerCase()} "${text}"`);
+          parts.unshift(`${tag} "${text}"`);
           break;
         }
-        parts.unshift(node.tagName.toLowerCase());
+        parts.unshift(tag);
+        if (LANDMARKS.includes(node.tagName)) {
+          break;
+        }
         node = node.parentElement;
       }
       return parts.join(' > ');

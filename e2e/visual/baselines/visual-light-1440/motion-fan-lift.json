@@ -49,7 +49,7 @@
   },
   {
     "kind": "CSSTransition",
-    "target": "body > div > div > div > main > section > div > div > div",
+    "target": "section \"Just start typing.\" > div > div > div",
     "property": "transform",
     "duration": 800,
     "delay": 0,

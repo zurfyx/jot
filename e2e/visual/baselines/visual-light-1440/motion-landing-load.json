@@ -37,7 +37,19 @@
   },
   {
     "kind": "CSSAnimation",
-    "target": "body > div > div > div > main > section > div > div > b",
+    "target": "button \"Live cursorsSee who's here and\" > span",
+    "property": "transform",
+    "duration": 3000,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "section \"Just start typing.\" > div > div > b",
     "property": "transform",
     "duration": 20000,
     "delay": -13000,
@@ -49,7 +61,7 @@
   },
   {
     "kind": "CSSAnimation",
-    "target": "body > div > div > div > main > section > div > div > b",
+    "target": "section \"Just start typing.\" > div > div > b",
     "property": "transform",
     "duration": 20000,
     "delay": -7000,
@@ -61,7 +73,7 @@
   },
   {
     "kind": "CSSAnimation",
-    "target": "body > div > div > div > main > section > div > div > b",
+    "target": "section \"Just start typing.\" > div > div > b",
     "property": "transform",
     "duration": 20000,
     "delay": 0,
@@ -73,7 +85,7 @@
   },
   {
     "kind": "CSSAnimation",
-    "target": "body > div > div > div > main > section > div > div > div",
+    "target": "section \"Just start typing.\" > div > div > div",
     "property": "rotate",
     "duration": 7000,
     "delay": 0,
@@ -85,7 +97,7 @@
   },
   {
     "kind": "CSSAnimation",
-    "target": "body > div > div > div > main > section > div > h1 > span > span > span",
+    "target": "section \"Just start typing.\" > div > h1 > span > span > span",
     "property": "transform",
     "duration": 1100,
     "delay": 400,
@@ -97,24 +109,12 @@
   },
   {
     "kind": "CSSAnimation",
-    "target": "body > div > div > div > main > section > div > h1 > span > span",
+    "target": "section \"Just start typing.\" > div > h1 > span > span",
     "property": "transform",
     "duration": 1100,
     "delay": 400,
     "easing": "linear",
     "keyframeEasing": "cubic-bezier(0.6, 0, 0.2, 1)",
-    "iterations": 1,
-    "direction": "normal",
-    "fill": "both"
-  },
-  {
-    "kind": "CSSAnimation",
-    "target": "button \"Live cursorsSee who's here and\" > span",
-    "property": "transform",
-    "duration": 3000,
-    "delay": 0,
-    "easing": "linear",
-    "keyframeEasing": "linear",
     "iterations": 1,
     "direction": "normal",
     "fill": "both"
