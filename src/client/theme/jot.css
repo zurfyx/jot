@@ -604,6 +604,18 @@
     line-height: 1;
   }
 
+  .astryx-progress-bar-track {
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .astryx-progress-bar-fill {
+    border-radius: 0;
+    transition-duration: var(--enter);
+    transition-timing-function: var(--ease);
+  }
+
   .astryx-text[data-color="primary"] { color: var(--color-text-primary); }
 
   .astryx-heading[data-color="primary"] { color: var(--color-text-primary); }

@@ -1,3 +1,4 @@
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import * as stylex from '@stylexjs/stylex';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 
@@ -6,7 +7,6 @@ import { highlightsSupported } from '../blame/highlights';
 import { dockButton, panelButton } from '../dock.styles';
 import { Icon } from '../icons';
 import { popoverProps, usePopover } from '../menu';
-import { meterStyles } from '../NoteInfo';
 import type { NoteSession } from '../session';
 import { useEditable, useSignal } from '../useSignal';
 import { aiModels } from './choice';
@@ -103,10 +103,18 @@ const styles = stylex.create({
   error: {
     color: colors['--bad'],
   },
+  /**
+   * The download's meter: Astryx's ProgressBar in jot AI's violet on
+   * --hover (its track and fill shape are theme overrides in jotTheme.ts).
+   */
   meter: {
+    width: 'auto',
+    minWidth: 0,
     marginTop: 6,
     marginInline: 4,
     marginBottom: 2,
+    '--color-accent': colors['--ai'],
+    '--color-background-muted': colors['--hover'],
   },
   unavailable: {
     marginBlock: 6,
@@ -386,16 +394,15 @@ function AskPanel({ ai }: { ai: AiState }) {
         </p>
       )}
       {phase.kind === 'downloading' && (
-        <div
-          {...stylex.props(meterStyles.track, styles.meter)}
+        <ProgressBar
+          label="Download"
+          isLabelHidden
+          value={phase.progress ?? 0}
+          max={1}
+          xstyle={styles.meter}
           aria-hidden="true"
           data-testid="ask-meter"
-        >
-          <span
-            {...stylex.props(meterStyles.fill, meterStyles.ai)}
-            style={{ transform: `scaleX(${phase.progress ?? 0})` }}
-          />
-        </div>
+        />
       )}
     </div>
   );

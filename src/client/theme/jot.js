@@ -512,6 +512,20 @@ export const jotTheme = {
         "fontWeight": "650",
         "lineHeight": "1"
       }
+    },
+    "progress-bar-track": {
+      "base": {
+        "height": "6px",
+        "borderRadius": "3px",
+        "overflow": "hidden"
+      }
+    },
+    "progress-bar-fill": {
+      "base": {
+        "borderRadius": "0",
+        "transitionDuration": "var(--enter)",
+        "transitionTimingFunction": "var(--ease)"
+      }
     }
   },
   __onDark: {

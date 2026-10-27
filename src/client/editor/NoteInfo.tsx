@@ -73,15 +73,11 @@ export const infoStyles = stylex.create({
 });
 
 /**
- * A meter: Note info's Yjs size against the cap, and Ask AI's download.
- * Not Astryx's ProgressBar (D28): Note info's is role="meter" (a size
- * against a limit, not progress), and for Ask AI's (aria-hidden, so the
- * role doesn't matter) ProgressBar can be made pixel-identical, but its lazy
- * mark tooltip puts Astryx's Tooltip and Layer styles in the global
- * stylesheet: about 4 kB gzipped of CSS on every page, landing included,
- * and 2.3 kB of JS on the note page, for a 6px bar.
+ * Note info's meter: the Yjs size against the cap. Not Astryx's ProgressBar
+ * (which Ask AI's download uses): this one is role="meter", a size against
+ * a limit rather than progress, and ProgressBar's role is progressbar.
  */
-export const meterStyles = stylex.create({
+const meterStyles = stylex.create({
   track: {
     height: 6,
     marginTop: 6,
@@ -104,9 +100,6 @@ export const meterStyles = stylex.create({
   },
   full: {
     backgroundColor: colors['--bad'],
-  },
-  ai: {
-    backgroundColor: colors['--ai'],
   },
 });
 

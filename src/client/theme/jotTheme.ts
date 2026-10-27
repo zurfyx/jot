@@ -64,5 +64,18 @@ export const jotTheme = defineTheme({
         lineHeight: '1',
       },
     },
+    // Ask AI's download meter (editor/ai/AskAI.tsx), jot's only ProgressBar:
+    // a 6px track, and a flat-ended fill that grows on jot's motion tokens.
+    // Its colours are set where it is used (jot AI's violet on --hover).
+    'progress-bar-track': {
+      base: { height: '6px', borderRadius: '3px', overflow: 'hidden' },
+    },
+    'progress-bar-fill': {
+      base: {
+        borderRadius: '0',
+        transitionDuration: 'var(--enter)',
+        transitionTimingFunction: 'var(--ease)',
+      },
+    },
   },
 });
