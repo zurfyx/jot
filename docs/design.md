@@ -187,11 +187,14 @@ The copy is a playground's, never a hosted service's: no sign-up or retention re
 
 ## Docs
 
-`src/client/docs/`, with its styles in `docs.css` (tokens only). The base tokens, light
-and dark, plus a `.docs` scope: the example people's colours (`--you`, `--ana`, `--ai`),
-their tints for the home's hero and the diagram (`--docs-tint-*`), the inspector's
-highlight (`--docs-hl`), callouts (`--docs-callout-*`, `--docs-warn-*`) and light code
-blocks (`--docs-code-*`).
+`src/client/docs/`, styled with StyleX in each component's file (tokens only). The prose
+elements are small components in `ui.tsx` (`P`, `H2`, `Ul`, `Li`, `B`, `C` for inline
+code), so a page's JSX carries its look. The base tokens, light and dark, plus the `docs`
+set (`docsDark` on the docs root): the people's tints for the home's hero and the diagram
+(`--docs-tint-*`), the inspector's highlight (`--docs-hl`), callouts (`--docs-callout-*`,
+`--docs-warn-*`) and light code blocks (`--docs-code-*`). The pages and the diagram are
+marked with the peer colours of you, Ana and jot AI (`tint.ts`). One plain rule is left in
+`docs.css`: the classless `<code>` Lexical wraps inline code in, inside the inspector.
 
 - **Header:** "jot docs", then Guides, API (`@lexical/y`'s README at the pinned Lexical
   commit) and GitHub. Under 860px the nav folds behind a Pages button.

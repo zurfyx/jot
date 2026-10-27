@@ -31,6 +31,6 @@ test('the inspector, following a hovered line', async ({ context }) => {
   const row = tree.getByTestId('inspector-row').filter({ hasText: '"Agenda"' });
   await row.scrollIntoViewIfNeeded();
   await row.hover();
-  await expect(row).toHaveClass(/is-active/);
+  await expect(row).toHaveAttribute('data-active', 'true');
   await shoot(page, 'docs-inspector');
 });

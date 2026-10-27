@@ -50,7 +50,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       const nav = await scrollbar(page.getByTestId('docs-nav'));
       expect(nav.track).toBe(TRANSPARENT);
       expect(nav.thumb).toBe((await scrollbar(page.locator('html'))).thumb);
-      const code = await scrollbar(page.locator('.docs-code pre').first());
+      const code = await scrollbar(page.getByTestId('docs-code').first().locator('pre'));
       expect(code).toEqual(nav);
     });
 

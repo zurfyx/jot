@@ -1,3 +1,5 @@
+import './docs.css';
+
 import { buildEditorFromExtensions, TabIndentationExtension } from '@lexical/extension';
 import { $createListItemNode, $createListNode } from '@lexical/list';
 import { $createHeadingNode } from '@lexical/rich-text';
@@ -11,13 +13,20 @@ import {
   $isRangeSelection,
   configExtension,
   defineExtension,
+  type EditorThemeClasses,
   type LexicalEditor,
 } from 'lexical';
+import * as stylex from '@stylexjs/stylex';
 import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { jotEditorExtension } from '../editor/extensions';
+import { editorTheme, jotEditorExtension } from '../editor/extensions';
+import { colors, docs, fonts } from '../theme/tokens.stylex';
+import { frame } from './inspectorFrame';
 import { $lineKeyOf, lineKeys } from './lines';
+import { C, prose } from './ui';
 import { type Attr, readRows, type Row, type Segment, visibleText } from './yjsTree';
+
+const STACKED = '@media (max-width: 1080px)';
 
 interface Box {
   top: number;
@@ -82,6 +91,8 @@ export default function Inspector() {
     const created = buildEditorFromExtensions(
       defineExtension({
         name: 'jot/docs-inspector',
+        // After jot's theme, so these classes replace its block classes.
+        theme: inspectorTheme,
         dependencies: [
           jotEditorExtension,
           // Tab leaves the inspector, as it would any small field on a page.
@@ -200,18 +211,26 @@ export default function Inspector() {
   };
 
   return (
-    <figure className="docs-inspector" aria-label="Live inspector">
-      <div className="insp-pane insp-editor-pane">
-        <p className="insp-label">Editor</p>
+    <figure aria-label="Live inspector" {...stylex.props(frame.box)}>
+      <div {...stylex.props(styles.pane, styles.editorPane)}>
+        <p {...stylex.props(styles.label)}>Editor</p>
         <div
-          className="insp-surface"
           ref={surfaceRef}
           onMouseMove={onEditorHover}
           onMouseLeave={() => setHover(null)}
+          {...stylex.props(styles.surface)}
         >
-          {box !== null && <div className="insp-line-hl" style={box} aria-hidden="true" />}
+          {box !== null && (
+            <div
+              aria-hidden="true"
+              data-testid="inspector-line-hl"
+              {...stylex.props(styles.lineHighlight)}
+              style={box}
+            />
+          )}
           <div
-            className="jot-editor insp-editor"
+            // `insp-editor` is the hook for the one rule docs.css keeps.
+            className={`insp-editor ${stylex.props(styles.editor).className ?? ''}`}
             ref={rootRef}
             contentEditable
             suppressContentEditableWarning
@@ -223,11 +242,15 @@ export default function Inspector() {
           />
         </div>
       </div>
-      <div className="insp-pane insp-tree-pane">
-        <p className="insp-label">
-          Yjs: <code>doc.get('lexical-y')</code>
+      <div {...stylex.props(styles.pane)}>
+        <p {...stylex.props(styles.label)}>
+          Yjs: <C xstyle={styles.labelCode}>doc.get('lexical-y')</C>
         </p>
-        <ol className="insp-tree" data-testid="inspector-tree" onMouseLeave={() => setHover(null)}>
+        <ol
+          data-testid="inspector-tree"
+          onMouseLeave={() => setHover(null)}
+          {...stylex.props(prose.list, styles.tree)}
+        >
           {state.rows.map((row, i) => (
             <TreeRow
               key={i}
@@ -251,42 +274,34 @@ function TreeRow({
   active: boolean;
   onHover: (line: number | null) => void;
 }) {
-  const indent = { paddingLeft: `${8 + row.depth * 16}px` };
-  if (row.kind === 'root') {
+  const rowProps = {
+    ...stylex.props(styles.row, active && styles.rowActive),
+    style: { paddingLeft: `${8 + row.depth * 16}px` },
+    'data-testid': 'inspector-row',
+  };
+  if (row.kind === 'root' || row.kind === 'node') {
     return (
-      <li className="insp-row is-root" style={indent} data-testid="inspector-row">
-        <span className="insp-name">{row.name}</span> <Attrs attrs={row.attrs} />
-      </li>
-    );
-  }
-  if (row.kind === 'node') {
-    return (
-      <li className="insp-row" style={indent} data-testid="inspector-row">
-        <span className="insp-name">{row.name}</span> <Attrs attrs={row.attrs} />
+      <li {...rowProps}>
+        <span {...stylex.props(styles.name)}>{row.name}</span> <Attrs attrs={row.attrs} />
       </li>
     );
   }
   if (row.kind === 'run') {
     return (
-      <li className="insp-row" style={indent} data-testid="inspector-row">
-        <Segments segments={row.segments} /> <span className="insp-marker">¦</span>
+      <li {...rowProps}>
+        <Segments segments={row.segments} /> <span {...stylex.props(styles.marker)}>¦</span>
       </li>
     );
   }
   return (
     <li
-      className={`insp-row is-line${active ? ' is-active' : ''}`}
-      style={indent}
-      data-testid="inspector-row"
+      {...rowProps}
       data-line={row.line}
+      data-active={active ? 'true' : undefined}
       onMouseMove={() => onHover(row.line)}
     >
-      <Segments segments={row.segments} /> <span className="insp-marker">¶</span>{' '}
-      {row.marker.length > 0 ? (
-        <Attrs attrs={row.marker} />
-      ) : (
-        <span className="insp-attrs">{'{}'} paragraph</span>
-      )}
+      <Segments segments={row.segments} /> <span {...stylex.props(styles.marker)}>¶</span>{' '}
+      {row.marker.length > 0 ? <Attrs attrs={row.marker} /> : <span>{'{}'} paragraph</span>}
     </li>
   );
 }
@@ -298,9 +313,9 @@ function Segments({ segments }: { segments: Segment[] }) {
         <Fragment key={i}>
           {i > 0 && ' '}
           {segment.node !== undefined ? (
-            <span className="insp-name">{segment.node}</span>
+            <span {...stylex.props(styles.name)}>{segment.node}</span>
           ) : (
-            <span className="insp-text">"{visibleText(segment.text)}"</span>
+            <span {...stylex.props(styles.text)}>"{visibleText(segment.text)}"</span>
           )}
           {segment.attrs.length > 0 && <Attrs attrs={segment.attrs} />}
         </Fragment>
@@ -314,7 +329,7 @@ function Attrs({ attrs }: { attrs: Attr[] }) {
     return null;
   }
   return (
-    <span className="insp-attrs">
+    <span>
       {'{'}
       {attrs.map((attr, i) => (
         <Fragment key={attr.key}>
@@ -326,3 +341,207 @@ function Attrs({ attrs }: { attrs: Attr[] }) {
     </span>
   );
 }
+
+const styles = stylex.create({
+  pane: {
+    minWidth: 0,
+    paddingTop: 14,
+    paddingInline: 16,
+    paddingBottom: 16,
+  },
+  editorPane: {
+    borderRightWidth: { default: 1, [STACKED]: 0 },
+    borderRightStyle: { default: 'solid', [STACKED]: 'none' },
+    borderRightColor: { default: colors['--rule'], [STACKED]: 'currentcolor' },
+    borderBottomWidth: { default: null, [STACKED]: 1 },
+    borderBottomStyle: { default: null, [STACKED]: 'solid' },
+    borderBottomColor: { default: null, [STACKED]: colors['--rule'] },
+  },
+  // A paragraph of the article, restyled.
+  label: {
+    maxWidth: '68ch',
+    marginTop: 0,
+    marginInline: 0,
+    marginBottom: 10,
+    color: colors['--muted'],
+    fontSize: 11.5,
+    lineHeight: 1.7,
+    fontWeight: 650,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  labelCode: {
+    textTransform: 'none',
+    letterSpacing: 0,
+  },
+  surface: {
+    position: 'relative',
+  },
+  lineHighlight: {
+    position: 'absolute',
+    zIndex: 0,
+    boxSizing: 'content-box',
+    marginBlock: -2,
+    marginInline: -6,
+    paddingBlock: 2,
+    paddingInline: 6,
+    borderRadius: 6,
+    backgroundColor: docs['--docs-hl'],
+    pointerEvents: 'none',
+  },
+  editor: {
+    position: 'relative',
+    zIndex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    minHeight: 200,
+    outline: 'none',
+    color: colors['--ink'],
+    fontSize: 15,
+    lineHeight: 1.55,
+    caretColor: colors['--accent'],
+    overflowWrap: 'break-word',
+  },
+  tree: {
+    marginTop: 0,
+    listStyleType: 'none',
+    // `font: 12.5px/1.7 var(--mono)`: the shorthand also resets the inherited
+    // tabular figures.
+    fontFamily: fonts['--mono'],
+    fontSize: 12.5,
+    lineHeight: 1.7,
+    fontWeight: 'normal',
+    fontVariantNumeric: 'normal',
+  },
+  row: {
+    margin: 0,
+    paddingBlock: 1,
+    paddingRight: 8,
+    borderRadius: 6,
+    color: colors['--muted'],
+    overflowWrap: 'anywhere',
+    whiteSpace: 'pre-wrap',
+  },
+  rowActive: {
+    backgroundColor: docs['--docs-hl'],
+  },
+  name: {
+    color: colors['--ink'],
+    fontWeight: 600,
+  },
+  text: {
+    color: colors['--ink'],
+  },
+  marker: {
+    color: colors['--peer-1'],
+    fontWeight: 700,
+  },
+});
+
+/*
+ * The inspector's editor is a jot editor, set smaller in the article: these
+ * classes replace jot's for its blocks. A first block that isn't a heading
+ * takes a title's size and weight.
+ */
+const FIRST = ':first-child';
+
+const blocks = stylex.create({
+  first: {
+    fontSize: { default: null, [FIRST]: 19 },
+    lineHeight: { default: null, [FIRST]: 1.3 },
+    fontWeight: { default: null, [FIRST]: 650 },
+    letterSpacing: { default: null, [FIRST]: '-0.01em' },
+  },
+  margin: {
+    marginTop: 0,
+    marginInline: 0,
+    marginBottom: 6,
+  },
+  p: {
+    maxWidth: '68ch',
+    color: colors['--body'],
+    fontSize: { default: 16, [FIRST]: 19 },
+    lineHeight: { default: 1.7, [FIRST]: 1.3 },
+  },
+  quote: {
+    paddingLeft: 14,
+    borderLeftWidth: 3,
+    borderLeftStyle: 'solid',
+    borderLeftColor: colors['--rule-strong'],
+    color: colors['--body'],
+  },
+  list: {
+    maxWidth: '68ch',
+    paddingLeft: 22,
+  },
+  li: {
+    marginBlock: 6,
+    marginInline: 0,
+    color: colors['--body'],
+    fontSize: 16,
+    lineHeight: 1.7,
+  },
+  heading: {
+    marginTop: 12,
+    marginInline: 0,
+    marginBottom: 4,
+    fontSize: 17,
+    lineHeight: 1.3,
+    fontWeight: 650,
+    letterSpacing: '-0.01em',
+  },
+  h1: {
+    lineHeight: { default: 1.15, [FIRST]: 1.3 },
+    fontWeight: { default: 680, [FIRST]: 650 },
+    letterSpacing: { default: '-0.022em', [FIRST]: '-0.01em' },
+  },
+  h3: {
+    lineHeight: { default: 1.35, [FIRST]: 1.3 },
+    letterSpacing: { default: null, [FIRST]: '-0.01em' },
+  },
+  code: {
+    display: 'block',
+    marginTop: 0,
+    marginInline: 0,
+    marginBottom: { default: 12, [FIRST]: 8 },
+    paddingBlock: 1,
+    paddingInline: 5,
+    borderRadius: 5,
+    backgroundColor: colors['--hover'],
+    color: colors['--ink'],
+    fontFamily: fonts['--mono'],
+    fontSize: { default: '0.86em', [FIRST]: 19 },
+    lineHeight: { default: 1.6, [FIRST]: 1.3 },
+    fontWeight: { default: null, [FIRST]: 650 },
+    letterSpacing: { default: null, [FIRST]: '-0.01em' },
+    tabSize: 2,
+    whiteSpace: 'pre-wrap',
+  },
+});
+
+const cls = (...styles: stylex.StyleXStyles[]) => stylex.props(...styles).className ?? '';
+
+const h3 = cls(blocks.heading, blocks.h3);
+
+const inspectorTheme: EditorThemeClasses = {
+  paragraph: cls(blocks.margin, blocks.first, blocks.p),
+  quote: cls(blocks.margin, blocks.quote, blocks.first),
+  code: cls(blocks.code),
+  heading: {
+    h1: cls(blocks.heading, blocks.h1),
+    h2: cls(blocks.heading),
+    h3,
+    h4: h3,
+    h5: h3,
+    h6: h3,
+  },
+  list: {
+    ...editorTheme.list,
+    ul: cls(blocks.margin, blocks.list, blocks.first),
+    ol: cls(blocks.margin, blocks.list, blocks.first),
+    // The article's list padding holds for to-do lists too.
+    checklist: '',
+    listitem: cls(blocks.li),
+  },
+};

@@ -323,7 +323,8 @@ component per page under `docs/content/`, and code blocks from real files import
 the app, and declarations cut out of jot's own source by `excerpt.ts`, linked to their
 lines on GitHub. The live inspector (`Inspector.tsx`) is a lazy chunk of its own: a jot
 editor on a local `Y.Doc` beside the `lexical-y` root as rows (`yjsTree.ts`), whose lines
-pair in document order with the editor's line elements (`lines.ts`).
+pair in document order with the editor's line elements (`lines.ts`). Its editor adds a
+theme of its own over jot's, so its blocks take the article's smaller sizes.
 
 There is no Yjs 14 IndexedDB provider yet, so a note's offline edits live in memory
 until the socket reconnects (D13).
