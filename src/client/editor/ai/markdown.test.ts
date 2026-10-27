@@ -153,6 +153,29 @@ describe('Ask AI Markdown', () => {
     expect(result.list).toBe('- Demos\n- Lunch with **Ana**');
   });
 
+  it('rewrites blocks of the same kind in place, keeping their text nodes', () => {
+    const editor = createEditor();
+    seed(editor);
+    const result = update(editor, () => {
+      const heading = children()[0]!;
+      const paragraph = children()[1]!;
+      const keys = paragraph.getChildren().map((node) => node.getKey());
+      const last = $replaceBlocks([heading, paragraph], '# Launch day\n\nNotes for **Friday**');
+      return {
+        sameBlocks:
+          children()[0]!.getKey() === heading.getKey() && last?.getKey() === paragraph.getKey(),
+        sameTexts: paragraph.getChildren().map((node) => node.getKey()),
+        keys,
+        markdown: $blocksToMarkdown([heading, paragraph]),
+        count: children().length,
+      };
+    });
+    expect(result.sameBlocks).toBe(true);
+    expect(result.sameTexts).toEqual(result.keys);
+    expect(result.markdown).toBe('# Launch day\n\nNotes for **Friday**');
+    expect(result.count).toBe(4);
+  });
+
   it('exports blocks that start or end with a line break, and code blocks with blank edges', () => {
     const editor = createEditor();
     const result = update(editor, () => {

@@ -21,6 +21,7 @@ import {
   type ElementNode,
   type LexicalNode,
   type PointType,
+  type TextNode,
 } from 'lexical';
 
 import { normalizeLinkUrl } from '../../../shared/links';
@@ -214,6 +215,10 @@ export function $replaceBlocks(
   for (const node of nodes) {
     $sanitizeLinks(node);
   }
+  if (nodes.length === blocks.length && nodes.every((node, i) => $canRewrite(blocks[i]!, node))) {
+    nodes.forEach((node, i) => $rewrite(blocks[i]!, node));
+    return blocks[blocks.length - 1] ?? null;
+  }
   for (const node of nodes) {
     first.insertBefore(node);
   }
@@ -221,4 +226,68 @@ export function $replaceBlocks(
     block.remove();
   }
   return nodes[nodes.length - 1] ?? null;
+}
+
+/** A block whose children are all plain text nodes (at least one). */
+function plainTextChildren(block: ElementNode): TextNode[] | null {
+  const children = block.getChildren();
+  if (children.length === 0) {
+    return null;
+  }
+  const texts: TextNode[] = [];
+  for (const child of children) {
+    if (!$isTextNode(child) || child.getType() !== 'text') {
+      return null;
+    }
+    texts.push(child);
+  }
+  return texts;
+}
+
+/**
+ * Whether old block `old` can take parsed block `fresh` in place: the same
+ * kind of block (type, and tag where it has one), each holding plain text alone.
+ */
+function $canRewrite(old: ElementNode, fresh: ElementNode): boolean {
+  const tag = (node: ElementNode): unknown =>
+    'getTag' in node && typeof node.getTag === 'function' ? node.getTag() : null;
+  return (
+    old.getType() === fresh.getType() &&
+    tag(old) === tag(fresh) &&
+    plainTextChildren(old) !== null &&
+    plainTextChildren(fresh) !== null
+  );
+}
+
+/**
+ * Writes parsed block `fresh` into old block `old`, which it then equals: the
+ * old text nodes take the new text, formats and styles (extra new ones are
+ * appended, extra old ones removed). Why: @lexical/y keeps the identity of
+ * characters a text node's text is set over and still holds (from the edits
+ * Lexical records), so blame keeps crediting their writer and a peer's
+ * concurrent edit of them stays; a block made again holds only new text, so
+ * jot AI would be credited with the whole passage.
+ */
+function $rewrite(old: ElementNode, fresh: ElementNode): void {
+  const olds = plainTextChildren(old)!;
+  const freshes = plainTextChildren(fresh)!;
+  old.setFormat(fresh.getFormatType());
+  old.setIndent(fresh.getIndent());
+  freshes.forEach((text, i) => {
+    const target = olds[i];
+    if (target === undefined) {
+      old.append(text);
+      return;
+    }
+    if (target.getTextContent() !== text.getTextContent()) {
+      target.setTextContent(text.getTextContent());
+    }
+    target.setFormat(text.getFormat());
+    target.setStyle(text.getStyle());
+    target.setDetail(text.getDetail());
+    target.setMode(text.getMode());
+  });
+  for (const extra of olds.slice(freshes.length)) {
+    extra.remove();
+  }
 }

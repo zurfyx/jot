@@ -69,12 +69,12 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   start or end with a line break and code blocks with blank first and last lines; a caret
   in a list targets the list (and the field says "the whole list") and a selection every
   block it touches, tables are refused; a reply replaces its blocks (an empty one changes
-  nothing), code blocks round-trip, only http, https and mailto links survive, and only
+  nothing), rewriting blocks of the same kind in place, code blocks round-trip, only http, https and mailto links survive, and only
   an unambiguous `markdown` fence is unwrapped (single and multiple code blocks keep
   theirs); the snapshot sees underline and alignment that Markdown drops. With a fake
   model on a real binding: nothing is sent before Ask; jot AI joins only once the model
   is ready, writes the reply under its own client id with its registry entry (kind `ai`,
-  `askedBy`) and its caret, and is credited only with the words it changed (the binding replaces whole words); on
+  `askedBy`) and its caret, and is credited only with the words it changed (the old block keeps its text nodes, and the binding replaces whole words); on
   someone else's note, an asker who has typed nothing is recorded as this browser's own
   and named by `askedBy`; it writes into an empty block, shows the download, runs one
   request at a time, and a cancelled request never resets a newer one; it writes nothing
