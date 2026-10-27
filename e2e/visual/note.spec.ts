@@ -8,11 +8,13 @@ import {
   editor,
   expect,
   freshNoteId,
+  holdTimers,
   openMore,
   openNote,
   pageFor,
   rest,
   setNoteContent,
+  settle,
   shoot,
   shootElement,
   test,
@@ -92,10 +94,19 @@ test('Share, after a copy', async ({ context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const page = await pageFor(context, GERARD);
   await openNote(page, freshNoteId());
-  await chrome(page).getByRole('button', { name: 'Share' }).click();
-  await expect(chrome(page).getByRole('button', { name: 'Link copied' })).toBeVisible();
+  // Settle first (the size, the fonts): "Link copied" lasts only 1.8 s.
+  await settle(page);
   await rest(page);
-  await shootElement(chrome(page), 'note-share-copied');
+  // Hold the page's timers so the confirmation is still up at the capture.
+  await holdTimers(page);
+  await chrome(page).getByRole('button', { name: 'Share' }).click();
+  const copied = chrome(page).getByRole('button', { name: 'Link copied' });
+  await expect(copied).toBeVisible();
+  await expect(chrome(page)).toHaveScreenshot('note-share-copied.png');
+  await expect(copied).toBeVisible();
+  // The held timer is the confirmation's own: once it runs, Share is back.
+  await page.clock.runFor(2000);
+  await expect(chrome(page).getByRole('button', { name: 'Share' })).toBeVisible();
 });
 
 test('Aa → Link: the link field', async ({ context }) => {

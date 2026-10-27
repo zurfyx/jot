@@ -50,8 +50,9 @@ test('Offline, with edits waiting', async ({ context }) => {
   await openNote(page, freshNoteId());
   await pill(page).click();
   await editor(page).click();
-  await page.keyboard.type('Written offline');
-  await expect(pill(page)).toHaveText(/^Offline · \d+ edits? waiting$/);
+  // One insertion, one edit: the count in the pill is the same every run.
+  await page.keyboard.insertText('Written offline');
+  await expect(pill(page)).toHaveText('Offline · 1 edit waiting');
   await rest(page);
   await shootElement(chrome(page), 'pill-offline');
 });

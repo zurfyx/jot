@@ -18,32 +18,65 @@ function hero(page: Page) {
   return page.getByRole('region', { name: 'Just start typing.' });
 }
 
-/**
- * The fan's cards overlap and lean: hover a corner of a card that the card in
- * front doesn't cover.
- */
-async function hoverCard(page: Page, card: Locator, corner: 'left' | 'right' = 'left') {
-  const box = await card.boundingBox();
-  expect(box).not.toBeNull();
-  const x = corner === 'left' ? box!.x + 40 : box!.x + box!.width - 40;
-  await page.mouse.move(x, box!.y + 40);
-}
-
 test('the hero at rest', async ({ page }) => {
   await openLanding(page);
   await shoot(page, 'landing-hero');
 });
 
+/** Which card link the pointer is over, if any, and whether it is over the fan. */
+function hovered(page: Page) {
+  return page.evaluate(() => {
+    const element = [...document.querySelectorAll(':hover')].at(-1);
+    const card = element?.closest('[data-testid="new-note-card"], [data-testid="example-card"]');
+    return {
+      card: card?.getAttribute('data-testid') ?? null,
+      inFan: card ? 'card' : element?.closest('.fan-cards') ? 'fan' : 'outside',
+    };
+  });
+}
+
+/**
+ * The fan's cards overlap and lean, and hovering changes where they sit:
+ * hovers the first point of a grid over `area` that lands on `card` (a card
+ * link's test id, or null for the fan alone) once the fan has moved.
+ */
+async function hoverFan(page: Page, card: string | null, area: Locator) {
+  const box = (await area.boundingBox())!;
+  for (let row = 1; row < 8; row++) {
+    for (let column = 1; column < 8; column++) {
+      // From the fan at rest, not from a card another hover moved.
+      await rest(page);
+      await page.mouse.move(box.x + (box.width * column) / 8, box.y + (box.height * row) / 8);
+      // Hover follows the pointer after the next frame: give it a moment.
+      await page.waitForTimeout(50);
+      const now = await hovered(page);
+      if (now.inFan !== 'outside' && now.card === card) {
+        return;
+      }
+    }
+  }
+  throw new Error(`No point hovers ${card ?? 'the fan alone'}.`);
+}
+
 test('the hero fan, hovered and lifted', async ({ page }) => {
   await openLanding(page);
+  const shots: Buffer[] = [];
+  const state = async (name: string) => {
+    await shootElement(hero(page), name);
+    shots.push(await hero(page).screenshot({ animations: 'disabled', caret: 'hide' }));
+  };
   // Hovering the fan (the recipe card is not a link) spreads it.
-  await hoverCard(page, page.getByText("Grandma's pancakes", { exact: true }));
-  await shootElement(hero(page), 'landing-fan-hovered');
+  await hoverFan(page, null, page.locator('.fan-recipe'));
+  await state('landing-fan-hovered');
   // Hovering a card lifts it and shows Open.
-  await hoverCard(page, page.getByTestId('new-note-card'));
-  await shootElement(hero(page), 'landing-fan-new-lifted');
-  await hoverCard(page, page.getByTestId('example-card'), 'right');
-  await shootElement(hero(page), 'landing-fan-example-lifted');
+  await hoverFan(page, 'new-note-card', page.getByTestId('new-note-card'));
+  await state('landing-fan-new-lifted');
+  await hoverFan(page, 'example-card', page.getByTestId('example-card'));
+  await state('landing-fan-example-lifted');
+  // Three different states, not one picture three times.
+  expect(shots[0]!.equals(shots[1]!)).toBe(false);
+  expect(shots[1]!.equals(shots[2]!)).toBe(false);
+  expect(shots[0]!.equals(shots[2]!)).toBe(false);
 });
 
 test('the two windows, at the end of the story', async ({ page }) => {

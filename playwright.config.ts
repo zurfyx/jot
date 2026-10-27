@@ -20,6 +20,9 @@ const visualProjects = (['light', 'dark'] as const).flatMap((colorScheme) =>
   ].map(({ size, viewport }) => ({
     name: `visual-${colorScheme}-${size}`,
     testMatch: /e2e\/visual\/.*\.spec\.ts$/,
+    // A screenshot that only passes on a second try is a flaky baseline, not a
+    // pass: no retries here, even in CI.
+    retries: 0,
     use: { ...devices['Desktop Chrome'], viewport, colorScheme, deviceScaleFactor: 1 },
   })),
 );

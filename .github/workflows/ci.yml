@@ -111,10 +111,14 @@ jobs:
           retention-days: 7
 
   e2e:
-    # The required check: passes only when every shard passed.
+    # The required check: passes only when every shard passed. always(), not
+    # !cancelled(): a cancelled run must still report e2e, and report it as a
+    # failure, never leave it skipped (a skipped required check counts as
+    # passing). The step fails for any shard result but success: failure,
+    # cancelled or skipped.
     name: e2e
     needs: e2e-shard
-    if: ${{ !cancelled() }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

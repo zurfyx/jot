@@ -81,7 +81,10 @@ async function steadyPill(page: Page): Promise<void> {
   }
   let last = await pill.innerText();
   let steadyFor = 0;
-  for (let waited = 0; steadyFor < 3000 && waited < 20_000; waited += 500) {
+  for (let waited = 0; steadyFor < 3000; waited += 500) {
+    if (waited >= 20_000) {
+      throw new Error(`The status pill never settled in 20 s; it last read "${last}".`);
+    }
     await page.waitForTimeout(500);
     const now = await pill.innerText();
     steadyFor = now === last ? steadyFor + 500 : 0;
@@ -89,19 +92,14 @@ async function steadyPill(page: Page): Promise<void> {
   }
 }
 
-const warmed = new WeakSet<Page>();
-
 /**
- * Text in a system font (the browser's `monospace`, which <code> gets from
- * the user-agent stylesheet) can resolve to one fallback font in the
- * Playwright image and switch to another at the page's first capture,
- * changing line heights. One throwaway capture per page settles it.
+ * Holds the page's timers where they are (Playwright's clock, paused), so a
+ * state that a timer ends, such as Share's 1.8 s "Link copied", stays for a
+ * capture. Settle first: `settle` waits on animation frames, which a paused
+ * clock holds too. `page.clock.runFor` lets the held timers run.
  */
-async function resolveSystemFonts(page: Page): Promise<void> {
-  if (!warmed.has(page)) {
-    warmed.add(page);
-    await page.screenshot({ fullPage: true });
-  }
+export async function holdTimers(page: Page): Promise<void> {
+  await page.clock.pauseAt(new Date(FIXED_TIME.getTime() + 1000));
 }
 
 /**
@@ -110,8 +108,13 @@ async function resolveSystemFonts(page: Page): Promise<void> {
  */
 export async function settle(page: Page): Promise<void> {
   await steadyPill(page);
-  await resolveSystemFonts(page);
   await page.evaluate(async () => {
+    // Load both families outright: `fonts.ready` resolves at once when the
+    // browser hasn't started a load yet, as for text rendered a moment ago.
+    await Promise.all([
+      document.fonts.load('16px "Geist Variable"'),
+      document.fonts.load('16px "Geist Mono Variable"'),
+    ]);
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });

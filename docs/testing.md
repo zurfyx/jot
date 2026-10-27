@@ -274,8 +274,9 @@ Durable Objects, over real WebSockets.
   and gives the caret to the note); Aa → Link focuses its field and Esc returns to the
   note; Esc after ⋯ opened from the keyboard gives the focus to the note, while Esc after
   a pointer-opened Aa closes it and leaves the note, as Esc does anywhere in it; a second
-  click closes a dock menu and opening one closes the other; Tab runs pill, Share, and Aa,
-  Ask AI, Blame (when on), ⋯; Note info and the AI model setting open from the keyboard,
+  click closes a dock menu and opening one closes the other; Tab runs pill, Share, the
+  note (where Tab indents, so Esc leaves it), then Aa, Ask AI, Blame (when on), ⋯, and
+  Shift+Tab back; Note info and the AI model setting open from the keyboard,
   take the focus, and close with Esc (arrow keys move the model choice, which holds); Ask
   AI's field takes the focus, Tab reaches its suggestions, Esc returns to the note; ⌘K
   filters, moves with the arrows, closes with Esc, a click on the scrim or ⌘K again (the
@@ -297,13 +298,14 @@ baselines in `e2e/visual/baselines/<project>/` (D27). Four projects run every te
 and dark, at 1440x900 and 390x844.
 
 - the landing page, under reduced motion so its loops rest on their final states: the hero,
-  the fan hovered and with each card lifted, the two windows at the end of their story,
+  the fan hovered and with each card lifted (three different pictures), the two windows at the end of their story,
   each feature tab, the developers section, the questions, the ending, the footer and the
   whole page;
 - a note: empty; with every block and format (headings, the three lists with a checked
   to-do, a quote, a code block, a table, a link, bold, italic, underline, strikethrough and
   inline code); the dock, Aa, Aa's link field, ⋯, Note info, the AI model setting, ⌘K,
-  Share after a copy, and focus rings from the keyboard;
+  Share after a copy (the page's timers held, so "Link copied" is still up at the capture),
+  and focus rings from the keyboard;
 - the status pill in each state, with the top bar: Synced, Connecting, Offline with edits
   waiting, Syncing, Back online, near the cap (amber, with its notice) and Full (red, with
   the full-note banner);
@@ -322,11 +324,12 @@ baseline, and screenshots frames with every animation paused at the same moment.
 reduced motion the note page's triggers start nothing.
 
 What would vary is fixed rather than masked (`e2e/visual/setup.ts`): the clock, each
-person's name and colour, and the magnitude and order of Yjs client ids; shots wait for
-the fonts and for the status pill's size to settle, and each page is captured once before
-its first comparison, because text in a system font (the `monospace` that `<code>` gets
-from the browser) can switch fallback fonts at the first capture. A still shot fails past a colour
-threshold of 0.1 or 40 differing pixels; a mid-motion frame past 0.3% of its pixels.
+person's name and colour, and the magnitude and order of Yjs client ids; shots load both
+web fonts outright and wait for the status pill's size to settle (failing if it never
+does), and a state a timer ends is captured with the page's timers held. A still shot
+fails past a colour threshold of 0.1 or 40 differing pixels; a mid-motion frame past 0.3%
+of its pixels. The screenshot projects never retry, in CI either: a shot that passes only
+on a second try is a flaky baseline.
 
 ### Running it and updating baselines
 
@@ -344,7 +347,7 @@ pnpm e2e:docker e2e/visual --update-snapshots   # rewrite baselines on purpose
 Update baselines only for an intended change to the look or motion, in the same PR as the
 change, and look at every PNG and JSON that changed before committing. A failing run
 leaves `<name>-actual.png`, `<name>-expected.png` and `<name>-diff.png` in `test-results/`
-(CI uploads them as `playwright-traces`). Outside the image, `pnpm e2e` leaves the visual
+(CI uploads them as `playwright-traces-<shard>`, one per shard that failed). Outside the image, `pnpm e2e` leaves the visual
 projects out (CI, or `JOT_E2E_VISUAL=1`, turns them on).
 
 ## Traces and ports

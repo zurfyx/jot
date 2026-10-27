@@ -7,6 +7,7 @@ import {
   editor,
   expect,
   freshNoteId,
+  holdTimers,
   openMore,
   openNote,
   pageFor,
@@ -175,14 +176,48 @@ test('the landing page as it loads', async ({ page }) => {
   // Every animation starts paused, so a slow machine reads the same moment:
   // otherwise the feature tabs' 3-second progress line can end and move on
   // to the next tab before the inventory is taken. `freeze` seeks them.
+  // Init scripts run before the document has its root element, so the style
+  // goes in the moment <html> exists, before any stylesheet can start one.
   await page.addInitScript(() => {
-    const style = document.createElement('style');
-    style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
-    document.documentElement.append(style);
+    const install = () => {
+      const style = document.createElement('style');
+      style.id = 'jot-motion-paused';
+      style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
+      document.documentElement.append(style);
+    };
+    if (document.documentElement !== null) {
+      install();
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (document.documentElement !== null) {
+        observer.disconnect();
+        install();
+      }
+    });
+    observer.observe(document, { childList: true });
   });
   await page.goto('/');
+  await expect(page.locator('style#jot-motion-paused')).toHaveCount(1);
   await settle(page);
   await rest(page);
+  // Every CSS animation on the page is still held at the moment it started.
+  expect(
+    await page.evaluate(() =>
+      document
+        .getAnimations()
+        .filter((animation) => animation instanceof CSSAnimation)
+        .map((animation) => animation.playState),
+    ),
+  ).toEqual(expect.arrayContaining(['paused']));
+  expect(
+    await page.evaluate(() =>
+      document
+        .getAnimations()
+        .filter((animation) => animation instanceof CSSAnimation)
+        .every((animation) => animation.playState === 'paused'),
+    ),
+  ).toBe(true);
   await expectMotion(page, 'motion-landing-load');
   // The headline's underline wipes in once. (The fan's loops are in the
   // inventory; the fan resumes them whenever it scrolls back into view, so
@@ -256,11 +291,15 @@ test('Share confirming a copy', async ({ context }) => {
   await openNote(page, freshNoteId());
   await settle(page);
   await holdNewAnimations(page);
+  // "Link copied" lasts 1.8 s: hold the page's timers until the frame is taken.
+  await holdTimers(page);
   await chrome(page).getByRole('button', { name: 'Share' }).click();
-  await expect(chrome(page).getByRole('button', { name: 'Link copied' })).toBeVisible();
+  const copied = chrome(page).getByRole('button', { name: 'Link copied' });
+  await expect(copied).toBeVisible();
   await expectMotion(page, 'motion-share-copied');
   await freeze(page, { fraction: 0.5 });
   await frame(chrome(page), 'motion-share-copied-half');
+  await expect(copied).toBeVisible();
 });
 
 test("blame's legend opening", async ({ context }) => {

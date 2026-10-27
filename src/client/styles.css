@@ -235,6 +235,19 @@ li {
   text-wrap: pretty;
 }
 
+/*
+ * Code in Geist Mono. The browser's stylesheet gives code, kbd, samp and pre
+ * `font-family: monospace` of their own, which beats the font they would
+ * inherit: a <code> inside a Geist Mono <pre> fell back to the system's
+ * monospace. Rules with a class (the landing page's keys) still win.
+ */
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--mono);
+}
+
 button {
   font: inherit;
   color: inherit;

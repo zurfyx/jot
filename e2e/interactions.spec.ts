@@ -119,20 +119,32 @@ test('Tab moves through the top bar and the dock in order', async ({ page }) => 
   await writeLine(page, 'Hello');
 
   const pill = page.getByTestId('status-pill');
-  await pill.focus();
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Share' })).toBeFocused();
-
+  const share = page.getByRole('button', { name: 'Share' });
   const aa = dock(page).getByRole('button', { name: 'Format' });
   const ask = dock(page).getByTestId('ask-ai');
   const moreButton = dock(page).getByRole('button', { name: 'More' });
-  await aa.focus();
+
+  // The whole path from the top: pill, Share, the note. Tab inside the note
+  // indents, so Esc leaves it, and Tab goes on from there into the dock.
+  await pill.focus();
+  await page.keyboard.press('Tab');
+  await expect(share).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(editor(page)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(editor(page)).not.toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(aa).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(ask).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(moreButton).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(ask).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(aa).toBeFocused();
+  // Nothing was typed on the way: the Tab that reached the note didn't indent.
+  await expect(editor(page)).toHaveText('Hello');
 
   // With blame on, its chip sits between Ask AI and ⋯.
   await moreButton.click();
@@ -140,7 +152,14 @@ test('Tab moves through the top bar and the dock in order', async ({ page }) => 
   await page.keyboard.press('Escape');
   const chip = page.getByTestId('blame-chip');
   await expect(chip).toBeVisible();
-  await ask.focus();
+  await share.focus();
+  await page.keyboard.press('Tab');
+  await expect(editor(page)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Tab');
+  await expect(aa).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(ask).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(chip).toBeFocused();
   await page.keyboard.press('Tab');

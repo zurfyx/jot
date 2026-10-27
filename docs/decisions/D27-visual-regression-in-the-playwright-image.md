@@ -30,10 +30,12 @@ CSS could change how jot looks without failing anything.
 - **Determinism over masking.** The clock is fixed, each person's name and colour are
   stored before the page loads, and Yjs client ids keep their randomness but get a fixed
   magnitude and an order by person, so sizes and the order of avatars never change. The
-  status pill is shot only once its size has settled. Only the refused paste behind a full
-  note's banner is masked.
+  status pill is shot only once its size has settled, and a state a timer ends (Share's
+  "Link copied") with the page's timers held. Only the refused paste behind a full note's
+  banner is masked.
 - **Tolerance**: a per-pixel colour threshold of 0.1 and at most 40 differing pixels per
   still shot; mid-motion frames allow 0.3%, because text rasterised mid-transform varies.
+  The screenshot projects never retry: a shot that passes only on a second try fails.
 
 ## Why
 
