@@ -149,8 +149,8 @@ describe('the example note', () => {
     expect(people.get('demo-jot-ai')?.kind).toBe('demo');
     const chars = Object.fromEntries(shares.map(({ person, chars }) => [person.id, chars]));
     expect(chars.me).toBe(EXAMPLE.youType.trim().length + 1);
-    // The binding keeps text the rewrite did not change ("Morning"), so jot
-    // AI is credited with the rest of the list.
+    // The list is a new block: the binding keeps a character's identity only
+    // within its line, so jot AI is credited with the list it made.
     expect(chars['demo-jot-ai']).toBeGreaterThanOrEqual(EXAMPLE.agendaItems[1].length);
     expect(chars['demo-jot-ai']).toBeLessThanOrEqual(EXAMPLE.agendaItems.join('').length);
   });
