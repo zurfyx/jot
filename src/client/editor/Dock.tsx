@@ -21,7 +21,8 @@ import { useEditable, useSignal } from './useSignal';
 export const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 export const COPY_LINK_HINT = isMac ? '⌘⇧C' : 'Ctrl+Shift+C';
 
-type Open = 'format' | 'more' | 'info';
+/** `panel:<feature id>`: a feature's ⋯ panel (NoteFeature.menuPanel). */
+type Open = 'format' | 'more' | 'info' | `panel:${string}`;
 
 /**
  * The floating dock at the bottom: Aa · ⋯, with room for features between
@@ -73,10 +74,14 @@ export function Dock({ session }: { session: NoteSession }) {
           className="dock-button"
           aria-label="More"
           aria-haspopup="menu"
-          aria-expanded={open === 'more' || open === 'info'}
+          aria-expanded={open !== null && open !== 'format'}
           title="More"
           onMouseDown={(event) => event.preventDefault()}
-          onClick={(event) => (open === 'info' ? close() : toggle('more', event.detail))}
+          onClick={(event) =>
+            open !== null && open !== 'format' && open !== 'more'
+              ? close()
+              : toggle('more', event.detail)
+          }
         >
           <Icon name="more" />
         </button>
@@ -90,9 +95,17 @@ export function Dock({ session }: { session: NoteSession }) {
             viaKeyboard={viaKeyboard}
             close={close}
             showInfo={() => setOpen('info')}
+            showPanel={(id) => setOpen(`panel:${id}`)}
           />
         )}
         {open === 'info' && <NoteInfo session={session} viaKeyboard={viaKeyboard} />}
+        {NOTE_FEATURES.map(
+          ({ id, menuPanel }) =>
+            menuPanel &&
+            open === `panel:${id}` && (
+              <menuPanel.Panel key={id} session={session} viaKeyboard={viaKeyboard} />
+            ),
+        )}
       </div>
     </div>
   );
@@ -107,11 +120,13 @@ function MoreMenu({
   viaKeyboard,
   close,
   showInfo,
+  showPanel,
 }: {
   session: NoteSession;
   viaKeyboard: boolean;
   close: () => void;
   showInfo: () => void;
+  showPanel: (featureId: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const bytes = useSignal(session.bytes);
@@ -133,6 +148,10 @@ function MoreMenu({
         ({ id, menuTop: Top }) => Top && <Top key={id} session={session} close={close} />,
       )}
       <MenuItem icon="info" label="Note info" hint={formatBytes(bytes)} onSelect={showInfo} />
+      {NOTE_FEATURES.map(
+        ({ id, menuPanel }) =>
+          menuPanel && <menuPanel.Item key={id} session={session} open={() => showPanel(id)} />,
+      )}
       <MenuToggle
         icon="offline"
         label="Work offline"

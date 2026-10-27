@@ -74,4 +74,24 @@ describe('chunk boundaries', () => {
     const inspector = staticGraph('/src/client/docs/Inspector.tsx');
     expect([...inspector.packages].some(isEngine)).toBe(true);
   });
+
+  it('keeps WebLLM out of every page: only its worker imports it', () => {
+    const importers = Object.keys(SOURCES).filter(
+      (file) =>
+        !file.endsWith('.test.ts') &&
+        // The docs show snippets as text (`?raw`); they are never bundled.
+        !file.startsWith('/src/docs/snippets/') &&
+        staticGraph(file).packages.has('@mlc-ai/web-llm'),
+    );
+    expect(importers).toEqual(['/src/client/editor/ai/webllm/worker.ts']);
+    for (const entry of ['/src/client/main.tsx', '/src/client/editor/NotePage.tsx']) {
+      const { files, packages } = staticGraph(entry);
+      expect(packages.has('@mlc-ai/web-llm')).toBe(false);
+      expect(files.has('/src/client/editor/ai/webllm/worker.ts')).toBe(false);
+    }
+    // The note page does reach the code that starts the worker.
+    expect(staticGraph('/src/client/editor/NotePage.tsx').files).toContain(
+      '/src/client/editor/ai/webllm/client.ts',
+    );
+  });
 });

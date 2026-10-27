@@ -82,6 +82,24 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   refuses without a target, on a read-only note and with an empty reply, and leaves the
   note a while after writing or when the page closes, coming back under a new client id
   as the same person in blame;
+- Ask AI's models (D26): phones (UA-CH, the user agent, an iPad's touch), little memory
+  and small screens count as small; the default is Chrome's model when available, else
+  Small or Larger with WebGPU, else Chrome's download, else none, and a chosen model that
+  can't run gives way to it; each WebLLM model picks its f16 or f32 build from the adapter,
+  and its state reads Ready, Downloaded, Needs download or Not supported; the reasons for
+  no model; the choice is kept and unknown values ignored; both builds of Small and Larger
+  are still in WebLLM's prebuilt list with a 4,096-token window. The WebLLM backend, over
+  a fake worker: it starts no worker to say a model needs downloading, downloads after a
+  yes with progress and remembers it, checks the cache before loading a remembered model
+  and asks again when it was evicted, stops the worker when a download is cancelled,
+  interrupts a reply on abort and keeps the model, and refuses a cut-off reply; the reply
+  budget and Qwen3's thinking block. The controller, with a downloadable backend: it asks
+  before downloading and Not now downloads nothing, downloads after a yes with progress
+  and then writes, asks again for an evicted model without jot AI joining, refuses a
+  passage over the model's limit before anything is sent, writes nothing for a cut-off
+  reply, an overlong prompt or a model that won't load, and Esc during the download
+  writes nothing;
+- the chunk boundaries also keep WebLLM out of every page: only its worker imports it;
 - the example's script: Ana seeds the offsite plan; the demo (all at once) ends with Ana's
   to-do and row, jot AI's list and "your" words, three authors in blame; `resetDemo` puts
   the seed back and a replay reaches the same end; steps whose part was edited away are
@@ -212,12 +230,23 @@ Durable Objects, over real WebSockets.
   choosing a suggestion sends nothing; the target is tinted; Ask sends the instruction and
   that block alone; jot AI's list appears with its caret, in a second browser too; blame
   names jot AI and You, its highlight covers the list, and its hover card says "asked by
-  You"; without `LanguageModel` (and when it is unavailable) the panel only explains what
-  it needs and nothing is created; Esc cancels a running request and nothing is written;
+  You"; without `LanguageModel` or WebGPU (and when the model is unavailable) the panel
+  only explains why and nothing is created; Esc cancels a running request and nothing is written;
   on a new note, a downloadable model shows its download, then writes; on someone else's
   note, asking before typing shows "asked by You" in the asker's blame and "asked by
   <name>" in the writer's; the target tint goes when a request settles (cancelled or
   failed) after the field closed;
+- Ask AI's models, with the device faked from `addInitScript` (Chrome's model or not,
+  WebGPU or not, a phone by UA-CH) and a stub for the WebLLM worker
+  (`window.__jotWebLLMWorker`): ⋯ → AI model lists the three with their downloads and
+  states, the laptop default is Larger, a choice survives a reload, and looking loads
+  nothing of WebLLM; on a phone, Ask with Small asks first with the mobile-data note, and
+  Not now and Esc download nothing (no worker, no request for WebLLM's chunk or the
+  model); Download shows the progress, then jot AI writes the list, credited in blame and
+  asked by You, and the setting shows Ready and deletes it; after a reload a downloaded
+  model loads from the cache without asking; Esc during a download stops the worker and
+  writes nothing; Chrome's ready model is the default with no download; without WebGPU or
+  built-in AI the panel explains why and every model reads Not supported;
 - the ⌘K menu toggles the theme;
 - scrollbars, in light and dark: the page, the ⋯ menu, the docs nav and its code blocks
   compute a transparent track, a thin width and the theme's thumb; the landing page's dark

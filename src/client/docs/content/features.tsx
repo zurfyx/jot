@@ -125,19 +125,42 @@ export function Ai() {
     <>
       <PageHeader crumb="Features / AI as a collaborator" title="AI as a collaborator" />
       <p>
-        Ask AI, in the dock, rewrites the selected blocks, or the one with the caret, with Chrome's
-        built-in model: Gemini Nano, on your device, through the Prompt API. The answer isn't pasted
-        in as your edit. jot AI writes it as a collaborator of its own, a Yjs peer inside your tab,
-        so it merges with whatever anyone types meanwhile, reaches every window through the relay,
-        and is named in <DocLink slug="blame">blame</DocLink>, asked by you.
+        Ask AI, in the dock, rewrites the selected blocks, or the one with the caret, with a model
+        that runs on your device: Chrome's built-in Gemini Nano, or a small open model in the
+        browser through WebLLM. The answer isn't pasted in as your edit. jot AI writes it as a
+        collaborator of its own, a Yjs peer inside your tab, so it merges with whatever anyone types
+        meanwhile, reaches every window through the relay, and is named in{' '}
+        <DocLink slug="blame">blame</DocLink>, asked by you.
       </p>
-      <h2>The model, on the device</h2>
+      <h2>Three models, one setting</h2>
+      <p>
+        ⋯ → AI model lists them, with where each runs, what it downloads and whether it's here. jot
+        picks one that fits the device, and remembers your choice in this browser.
+      </p>
+      <ul>
+        <li>
+          <b>Chrome built-in:</b> Gemini Nano through the Prompt API, in Chrome and Edge on desktop.
+          Chrome downloads and keeps it. The default wherever it's ready.
+        </li>
+        <li>
+          <b>Small:</b> Qwen2.5 0.5B Instruct in WebLLM, 300 MB. The default on phones, tablets and
+          devices with 4 GB of memory or less, wherever WebGPU runs.
+        </li>
+        <li>
+          <b>Larger:</b> Qwen3 1.7B in WebLLM, 990 MB. Better edits; the default on laptops and
+          desktops without Chrome's model.
+        </li>
+      </ul>
+      <p>
+        Without WebGPU or Chrome's model, Ask AI says why and offers nothing else. Small models are
+        small: lists and spelling work, shortening and renumbering often don't.
+      </p>
+      <h2>Chrome's model</h2>
       <Code source={SNIPPETS.prompt} />
       <ul>
         <li>
           <b>Opening the field sends nothing.</b> It asks the browser whether the model is there,
-          for English text in and out. Without it, Ask AI says it needs Chrome's built-in AI and
-          offers nothing else.
+          for English text in and out.
         </li>
         <li>
           <b>Only Ask sends.</b> Creating the model is what starts its download, which needs a
@@ -148,6 +171,30 @@ export function Ai() {
           <b>It must fit.</b> Where the browser can tell, <code>measureInputUsage()</code> checks
           the passage against the context window, under a 12,000-character ceiling. A reply is
           capped at 20,000 characters and refused when the note has no room left for it.
+        </li>
+      </ul>
+      <h2>WebLLM, in a worker</h2>
+      <Code source={SNIPPETS.webllmWorker} />
+      <ul>
+        <li>
+          <b>Nothing downloads without a yes.</b> The first Ask with a WebLLM model asks "Ask AI
+          needs a 300 MB model on this device (Qwen2.5 0.5B). Download it?", and warns about mobile
+          data on a phone. The model comes from Hugging Face into the browser's cache, never from
+          jot's server, with its progress in the field; Esc stops the worker and the download.
+        </li>
+        <li>
+          <b>The page stays light.</b> Only the worker imports WebLLM, and it starts on the first
+          Ask, never on page load. The model stays loaded for five idle minutes, then the worker
+          stops and the GPU memory is free.
+        </li>
+        <li>
+          <b>It must fit.</b> The models have a 4,096-token window, shared by the passage and its
+          rewrite: the passage may be up to 5,544 characters, and a reply that ran out of room is
+          refused rather than written half done.
+        </li>
+        <li>
+          <b>Delete it.</b> ⋯ → AI model deletes a downloaded model from the browser. If the browser
+          evicted it (Safari does), the next Ask asks again before downloading.
         </li>
       </ul>
       <h2>What it rewrites</h2>

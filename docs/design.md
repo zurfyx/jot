@@ -97,22 +97,33 @@ playground needs: no toolbar is always there.
     (bold, italic, underline, strikethrough, inline code, link). Pointer presses keep the
     editor's focus and selection.
   - **⋯** opens Show blame (a switch), Replay demo (only in an example's own tab), Note
-    info (with the size), Work offline (a switch), Copy link (⌘⇧C), New note and Dark
-    theme (a switch).
+    info (with the size), AI model (with the model Ask AI uses, "Small"), Work offline (a
+    switch), Copy link (⌘⇧C), New note and Dark theme (a switch).
   - **Note info:** the Yjs size as "238 KB of 2 MB" with a meter, "Here now" (colour, name,
     editing or idle), and "Kept until <date> · 90 days after the last visit".
+  - **AI model** (D26) opens in the menu's place like Note info: "AI model", a muted line
+    ("Ask AI's model runs on this device, so your text never leaves it."), then a row per
+    model: a violet radio, the name ("Small · default here") with its state on the right
+    ("Ready" and "Downloaded" in `--ok`, "Needs download", "Not supported on this device",
+    or "Downloading 42%"), then two muted lines, the model and its download ("Qwen2.5 0.5B ·
+    300 MB") and where it runs ("In the browser, best on phones"). A downloaded WebLLM
+    model has a quiet Delete. Rows that can't run here are muted and disabled.
   - **Ask AI** (D21) looks like a field: a violet spark and "Ask AI…" in `--muted` on
     `--hover`, about 190px wide (narrower on a phone); while jot AI works it reads "jot AI
     is writing…" in violet. It opens a panel above the dock: an input with a 1px `--ai`
     border, the spark and a dark Ask button (Stop while a request runs); suggestion chips
     that only fill the input; and a quiet line saying what happens ("Rewrites this block ·
-    runs on this device", "Rewrites the whole list", "Rewrites 3 blocks", "Writes into the
-    empty line", the download
-    with a violet meter, "jot AI is writing… Esc to cancel", or an error in `--bad`).
-    The target blocks carry `--ai-tint` (`::highlight(jot-ai-target)`) while the panel is
-    open or a request runs. Without the model, the panel holds only "Needs Chrome's
-    built-in AI (Gemini Nano). Open jot in Chrome on desktop." jot AI is "jot AI" in
-    violet (`--peer-2`) on its caret, in blame and in Note info.
+    Gemini Nano, on this device", "Rewrites the whole list", "Rewrites 3 blocks", "Writes
+    into the empty line", "· Qwen2.5 0.5B (300 MB) downloads after you agree", the download
+    or the load with a violet meter, "jot AI is writing… Esc to cancel", or an error in
+    `--bad`). Before a WebLLM download the line gives way to the question: "Ask AI needs a
+    300 MB model on this device (Qwen2.5 0.5B). Download it?", on a phone a muted
+    mobile-data note, then the dark Download button, a quiet Not now and "Or pick another
+    in ⋯ → AI model". The target blocks carry `--ai-tint` (`::highlight(jot-ai-target)`)
+    while the panel is open or a request runs. Where no model can run, the panel holds
+    only why ("Ask AI runs a model on this device, and this browser can't: it has no
+    WebGPU and no built-in AI. Try a recent Chrome, Edge or Safari."). jot AI is "jot AI"
+    in violet (`--peer-2`) on its caret, in blame and in Note info.
   - Menus open above the dock, move with the arrow keys and close on Escape or a press
     outside.
 - **Blame** (D19), drawn over the page without changing it:

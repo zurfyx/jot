@@ -41,13 +41,17 @@ version of the engine.
   last active (for jot AI, who asked). Deleted text is not shown (D19).
 - **Ask AI.** "✦ Ask AI…" in the dock opens a field for an instruction ("Make it a list",
   "Shorter", or anything). It applies to the selected blocks, or the block with the caret,
-  tinted while the field is open; nothing is sent until the person presses Ask. Chrome's
-  built-in model (Gemini Nano) does the work on the device, downloading once on the first
-  Ask with its progress shown; elsewhere the field only says "Needs Chrome's built-in AI
-  (Gemini Nano). Open jot in Chrome on desktop." The answer is written by **jot AI**, a
+  tinted while the field is open; nothing is sent until the person presses Ask. A model on
+  the device does the work, never a server: Chrome's built-in Gemini Nano on desktop Chrome
+  and Edge, or, wherever WebGPU runs (phones included), a small (300 MB) or larger (990 MB)
+  open model through WebLLM. jot picks the one that fits the device, and ⋯ → AI model
+  lets the person choose, see what each downloads and delete a download. A WebLLM model
+  downloads only after the person agrees ("Ask AI needs a 300 MB model on this device…
+  Download it?", with a mobile-data note on phones), with its progress in the field;
+  where no model can run, the field says why. The answer is written by **jot AI**, a
   collaborator of its own in violet with a named caret, so everyone on the note sees the
   edit arrive and blame credits jot AI with what it changed, asked by the person. One
-  request at a time; Esc or Stop cancels it (D21).
+  request at a time; Esc or Stop cancels it (D21, D26).
 - **See the note's state.** The status pill says "Synced · 238 KB" (the note's Yjs size),
   "Connecting…", "Offline · 3 edits waiting", "Syncing · 3 edits waiting" or "Back online ·
   merged". ⋯ → Note info shows the size against the 2 MB cap, who is here, and until when
