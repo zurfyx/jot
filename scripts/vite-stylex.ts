@@ -32,6 +32,12 @@ import type { Plugin, ViteDevServer } from 'vite';
  * stylesheet, in StyleX's order, so their relative order never depends on
  * which page loaded first.
  *
+ * That placement is the build's only. The dev server serves each module's
+ * rules as its own stylesheet, so the layers still order priorities, but two
+ * same-priority rules of one property from different modules follow the
+ * order their stylesheets arrived in. Production builds, and the tests that
+ * run on them (e2e/production), are what guarantee the order.
+ *
  * All of `src` is compiled once when the build or dev server starts, so the
  * set of priorities, and the layer order, is known before the first page loads.
  */

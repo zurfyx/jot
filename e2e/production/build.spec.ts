@@ -97,3 +97,54 @@ test('the entry stylesheet orders every layer, by priority, before a lazy one us
   const lastPriority = `stylex.p${String(priorities.at(-1)).replace('.', '_')}`;
   expect(css[entry]!.indexOf(lastPriority)).toBeLessThan(firstUse);
 });
+
+/** A stylesheet's top-level statements: each rule's prelude, or a statement at-rule. */
+function topLevel(css: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    if (c === '"' || c === "'") {
+      for (i++; i < css.length && css[i] !== c; i++) {
+        if (css[i] === '\\') i++;
+      }
+    } else if (c === '/' && css[i + 1] === '*') {
+      i = css.indexOf('*/', i) + 1;
+    } else if (c === '{') {
+      if (depth === 0) out.push(css.slice(start, i).trim());
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0) start = i + 1;
+    } else if (c === ';' && depth === 0) {
+      out.push(`${css.slice(start, i).trim()};`);
+      start = i + 1;
+    }
+  }
+  return out;
+}
+
+/**
+ * Unlayered CSS beats every layer, so every component style (D28): only these
+ * global rules may sit outside a layer. A new one needs a reason in
+ * globals.css and an entry here.
+ */
+const UNLAYERED = [
+  ':root,[data-theme=light]', // color-scheme
+  '[data-theme=dark]', // color-scheme
+  ':root[data-theme=dark]', // the dark token values, before the first paint
+  'body',
+  '@media (prefers-reduced-motion:reduce)',
+  '::highlight(jot-ai-target)',
+  '.jot-table-selection ::selection',
+  '.insp-editor :not(pre)>code:not([class])', // docs/docs.css
+];
+
+test('only the listed global rules are unlayered', () => {
+  const found = Object.values(sheets())
+    .flatMap(topLevel)
+    // Layer blocks and statements, fonts and keyframes are not style rules.
+    .filter((prelude) => !/^@(layer|font-face|keyframes)\b/.test(prelude));
+  expect(found.sort()).toEqual([...UNLAYERED].sort());
+});

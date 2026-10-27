@@ -294,12 +294,15 @@ Durable Objects, over real WebSockets.
 ## Production build (`pnpm e2e`, project `production`)
 
 A setup step builds the app; the tests then serve `dist/client` to the browser themselves
-(`e2e/production/serve.ts`: no server, no Worker; a note's socket never connects). They
+(`e2e/production/serve.ts`: no server, no Worker; a note's socket never connects). Their contexts come from the `newContext` fixture (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`. They
 check the StyleX output (D28):
 
 - every StyleX rule ships in exactly one stylesheet, the one the build chose for it, with no
   marker left; the note page's and the docs' own rules are in their chunks, and few rules
   are moved to the entry;
+- only the listed global rules (color-scheme, the dark tokens, `<body>`, reduced motion,
+  `::highlight()`, a table selection's `::selection`, the inspector's code) sit outside a
+  layer, since unlayered CSS beats every component style;
 - the entry stylesheet puts `reset` and every `stylex.p<priority>` layer in priority order
   before its first rule, and every layer any stylesheet uses is in that order;
 - in dark and in light, the theme's background is on the page before the app's script runs

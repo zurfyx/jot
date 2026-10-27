@@ -1,5 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
+import { expect, test } from '../helpers';
 import { entryScript, navigateInApp, ORIGIN, serveBuild } from './serve';
 
 /**
@@ -13,8 +14,8 @@ for (const [scheme, background] of [
   ['dark', 'rgb(18, 19, 22)'],
   ['light', 'rgb(255, 255, 255)'],
 ] as const) {
-  test(`the ${scheme} theme is on the page before any script runs`, async ({ browser }) => {
-    const context = await browser.newContext({ colorScheme: scheme });
+  test(`the ${scheme} theme is on the page before any script runs`, async ({ newContext }) => {
+    const context = await newContext({ colorScheme: scheme });
     const page = await context.newPage();
     const entry = entryScript();
     const server = await serveBuild(page, { hold: new RegExp(`/${entry}$`) });
@@ -109,10 +110,10 @@ const PAGES = {
 for (const [name, target] of Object.entries(PAGES)) {
   for (const before of ['/', name === 'docs' ? NOTE : '/docs']) {
     test(`the ${name} page looks the same reached from ${before} as opened directly`, async ({
-      browser,
+      newContext,
     }) => {
       const open = async () => {
-        const context = await browser.newContext({ reducedMotion: 'reduce' });
+        const context = await newContext({ reducedMotion: 'reduce' });
         const page = await context.newPage();
         await serveBuild(page);
         return { context, page };

@@ -41,7 +41,10 @@ pixel-identical and behave the same.
   priority and one property under different conditions (two media queries, say) are kept
   where their order can't depend on which page loaded first: in one lazy stylesheet, or in
   the entry when they span more. Rules of one priority, property and condition never meet
-  on an element (`stylex.props` keeps one class per property and condition).
+  on an element (`stylex.props` keeps one class per property and condition). This placement
+  happens only in the build: the dev server serves each module's rules as its own
+  stylesheet, so there two same-priority rules of one property from different modules
+  follow the order their stylesheets arrived in. The production tests run on the build.
 - **A small global stylesheet** (`src/client/globals.css`, a one-line reason per rule) for
   what StyleX can't express: `color-scheme` and the dark token values from `data-theme`;
   element defaults (type selectors) in a `reset` layer below every StyleX layer
