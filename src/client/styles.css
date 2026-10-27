@@ -1285,6 +1285,156 @@ button {
   line-height: 1.45;
 }
 
+.ask-consent {
+  margin: 8px 4px 2px;
+  color: var(--body);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ask-consent-text,
+.ask-consent-note {
+  margin: 0;
+}
+
+.ask-consent-note {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ask-consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ask-consent-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ask-quiet {
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  color: var(--body);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ask-quiet:not(:disabled):hover,
+.ask-quiet:focus-visible {
+  border-color: var(--rule-strong);
+  background: var(--hover);
+  outline: none;
+}
+
+.ask-quiet:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The AI model setting, opened from ⋯ like Note info (D26). */
+
+.model-panel {
+  width: min(360px, calc(100vw - 24px));
+}
+
+.model-lede {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.model-list {
+  display: grid;
+  gap: 2px;
+}
+
+.model-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 6px;
+  border-radius: 8px;
+}
+
+.model-row:not(.is-unsupported):hover {
+  background: var(--hover);
+}
+
+.model-choice {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.model-row.is-unsupported .model-choice {
+  cursor: default;
+}
+
+.model-choice input {
+  flex: none;
+  margin: 3px 0 0;
+  accent-color: var(--ai);
+}
+
+.model-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.model-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.model-name {
+  color: var(--ink);
+  font-weight: 550;
+}
+
+.model-default,
+.model-sub {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.model-state {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.model-state.is-ready,
+.model-state.is-downloaded {
+  color: var(--ok);
+}
+
+.model-row.is-unsupported .model-name,
+.model-row.is-unsupported .model-sub {
+  color: var(--muted);
+}
+
+.model-delete {
+  flex: none;
+  align-self: center;
+}
+
 ::highlight(jot-ai-target) {
   background-color: var(--ai-tint);
 }

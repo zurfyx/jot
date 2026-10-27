@@ -155,7 +155,8 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   popover behaviour (Escape, outside press, arrow keys) and the menu item primitives.
 - `features.ts`: the extension points for features. A `NoteFeature` can add a dock item
   before or after the others (`dockStart`, `dockEnd`), items at the top of ⋯ (`menuTop`),
-  a banner above the text (`banner`) and a layer over the note surface (`surface`);
+  a ⋯ item after Note info that opens a panel in the menu's place (`menuPanel`), a banner
+  above the text (`banner`) and a layer over the note surface (`surface`);
   `session.onReconnect` reports merges. Ask AI, blame and the example use them.
 - `blame/` (D19), all in the browser:
   - `registry.ts`: the `jot-people` root. `trackLocalPerson` writes this tab's entry
@@ -224,11 +225,43 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   ⋯ → Replay demo and the surface hook that stops everything when the page unmounts (a
   layout effect, so the collaborators' departure is sent before the page closes its
   socket).
-- `ai/` (D21), all in the browser:
+- `ai/` (D21, D26), all in the browser:
+  - `models.ts`: the three models (Chrome built-in, Small `Qwen2.5-0.5B-Instruct`, Larger
+    `Qwen3-1.7B`, each WebLLM model in a `q4f16_1` and a `q4f32_1` build), and the pure
+    choice: `isSmallDevice()` from UA-CH `mobile`, the user agent, touch, `deviceMemory`
+    and the screen; `defaultModel()` (Chrome's when available, else WebLLM by device size
+    when WebGPU has a hardware adapter, else Chrome's if downloadable, else none);
+    `activeModel()` (the stored choice where it can run); `modelState()` for the setting;
+    `unsupportedReason()`; the choice in `localStorage` (`jot:ai-model`).
+  - `device.ts`: the probes: `navigator.gpu.requestAdapter()` once per page (`shader-f16`
+    picks the f16 build; a fallback adapter counts as none) and the device hints.
   - `prompt-api.ts`: Chrome's Prompt API, typed locally (`LanguageModel.availability()`,
     `create({ expectedInputs, expectedOutputs, initialPrompts, monitor, signal })`,
     `measureInputUsage()` and `inputQuota` where offered, `prompt(text, { signal })`,
     `destroy()`), and `checkAvailability()`, which never throws.
+  - `backend.ts`: `AiBackend`, what the controller needs of any model: its name, a
+    download that needs consent (or none), a passage limit, `availability()` (local) and
+    `open({ system, signal, onProgress, consented })`, which resolves to a session with
+    `prompt()`, or rejects with a `ModelError` (`consent`, `too-long`, `cut-off`, `load`).
+    `promptApiBackend()` wraps Chrome's model.
+  - `webllm/`: `worker.ts`, a module worker and the only importer of `@mlc-ai/web-llm`,
+    runs one `MLCEngine` and answers `protocol.ts` messages (`load` with progress and its
+    stage read from WebLLM's report text, `chat` with Qwen3's thinking off, `interrupt`);
+    an `offline` load makes `Cache.add()` and cross-origin `fetch()` refuse with
+    `NeedsDownload`. `cache.ts` reads and clears WebLLM's Cache Storage from the page
+    (`webllm/model`, `webllm/config`, `webllm/wasm`): `cacheState()` says `complete` only
+    with the tensor manifest, every shard, the tokenizer, the config and the WebGPU
+    library. `client.ts` starts the worker to load a model (`new Worker(new
+URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWorker`
+    for tests), keeps one per page, stops it when it has no model and nothing to do, when
+    a download is cancelled (and clears that download's files) and after 5 idle minutes,
+    and makes `webllmBackend()`: consent unless the build is complete, an offline load
+    when it is, "Loading" for cached loads, a 5,544-character passage limit from the
+    4,096-token window, a reply budget of about twice the passage, a cut-off reply
+    refused.
+  - `choice.ts`: `aiModels()`, one per page: the probed device, the choice, what the
+    cache holds of each build (`refreshCache()`), `remove()`, and `resolve()`, the backend
+    Ask AI uses now or why none can run.
   - `markdown.ts`: the target (the top-level blocks between two points, tables refused),
     its Markdown (`$convertSelectionToMarkdownString` over whole blocks, text points only
     on text nodes, so blocks that start or end with a line break export too), its lossless
@@ -237,23 +270,29 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
     other than http, https and mailto unwrapped, inserted before the first target, then
     the targets removed).
   - `controller.ts`: `aiState(session)`. Opening the field captures the page binding's
-    `getCursor()` as the target. Ask checks the target in the page's editor, creates the
-    model under one `AbortController`, then has jot AI join as an in-tab peer (kind `ai`,
-    `askedBy`, one per asker) with its caret at the target; jot AI reads the target's
-    Markdown and snapshot from its own editor, the prompt is measured against the context
-    window and sent, and, inside jot AI's editor, the same cursor is resolved again, the
-    snapshot compared, the room in the note checked, and the target replaced. A request
-    that settles after the field closed forgets its target (and its tint); a cancelled
-    request never touches the state of a newer one. jot AI follows the peer rules: a fresh client id each time
-    it joins, its registry entry with its first change (moving its caret writes nothing),
-    and nothing written unless the note takes edits (the session's `writable()`); the
-    asker gets an entry when jot AI writes (`writeLocalEntry`, which also records the client
-    id as this browser's), so "asked by" names them. One request at
-    a time; `cancel()` aborts it; jot AI leaves a minute after its last request, or with
-    the page.
-  - `AskAI.tsx`: the dock item and its panel (`dockStart`), and the surface hook that tints
+    `getCursor()` as the target and resolves the model. Ask resolves it again, checks the
+    target in the page's editor, stops at the `consent` phase for a WebLLM model that isn't
+    all here (until Download, whose consent names the model, build and size and must
+    still match), opens the model under one `AbortController` (the `downloading`
+    phase, with `loading` once WebLLM loads from its cache), then has jot AI join as an
+    in-tab peer (kind `ai`, `askedBy`, one per asker) with its caret at the target; jot AI
+    reads the target's Markdown and snapshot from its own editor, the prompt is checked
+    against the model's limit and context window and sent, and, inside jot AI's editor, the
+    same cursor is resolved again, the snapshot compared, the room in the note checked, and
+    the target replaced. A request that settles after the field closed forgets its target
+    (and its tint); a cancelled request never touches the state of a newer one. jot AI
+    follows the peer rules: a fresh client id each time it joins, its registry entry with
+    its first change (moving its caret writes nothing), and nothing written unless the note
+    takes edits (the session's `writable()`); the asker gets an entry when jot AI writes
+    (`writeLocalEntry`, which also records the client id as this browser's), so "asked by"
+    names them. One request at a time; `cancel()` aborts it, or declines a download; jot AI
+    leaves a minute after its last request, or with the page.
+  - `AskAI.tsx`: the dock item and its panel (`dockStart`): the field, the download
+    question, the progress meter, or why no model can run; and the surface hook that tints
     the target with a `Highlight`, makes Esc cancel a running request, and stops jot AI
     when the page unmounts.
+  - `ModelPanel.tsx`: ⋯ → AI model (`menuPanel`): the three models as radio rows with
+    their download, state and Delete.
 - `RemoteCarets.tsx`: each client publishes `binding.getCursor()` (Yjs relative positions)
   in awareness with its name and colour; peers resolve them with `binding.$resolveCursor()`
   and draw carets and selections over the page. `people.tsx` lists the same states for the
@@ -298,3 +337,11 @@ other branch as a Worker Preview at `<preview-name>-jot.rovira.workers.dev`
 (`wrangler preview`), with its own Durable Object namespace, where Cloudflare marks every
 response noindex (D10, D24). GitHub Actions runs CI only: the
 required checks gate merges, and no Cloudflare credential lives in GitHub.
+
+The WebLLM worker builds as an ES module worker (`worker.format: 'es'`) into one asset of
+about 6 MB (2.1 MB compressed), `assets/webllm-worker-<hash>.js`, that only the worker
+loads; `public/_headers` serves it with `Referrer-Policy: no-referrer`, so its requests to
+Hugging Face carry no Referer (huggingface.co refuses `*.workers.dev` Previews that send
+one). The models themselves are not
+part of the build: WebLLM fetches them from Hugging Face and raw.githubusercontent.com into
+the browser's Cache Storage (D26).

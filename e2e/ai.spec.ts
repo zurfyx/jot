@@ -9,6 +9,11 @@ interface FakeModel {
   hang?: boolean;
   /** The prompt fails after a moment. */
   fail?: boolean;
+  /**
+   * WebGPU, which would make a WebLLM model the default where Chrome's isn't
+   * ready (e2e/ai-models.spec.ts covers those). Off unless asked for.
+   */
+  webgpu?: boolean;
 }
 
 interface ModelLog {
@@ -24,6 +29,12 @@ interface ModelLog {
  */
 async function withFakeModel(context: BrowserContext, model: FakeModel): Promise<Page> {
   await context.addInitScript((options: FakeModel) => {
+    if (!options.webgpu) {
+      Object.defineProperty(Navigator.prototype, 'gpu', {
+        configurable: true,
+        get: () => undefined,
+      });
+    }
     const log: ModelLog = { availability: 0, create: 0, prompts: [], aborted: 0 };
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     Object.assign(window, {
@@ -100,7 +111,7 @@ test('jot AI rewrites the current block as its own peer, attributed to it in bla
   await askButton(page).click();
   const panel = page.getByTestId('ask-panel');
   await expect(panel.getByTestId('ask-meta')).toHaveText(
-    'Rewrites this block · runs on this device',
+    'Rewrites this block · Gemini Nano, on this device',
   );
   // The target is tinted while the field is open.
   await expect
@@ -240,15 +251,16 @@ test('the target tint goes when a closed request fails', async ({ context }) => 
   await expect(editor(page)).toContainText('Demos, lunch, hack session');
 });
 
-test('without the built-in model, Ask AI only explains what it needs', async ({ page }) => {
-  // Playwright's Chromium has a LanguageModel of its own: take it away.
+test('without the built-in model or WebGPU, Ask AI only explains why', async ({ page }) => {
+  // Playwright's Chromium has a LanguageModel of its own: take it away, and WebGPU too.
   await page.addInitScript(() => {
     delete (window as { LanguageModel?: unknown }).LanguageModel;
+    Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => undefined });
   });
   await openNote(page, freshNoteId());
   await askButton(page).click();
   await expect(page.getByTestId('ask-unavailable')).toHaveText(
-    "Needs Chrome's built-in AI (Gemini Nano). Open jot in Chrome on desktop.",
+    "Ask AI runs a model on this device, and this browser can't: it has no WebGPU and no built-in AI. Try a recent Chrome, Edge or Safari.",
   );
   await expect(page.getByTestId('ask-input')).toHaveCount(0);
   await expect(page.getByTestId('ask-submit')).toHaveCount(0);
@@ -258,7 +270,7 @@ test("an unavailable model says the same, and isn't created", async ({ context }
   const page = await withFakeModel(context, { availability: 'unavailable' });
   await openNote(page, freshNoteId());
   await askButton(page).click();
-  await expect(page.getByTestId('ask-unavailable')).toBeVisible();
+  await expect(page.getByTestId('ask-unavailable')).toContainText('no WebGPU and no built-in AI');
   expect(await modelLog(page)).toMatchObject({ create: 0, prompts: [] });
 });
 

@@ -1,12 +1,14 @@
 /**
- * Ask AI (D21): an instruction, applied by Chrome's built-in model to the
+ * Ask AI (D21, D26): an instruction, applied by the chosen on-device model
+ * (Chrome's built-in one, or a WebLLM model) to the
  * selected blocks (or the block with the caret), written into the note by
  * jot AI: an in-tab peer of its own (D20), so the edit reaches everyone
  * through the relay and blame names jot AI, asked by this person. It joins
  * once the model is ready and leaves a minute after its last request.
  *
  * Nothing leaves the page, and nothing is sent to the model unless the
- * person presses Ask. One request at a time; `cancel` (Esc) stops it.
+ * person presses Ask. A WebLLM model downloads only after the person agrees
+ * (the `consent` phase). One request at a time; `cancel` (Esc) stops it.
  */
 import { type ReadonlySignal, signal } from '@lexical/extension';
 import type { YBinding, YCursor } from '@lexical/y';
@@ -31,15 +33,9 @@ import {
   SYSTEM_PROMPT,
   type Target,
 } from './markdown';
-import {
-  type AiAvailability,
-  checkAvailability,
-  type LanguageModelApi,
-  languageModel,
-  MODEL_OPTIONS,
-  type ModelSession,
-  progressOf,
-} from './prompt-api';
+import { type AiBackend, type AiSession, ModelError } from './backend';
+import { aiModels, type Resolved } from './choice';
+import type { AiAvailability } from './prompt-api';
 
 /** jot AI's name, on its caret and in blame. */
 export const JOT_AI_NAME = 'jot AI';
@@ -59,23 +55,48 @@ export function roomFor(markdown: string): number {
 }
 
 export const MESSAGES = {
-  unavailable: "Needs Chrome's built-in AI (Gemini Nano). Open jot in Chrome on desktop.",
+  unavailable: "This model can't run in this browser. Pick another in ⋯ → AI model.",
   noTarget:
     'Click in the note first: jot AI works on the selected blocks, or the one with the caret.',
   table: "jot AI can't rewrite tables yet. Select text outside the table.",
   tooLong: 'That is more text than the on-device model can take. Select fewer blocks.',
+  cutOff: "jot AI's answer ran out of room in the model. Select fewer blocks.",
+  load: "The model couldn't start on this device. Try again, or pick another in ⋯ → AI model.",
   readOnly: "This note can't be edited right now.",
   full: 'This note is too full for what jot AI wrote.',
   empty: 'jot AI had nothing to write. Try another instruction.',
   changed: 'The text changed while jot AI was thinking. Ask again.',
+  modelChanged: 'The AI model changed since you agreed to the download. Ask again.',
   failed: "jot AI couldn't answer. Try again.",
 } as const;
 
 export type AiPhase =
   | { kind: 'idle' }
-  | { kind: 'downloading'; progress: number | null }
+  /** A WebLLM model isn't here: the field asks before downloading it. */
+  | { kind: 'consent'; model: string; size: string; ask: ConsentAsk }
+  /** `loading`: from this browser's cache, not the network. */
+  | { kind: 'downloading'; model: string; loading: boolean; progress: number | null }
   | { kind: 'thinking' }
   | { kind: 'error'; message: string };
+
+/**
+ * The download a consent question asked about: the model, its exact build and
+ * its size. Download hands it back to `ask`, which goes on only if the model
+ * it would use now is still that one.
+ */
+export interface ConsentAsk {
+  id: string;
+  build: string | null;
+  bytes: number;
+}
+
+function consentAsk(backend: AiBackend): ConsentAsk {
+  return { id: backend.id, build: backend.build ?? null, bytes: backend.consent?.bytes ?? 0 };
+}
+
+function sameConsent(a: ConsentAsk, b: ConsentAsk): boolean {
+  return a.id === b.id && a.build === b.build && a.bytes === b.bytes;
+}
 
 /** What a request applies to, described for the field. */
 export interface TargetInfo {
@@ -101,28 +122,47 @@ export interface AiHost {
 }
 
 export interface AiDeps {
-  api(): LanguageModelApi | null;
+  /** The model to use now (the AI model setting), or why none can run. */
+  resolve(): Promise<Resolved>;
+  /** A model finished loading. */
+  onReady?(): void;
   personId(): string;
   user(): PeerUser;
   /** Defaults to AI_LINGER_MS. */
   lingerMs?: number;
 }
 
+/** The model a request would use, for the field. */
+export interface AiModelView {
+  name: string;
+  /** Its download, when the person must agree to it first. */
+  consent: { bytes: number; text: string } | null;
+}
+
 export interface AiState {
   availability: ReadonlySignal<AiAvailability | 'checking'>;
+  /** The model the next request uses; null while checking or when none can run. */
+  model: ReadonlySignal<AiModelView | null>;
+  /** Why no model can run here, once checked. */
+  reason: ReadonlySignal<string | null>;
   phase: ReadonlySignal<AiPhase>;
   /** The selection the next request applies to, as a Yjs cursor. */
   target: ReadonlySignal<YCursor | null>;
   targetInfo: ReadonlySignal<TargetInfo | null>;
   /** Counts the edits jot AI has written. */
   written: ReadonlySignal<number>;
-  /** Asks the browser whether the model is there (local; sends nothing). */
+  /** Asks the browser which model to use and whether it is there (local; sends nothing). */
   refresh(): Promise<void>;
   /** Takes the page's selection as the target of the next request (the field opened). */
   capture(): void;
-  /** Sends the instruction and the target to the model. Resolves true once jot AI wrote. */
-  ask(instruction: string): Promise<boolean>;
-  /** Stops the running request; nothing is written. */
+  /**
+   * Sends the instruction and the target to the model. Resolves true once
+   * jot AI wrote. A WebLLM model that isn't here stops at the `consent`
+   * phase; `consent` (from Download) lets it download, but only if it is
+   * still the model, build and size the question named.
+   */
+  ask(instruction: string, options?: { consent?: ConsentAsk }): Promise<boolean>;
+  /** Stops the running request, or declines a download; nothing is written. */
   cancel(): void;
   /** Clears an error. */
   dismiss(): void;
@@ -139,6 +179,9 @@ class Cancelled extends Error {}
 
 export function createAiState(host: AiHost, deps: AiDeps): AiState {
   const availability = signal<AiAvailability | 'checking'>('checking');
+  const model = signal<AiModelView | null>(null);
+  const reason = signal<string | null>(null);
+  let backend: AiBackend | null = null;
   const phase = signal<AiPhase>({ kind: 'idle' });
   const target = signal<YCursor | null>(null);
   const targetInfo = signal<TargetInfo | null>(null);
@@ -223,9 +266,33 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
   };
 
   const refresh = async () => {
-    const result = await checkAvailability(deps.api());
-    // A download that started meanwhile knows better.
-    if (running === null || result === 'available') {
+    let resolved: Resolved;
+    try {
+      resolved = await deps.resolve();
+    } catch {
+      resolved = { backend: null, reason: MESSAGES.failed };
+    }
+    if (running !== null) {
+      // A running request keeps the model it started with.
+      return;
+    }
+    backend = resolved.backend;
+    if (resolved.backend === null) {
+      model.value = null;
+      reason.value = resolved.reason;
+      availability.value = 'unavailable';
+      return;
+    }
+    const found = resolved.backend;
+    reason.value = null;
+    model.value = { name: found.name, consent: found.consent };
+    let result: AiAvailability;
+    try {
+      result = await found.availability();
+    } catch {
+      result = 'unavailable';
+    }
+    if (running === null && backend === found) {
       availability.value = result;
     }
   };
@@ -244,30 +311,48 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
     }
   };
 
-  const run = async (controller: AbortController, cursor: YCursor, text: string) => {
+  const run = async (
+    controller: AbortController,
+    using: AiBackend,
+    consented: boolean,
+    cursor: YCursor,
+    text: string,
+  ): Promise<string | null | 'consent'> => {
     const { signal: abort } = controller;
     const check = () => {
       if (abort.aborted || running !== controller) {
         throw new Cancelled();
       }
     };
-    const api = deps.api()!;
-    let model: ModelSession | null = null;
+    let session: AiSession | null = null;
     try {
-      model = await api.create({
-        ...MODEL_OPTIONS,
-        initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
-        signal: abort,
-        monitor(monitor) {
-          monitor.addEventListener('downloadprogress', (event) => {
-            if (running === controller && phase.peek().kind === 'downloading') {
-              phase.value = { kind: 'downloading', progress: progressOf(event) };
+      try {
+        session = await using.open({
+          system: SYSTEM_PROMPT,
+          signal: abort,
+          consented,
+          onProgress(progress, loading) {
+            const now = phase.peek();
+            if (running !== controller) {
+              return;
             }
-          });
-        },
-      });
+            if (now.kind === 'downloading') {
+              phase.value = { ...now, progress, loading: loading ?? now.loading };
+            } else if (now.kind === 'thinking') {
+              // A model that is here loads from the cache before it thinks.
+              phase.value = { kind: 'downloading', model: using.name, loading: true, progress };
+            }
+          },
+        });
+      } catch (error) {
+        if (error instanceof ModelError && error.reason === 'consent') {
+          return 'consent';
+        }
+        throw error;
+      }
       check();
       availability.value = 'available';
+      deps.onReady?.();
       phase.value = { kind: 'thinking' };
       if (!host.writable()) {
         return MESSAGES.readOnly;
@@ -294,18 +379,21 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         return MESSAGES.changed;
       }
       const prompt = buildPrompt(text, read.markdown);
-      if (read.markdown.length > MAX_PASSAGE) {
+      if (read.markdown.length > Math.min(MAX_PASSAGE, using.maxPassage ?? Infinity)) {
         return MESSAGES.tooLong;
       }
-      if (typeof model.measureInputUsage === 'function' && typeof model.inputQuota === 'number') {
-        const usage = await model.measureInputUsage(prompt, { signal: abort });
+      if (
+        typeof session.measureInputUsage === 'function' &&
+        typeof session.inputQuota === 'number'
+      ) {
+        const usage = await session.measureInputUsage(prompt, { signal: abort });
         check();
-        if (usage > model.inputQuota - (model.inputUsage ?? 0)) {
+        if (usage > session.inputQuota - (session.inputUsage ?? 0)) {
           return MESSAGES.tooLong;
         }
       }
 
-      const reply = await model.prompt(prompt, { signal: abort });
+      const reply = await session.prompt(prompt, { signal: abort });
       check();
       const markdown = cleanReply(reply);
       if (markdown === '') {
@@ -353,7 +441,7 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       }
     } finally {
       try {
-        model?.destroy();
+        session?.destroy();
       } catch {
         // Already gone.
       }
@@ -362,6 +450,8 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
 
   return {
     availability,
+    model,
+    reason,
     phase,
     target,
     targetInfo,
@@ -391,11 +481,13 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         }
       }
       targetInfo.value = info;
-      if (phase.peek().kind === 'error') {
+      // A question or an error from before belongs to a field that closed.
+      const kind = phase.peek().kind;
+      if (kind === 'error' || kind === 'consent') {
         phase.value = { kind: 'idle' };
       }
     },
-    async ask(instruction) {
+    async ask(instruction, options = {}) {
       const text = instruction.trim();
       if (text === '' || running !== null) {
         return false;
@@ -404,13 +496,19 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         phase.value = { kind: 'error', message };
         return false;
       };
-      if (availability.peek() === 'checking') {
-        await refresh();
+      // The setting may have changed since the field opened.
+      await refresh();
+      if (running !== null) {
+        return false;
       }
       const status = availability.peek();
-      if (deps.api() === null || status === 'missing' || status === 'unavailable') {
-        return fail(MESSAGES.unavailable);
+      const using = backend;
+      if (using === null || status === 'missing' || status === 'unavailable') {
+        return fail(reason.peek() ?? MESSAGES.unavailable);
       }
+      // Consent is for one download: the model the question named, nothing else.
+      const consented =
+        options.consent !== undefined && sameConsent(options.consent, consentAsk(using));
       const cursor = target.peek();
       if (cursor === null) {
         return fail(MESSAGES.noTarget);
@@ -432,34 +530,80 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       if (early.problem !== 'none') {
         return fail(MESSAGES.table);
       }
-      if (early.markdown.length > MAX_PASSAGE) {
+      if (early.markdown.length > Math.min(MAX_PASSAGE, using.maxPassage ?? Infinity)) {
         return fail(MESSAGES.tooLong);
+      }
+      const question = (): AiPhase => ({
+        kind: 'consent',
+        model: using.name,
+        size: using.consent?.text ?? '',
+        ask: consentAsk(using),
+      });
+      const askFirst = (): false => {
+        phase.value = question();
+        return false;
+      };
+      if (using.consent !== null && status !== 'available' && !consented) {
+        // Nothing downloads without a yes: the field asks first, and asks
+        // again when the yes was for another model.
+        return askFirst();
+      }
+      if (options.consent !== undefined && !consented) {
+        // The yes was for a download this model doesn't need: nothing runs on it.
+        return fail(MESSAGES.modelChanged);
       }
 
       const controller = new AbortController();
       running = controller;
+      // A WebLLM model that is here still loads from the cache first.
       phase.value =
-        status === 'available' ? { kind: 'thinking' } : { kind: 'downloading', progress: null };
-      let message: string | null;
+        status !== 'available'
+          ? { kind: 'downloading', model: using.name, loading: false, progress: null }
+          : using.consent === null
+            ? { kind: 'thinking' }
+            : { kind: 'downloading', model: using.name, loading: true, progress: null };
+      let message: string | null | 'consent';
       try {
-        message = await run(controller, cursor, text);
+        message = await run(controller, using, consented, cursor, text);
       } catch (error) {
         if (error instanceof Cancelled || controller.signal.aborted) {
           // `cancel` set the phase; only a request still current resets it.
           settle(controller, { kind: 'idle' });
           return false;
         }
-        console.warn('jot: Ask AI failed', error);
-        message = MESSAGES.failed;
+        if (error instanceof ModelError) {
+          message =
+            error.reason === 'too-long'
+              ? MESSAGES.tooLong
+              : error.reason === 'cut-off'
+                ? MESSAGES.cutOff
+                : MESSAGES.load;
+        } else {
+          console.warn('jot: Ask AI failed', error);
+          message = MESSAGES.failed;
+        }
       } finally {
         if (peer !== null && (running === null || running === controller)) {
           linger();
         }
       }
+      if (message === 'consent') {
+        // Some file went missing (evicted): ask before fetching it again, unless
+        // the field closed meanwhile, which also forgets the target.
+        if (running === controller) {
+          availability.value = 'downloadable';
+          settle(controller, released ? { kind: 'idle' } : question());
+        }
+        return false;
+      }
       settle(controller, message === null ? { kind: 'idle' } : { kind: 'error', message });
       return message === null;
     },
     cancel() {
+      if (running === null && phase.peek().kind === 'consent') {
+        phase.value = { kind: 'idle' };
+        return;
+      }
       if (running !== null) {
         running.abort();
         running = null;
@@ -471,7 +615,8 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       }
     },
     dismiss() {
-      if (phase.peek().kind === 'error') {
+      const kind = phase.peek().kind;
+      if (kind === 'error' || kind === 'consent') {
         phase.value = { kind: 'idle' };
       }
     },
@@ -481,7 +626,8 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         return;
       }
       forgetTarget();
-      if (phase.peek().kind === 'error') {
+      const kind = phase.peek().kind;
+      if (kind === 'error' || kind === 'consent') {
         phase.value = { kind: 'idle' };
       }
     },
@@ -520,7 +666,12 @@ export function aiState(session: NoteSession): AiState {
           session.cap.peek() !== 'full',
         room: () => NOTE_MAX_BYTES - session.bytes.peek(),
       },
-      { api: languageModel, personId: once(localPersonId), user: localUser },
+      {
+        resolve: () => aiModels().resolve(),
+        onReady: () => void aiModels().refreshCache(),
+        personId: once(localPersonId),
+        user: localUser,
+      },
     );
     states.set(session, state);
   }

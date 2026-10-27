@@ -236,6 +236,9 @@ importers:
       '@lexical/y':
         specifier: https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b
         version: https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b(@y/y@14.0.0-rc.29)(typescript@6.0.3)
+      '@mlc-ai/web-llm':
+        specifier: 0.2.86
+        version: 0.2.86
       '@y/protocols':
         specifier: 1.0.6-rc.1
         version: 1.0.6-rc.1(@y/y@14.0.0-rc.29)
@@ -1011,6 +1014,9 @@ packages:
       typescript:
         optional: true
 
+  '@mlc-ai/web-llm@0.2.86':
+    resolution: {integrity: sha512-plciXBCYtY7iTKHzEcsqOfSO+s5u8NqMYFPnHmRbsN8CEdKcolgXIoGLPbzO6FtJHV43m7YP00x6qQ6Kb8CJJw==}
+
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
 
@@ -1653,6 +1659,10 @@ packages:
   locate-path@6.0.0:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
+
+  loglevel@1.9.2:
+    resolution: {integrity: sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==}
+    engines: {node: '>= 0.6.0'}
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
@@ -2627,6 +2637,10 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
+  '@mlc-ai/web-llm@0.2.86':
+    dependencies:
+      loglevel: 1.9.2
+
   '@oxc-project/types@0.155.0': {}
 
   '@playwright/test@1.64.1':
@@ -3197,6 +3211,8 @@ snapshots:
   locate-path@6.0.0:
     dependencies:
       p-locate: 5.0.0
+
+  loglevel@1.9.2: {}
 
   lru-cache@5.1.1:
     dependencies:

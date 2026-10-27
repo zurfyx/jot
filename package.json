@@ -39,6 +39,7 @@
     "@lexical/table": "https://pkg.pr.new/facebook/lexical/@lexical/table@62f1300b71dadbf6fa0e89f51b821a783f61c54b",
     "@lexical/utils": "https://pkg.pr.new/facebook/lexical/@lexical/utils@62f1300b71dadbf6fa0e89f51b821a783f61c54b",
     "@lexical/y": "https://pkg.pr.new/facebook/lexical/@lexical/y@62f1300b71dadbf6fa0e89f51b821a783f61c54b",
+    "@mlc-ai/web-llm": "0.2.86",
     "@y/protocols": "1.0.6-rc.1",
     "@y/websocket": "4.0.0-rc.2",
     "@y/y": "14.0.0-rc.29",

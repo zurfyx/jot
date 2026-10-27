@@ -14,6 +14,7 @@ import reconnect from '../../docs/snippets/reconnect.ts?raw';
 import registry from '../../docs/snippets/registry.ts?raw';
 import serverEdit from '../../docs/snippets/server-edit.ts?raw';
 import underline from '../../docs/snippets/underline.ts?raw';
+import webllmWorker from '../../docs/snippets/webllm-worker.ts?raw';
 import workOffline from '../../docs/snippets/work-offline.ts?raw';
 import aiMarkdownSource from '../editor/ai/markdown.ts?raw';
 import attributionSource from '../editor/blame/attribution.ts?raw';
@@ -90,6 +91,7 @@ export const SNIPPETS = {
   underline: snippet('underline.ts', underline),
   aiPeer: snippet('ai-peer.ts', aiPeer),
   prompt: snippet('prompt.ts', prompt),
+  webllmWorker: snippet('webllm-worker.ts', webllmWorker),
   serverEdit: snippet('server-edit.ts', serverEdit),
   install: {
     file: 'Terminal',

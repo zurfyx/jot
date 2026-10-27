@@ -82,6 +82,34 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   refuses without a target, on a read-only note and with an empty reply, and leaves the
   note a while after writing or when the page closes, coming back under a new client id
   as the same person in blame;
+- Ask AI's models (D26): phones (UA-CH, the user agent, an iPad's touch), little memory
+  and small screens count as small; the default is Chrome's model when available, else
+  Small or Larger with WebGPU, else Chrome's download, else none, and a chosen model that
+  can't run gives way to it; each WebLLM model picks its f16 or f32 build from the adapter,
+  and its state reads Ready, Downloaded, Partly downloaded, Needs download or Not
+  supported; the reasons for no model; the choice is kept and unknown values ignored; both
+  builds of Small and Larger are still in WebLLM's prebuilt list at the URLs and context
+  window jot uses. WebLLM's cache, over an in-memory Cache Storage: complete only with the
+  manifest, every shard, the tokenizer, the config and the WebGPU library (each missing one
+  makes it partial), another model's files don't count, and clearing removes a build's
+  files and no one else's; the stage of each WebLLM progress text. The WebLLM backend,
+  over a fake worker and cache: it starts no worker for a model that is missing or partial
+  and asks for consent; a yes downloads with "Downloading" while fetching and "Loading"
+  once loading; a complete model loads offline as "Loading" from its first report; a
+  `NeedsDownload` from the offline load asks for consent; cancelling a download stops the
+  worker and clears its files, and a retry started at once waits for that cleanup (so it
+  never deletes the retry's download); cancelling a cached load keeps them; a reply
+  interrupted on abort keeps the model; a cut-off reply is refused; the worker stops five idle minutes
+  after its last use (fake timers) and at once after a failed load. The controller, with a
+  downloadable backend: it asks before downloading and Not now downloads nothing,
+  downloads after a yes with progress and then writes, asks again (and downloads nothing)
+  when the model changed after the question, runs nothing on a yes for a download the
+  model no longer needs, asks again for an evicted model without jot AI joining, forgets
+  its target and asks nothing when the field closed during the cache check, drops a stale
+  question when the field opens again, refuses a passage over the model's limit before
+  anything is sent, writes nothing for a cut-off reply, an overlong prompt or a model that
+  won't load, and Esc during the download writes nothing;
+- the chunk boundaries also keep WebLLM out of every page: only its worker imports it;
 - the example's script: Ana seeds the offsite plan; the demo (all at once) ends with Ana's
   to-do and row, jot AI's list and "your" words, three authors in blame; `resetDemo` puts
   the seed back and a replay reaches the same end; steps whose part was edited away are
@@ -212,12 +240,28 @@ Durable Objects, over real WebSockets.
   choosing a suggestion sends nothing; the target is tinted; Ask sends the instruction and
   that block alone; jot AI's list appears with its caret, in a second browser too; blame
   names jot AI and You, its highlight covers the list, and its hover card says "asked by
-  You"; without `LanguageModel` (and when it is unavailable) the panel only explains what
-  it needs and nothing is created; Esc cancels a running request and nothing is written;
+  You"; without `LanguageModel` or WebGPU (and when the model is unavailable) the panel
+  only explains why and nothing is created; Esc cancels a running request and nothing is written;
   on a new note, a downloadable model shows its download, then writes; on someone else's
   note, asking before typing shows "asked by You" in the asker's blame and "asked by
   <name>" in the writer's; the target tint goes when a request settles (cancelled or
   failed) after the field closed;
+- Ask AI's models, with the device faked from `addInitScript` (Chrome's model or not,
+  WebGPU or not, a phone by UA-CH) and a stub for the WebLLM worker
+  (`window.__jotWebLLMWorker`) that reports WebLLM's stages and writes its files into the
+  page's real Cache Storage: ⋯ → AI model lists the three with their downloads and states,
+  the laptop default is Larger, a choice survives a reload, and looking starts no worker;
+  on a phone, Ask with Small asks first with the mobile-data note and the focus on
+  Download, and Not now and Esc download nothing; Download shows "Downloading", then
+  "Loading", then jot AI writes the list, credited in blame and asked by You, and the
+  setting shows Ready and its labelled Delete clears it; after a reload a downloaded model
+  loads offline as "Loading", without asking; Esc during a download stops the worker and
+  leaves no files; a switch to another model withdraws the question and asks again for
+  the new size; a model missing its WebGPU library is Partly downloaded and asks first, a
+  partial download can be deleted, and every file makes it Downloaded; Chrome's ready
+  model is the default with no download; without WebGPU or built-in AI the panel explains
+  why and every model reads Not supported; and the setting says "Downloading", then
+  "Loading", then "Ready" while a download runs, as the field does;
 - the ⌘K menu toggles the theme;
 - scrollbars, in light and dark: the page, the ⋯ menu, the docs nav and its code blocks
   compute a transparent track, a thin width and the theme's thumb; the landing page's dark

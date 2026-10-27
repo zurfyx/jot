@@ -46,6 +46,7 @@ test('the dock holds Aa, Ask AI and ⋯, and their menus act', async ({ page }) 
   await expect(more.locator('[role^="menuitem"]')).toHaveText([
     'Show blame',
     /Note info/,
+    /AI model/,
     'Work offline',
     /Copy link/,
     'New note',
@@ -74,6 +75,8 @@ test('the ⋯ menu works from the keyboard', async ({ page }) => {
   await expect(more.getByRole('menuitemcheckbox', { name: 'Show blame' })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(more.getByRole('menuitem', { name: /Note info/ })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(more.getByRole('menuitem', { name: /AI model/ })).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(more.getByRole('menuitemcheckbox', { name: 'Work offline' })).toBeFocused();
   await page.keyboard.press('End');

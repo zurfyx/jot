@@ -5,8 +5,9 @@ import { Icon } from '../icons';
 import { usePopover } from '../menu';
 import type { NoteSession } from '../session';
 import { useEditable, useSignal } from '../useSignal';
+import { aiModels } from './choice';
 import { type AiPhase, type AiState, aiState, MESSAGES } from './controller';
-import { metaLine } from './copy';
+import { consentLine, metaLine, MOBILE_DATA_WARNING } from './copy';
 import { $targetBetween } from './markdown';
 
 /** The highlight that marks the blocks a request applies to. */
@@ -84,8 +85,11 @@ export function AskAIDockItem({ session }: { session: NoteSession }) {
 
 function AskPanel({ ai }: { ai: AiState }) {
   const availability = useSignal(ai.availability);
+  const model = useSignal(ai.model);
+  const reason = useSignal(ai.reason);
   const phase = useSignal(ai.phase);
   const info = useSignal(ai.targetInfo);
+  const device = useSignal(aiModels().device);
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const busy = isBusy(phase);
@@ -97,11 +101,30 @@ function AskPanel({ ai }: { ai: AiState }) {
     }
   }, [unavailable]);
 
+  const consent = phase.kind === 'consent' ? phase : null;
+  const chosen = useSignal(aiModels().chosen);
+  const downloadRef = useRef<HTMLButtonElement>(null);
+  // The question is for one model: a change in the setting withdraws it.
+  const asked = useRef(chosen);
+  useEffect(() => {
+    if (asked.current !== chosen) {
+      asked.current = chosen;
+      ai.dismiss();
+    }
+  }, [chosen, ai]);
+  // The question takes the focus, so a screen reader reads it (and Enter downloads).
+  const questionShown = consent !== null;
+  useEffect(() => {
+    if (questionShown) {
+      downloadRef.current?.focus();
+    }
+  }, [questionShown]);
+
   if (unavailable) {
     return (
       <div className="popover ask-panel" role="dialog" aria-label="Ask AI" data-testid="ask-panel">
         <p className="ask-unavailable" data-testid="ask-unavailable">
-          {MESSAGES.unavailable}
+          {reason ?? MESSAGES.unavailable}
         </p>
       </div>
     );
@@ -109,6 +132,7 @@ function AskPanel({ ai }: { ai: AiState }) {
 
   const canAsk =
     availability !== 'checking' &&
+    consent === null &&
     text.trim() !== '' &&
     info !== null &&
     info.problem === 'none' &&
@@ -156,7 +180,48 @@ function AskPanel({ ai }: { ai: AiState }) {
           </button>
         )}
       </form>
-      {!busy && (
+      {consent !== null && (
+        <div
+          className="ask-consent"
+          role="group"
+          aria-labelledby="ask-consent-text"
+          data-testid="ask-consent"
+        >
+          <p id="ask-consent-text" className="ask-consent-text" aria-live="assertive">
+            {consentLine(consent.model, consent.size)}
+          </p>
+          {device?.small === true && (
+            <p className="ask-consent-note" data-testid="ask-mobile-data">
+              {MOBILE_DATA_WARNING}
+            </p>
+          )}
+          <div className="ask-consent-actions">
+            <button
+              ref={downloadRef}
+              type="button"
+              className="ask-go"
+              aria-describedby="ask-consent-text"
+              data-testid="ask-download"
+              onClick={() => void ai.ask(text, { consent: consent.ask })}
+            >
+              Download
+            </button>
+            <button
+              type="button"
+              className="ask-quiet"
+              data-testid="ask-decline"
+              onClick={() => {
+                ai.cancel();
+                inputRef.current?.focus();
+              }}
+            >
+              Not now
+            </button>
+            <span className="ask-consent-hint">Or pick another in ⋯ → AI model</span>
+          </div>
+        </div>
+      )}
+      {!busy && consent === null && (
         <div className="ask-chips">
           {SUGGESTIONS.map((suggestion) => (
             <button
@@ -174,13 +239,15 @@ function AskPanel({ ai }: { ai: AiState }) {
           ))}
         </div>
       )}
-      <p
-        className={`ask-meta${phase.kind === 'error' ? ' is-error' : ''}`}
-        aria-live="polite"
-        data-testid="ask-meta"
-      >
-        {metaLine(phase, availability, info)}
-      </p>
+      {consent === null && (
+        <p
+          className={`ask-meta${phase.kind === 'error' ? ' is-error' : ''}`}
+          aria-live="polite"
+          data-testid="ask-meta"
+        >
+          {metaLine(phase, availability, info, model)}
+        </p>
+      )}
       {phase.kind === 'downloading' && (
         <div className="meter ask-meter" aria-hidden="true">
           <span style={{ transform: `scaleX(${phase.progress ?? 0})` }} />
