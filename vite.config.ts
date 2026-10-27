@@ -15,10 +15,6 @@ export default defineConfig({
     cloudflare(),
   ],
   server: { port: 5173, strictPort: true },
-  // Astryx's packages are compiled from source, so Vite doesn't pre-bundle
-  // them or see what they import: pre-bundle the Neutral theme's icon set
-  // (lucide-react), or the dev server serves its ~1,900 modules one by one.
-  optimizeDeps: { include: ['lucide-react'] },
   // The note page chunk carries Lexical and Yjs (about 220 kB gzipped); the
   // landing page loads without it.
   build: { chunkSizeWarningLimit: 800 },

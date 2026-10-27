@@ -49,7 +49,6 @@
     "@y/y": "14.0.0-rc.29",
     "lexical": "https://pkg.pr.new/facebook/lexical/lexical@1eff767641553b12126c484696555be4ce094dae",
     "lib0": "1.0.0-rc.36",
-    "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

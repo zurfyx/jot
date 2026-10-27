@@ -263,9 +263,6 @@ importers:
       lib0:
         specifier: 1.0.0-rc.36
         version: 1.0.0-rc.36
-      lucide-react:
-        specifier: ^1.61.0
-        version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1
