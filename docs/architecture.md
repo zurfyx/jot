@@ -307,7 +307,8 @@ fresh `/n/<id>` (the example ones `/new?example`) through `landing/open.ts`: it 
 editor chunk, then navigates inside `document.startViewTransition`, so a cold start never
 freezes the page. The card (the clicked one, or the New note card for the button and the
 keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
-`#root` carries it in the new one. `landing.css` styles the pair: the group animates from
+`#root` carries it in the new one, both with a StyleX `viewTransitionClass` that styles the
+pair (`<html>` gets one too, for the page's own `root` group): the group animates from
 the card's box to the page's in 450ms; its `::view-transition-image-pair` is the sheet,
 `--bg` clipped to corners that go from 20px to square (the page's picture is otherwise
 transparent, and the clip keeps the card's shadow from scaling up);

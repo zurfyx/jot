@@ -56,7 +56,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     test("the landing page's dark code block has a light thumb", async ({ page }) => {
       await page.goto('/');
-      const code = await scrollbar(page.locator('.code-block'));
+      const code = await scrollbar(page.getByLabel('Quick start', { exact: true }));
       expect(code.track).toBe(TRANSPARENT);
       expect(code.thumb).toBe('rgba(231, 233, 238, 0.24)');
     });

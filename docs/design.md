@@ -28,9 +28,9 @@ Toggle theme flip and remember it.
 | `--ai`, `--ai-tint`                      | jot AI's violet (`--peer-2`); the tint on Ask AI's target |
 | `--scrollbar`                            | the scrollbar thumb, on a transparent track               |
 
-The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
-to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
-same names.
+The landing page scopes a second set on its root (`landing` in `tokens.stylex.ts`, its dark
+values in `themes.ts`). In dark it re-points the base tokens to the Night treatment (a deep
+navy `--landing-bg`, a brighter glow), so its styles read the same names.
 
 | Token                                 | Use                                                  |
 | ------------------------------------- | ---------------------------------------------------- |
@@ -156,7 +156,8 @@ playground needs: no toolbar is always there.
 
 ## Landing page
 
-`src/client/landing/`, with its styles in `landing.css` (tokens only). Content stops at
+`src/client/landing/`, styled with StyleX beside each component (tokens only; shared section
+styles in `section.styles.ts`, relational markers in `markers.stylex.ts`). Content stops at
 1040px with 40px gutters (20px under 760px); there are no boxed card grids.
 
 - **Top bar:** the "jot" wordmark with a blinking violet caret, then Docs and GitHub.

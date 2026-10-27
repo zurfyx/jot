@@ -163,7 +163,7 @@ for (const { testId, name, path, kind } of [
     const card = page.getByTestId(testId);
     await card.hover({ position: await visiblePoint(page, testId), force: true });
     await page.waitForTimeout(900); // the card lifts
-    await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
+    await expect(card.getByText('Open', { exact: true })).toHaveCSS('opacity', '1');
     await card.click({ position: await visiblePoint(page, testId), force: true });
     await expectNotePage(page, kind);
     const pushed = await pushes(page);
