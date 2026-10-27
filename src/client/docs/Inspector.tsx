@@ -19,7 +19,7 @@ import {
 import * as stylex from '@stylexjs/stylex';
 import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { editorTheme, jotEditorExtension } from '../editor/extensions';
+import { editorTheme, jotEditorExtension, TitleExtension } from '../editor/extensions';
 import { colors, docs, fonts } from '../theme/tokens.stylex';
 import { frame } from './inspectorFrame';
 import { $lineKeyOf, lineKeys } from './lines';
@@ -97,6 +97,8 @@ export default function Inspector() {
           jotEditorExtension,
           // Tab leaves the inspector, as it would any small field on a page.
           configExtension(TabIndentationExtension, { disabled: true }),
+          // Its first line has the inspector's own style, not the note's title.
+          configExtension(TitleExtension, { disabled: true }),
           // A local document is synced from the start: initialize at once.
           configExtension(YCollabExtension, { doc, synced: true }),
         ],

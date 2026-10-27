@@ -159,7 +159,7 @@ export function CommandMenu({ session }: { session: NoteSession }) {
   };
 
   return (
-    <div {...stylex.props(styles.scrim)} onMouseDown={close}>
+    <div {...stylex.props(styles.scrim)} onMouseDown={close} data-command-scrim="">
       <div
         {...stylex.props(styles.menu)}
         role="dialog"

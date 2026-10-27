@@ -590,6 +590,7 @@ function HoverCard({ card }: { card: Card }) {
       role="tooltip"
       style={{ ...peerStyle(person.color), ...style }}
       data-testid="blame-card"
+      data-own-press=""
     >
       <b {...stylex.props(surfaceStyles.cardName)}>{displayName(person)}</b>
       <span {...stylex.props(surfaceStyles.cardDetails)}>{details.join(' · ')}</span>

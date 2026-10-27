@@ -91,7 +91,12 @@ export function ExampleBanner({ session }: { session: NoteSession }) {
     startNewNote();
   };
   return (
-    <div {...stylex.props(styles.banner)} role="note" data-testid="example-banner">
+    <div
+      {...stylex.props(styles.banner)}
+      role="note"
+      data-testid="example-banner"
+      data-own-press=""
+    >
       <b {...stylex.props(styles.title)}>Example note</b>
       <span {...stylex.props(styles.text)}>Ana and jot AI are demos in your browser</span>
       <span {...stylex.props(styles.actions)}>

@@ -164,9 +164,13 @@ export default function NotePage({ id }: { id: string }) {
   }, [session]);
 
   return (
-    // data-dock: the root keeps the caret line clear of the dock (globals.css).
-    <div {...stylex.props(styles.page)} ref={pageRef} data-dock={session === null ? undefined : ''}>
-      <header {...stylex.props(styles.chrome)}>
+    // data-note-page: the root keeps the caret line clear of the dock (globals.css).
+    <div
+      {...stylex.props(styles.page)}
+      ref={pageRef}
+      data-note-page={session === null ? undefined : ''}
+    >
+      <header {...stylex.props(styles.chrome)} data-own-press="">
         {session && (
           <>
             <Avatars session={session} />
@@ -206,12 +210,12 @@ function NoteBody({ session }: { session: NoteSession }) {
   return (
     <>
       {status === 'readonly' && (
-        <p {...stylex.props(styles.message, styles.banner)} role="status">
+        <p {...stylex.props(styles.message, styles.banner)} role="status" data-own-press="">
           Read only. This note was written by a newer version of jot; reload to edit.
         </p>
       )}
       {cap === 'full' && (
-        <p {...stylex.props(styles.message, styles.banner)} role="status">
+        <p {...stylex.props(styles.message, styles.banner)} role="status" data-own-press="">
           This note is full.{' '}
           <a
             {...stylex.props(styles.bannerLink)}
@@ -227,7 +231,7 @@ function NoteBody({ session }: { session: NoteSession }) {
         </p>
       )}
       {cap === 'warn' && (
-        <p {...stylex.props(styles.message, styles.notice)} role="status">
+        <p {...stylex.props(styles.message, styles.notice)} role="status" data-own-press="">
           This note is almost full.
         </p>
       )}

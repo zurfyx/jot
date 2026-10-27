@@ -81,9 +81,7 @@ export function Dock({ session }: { session: NoteSession }) {
   }, [editable, open, close]);
 
   return (
-    // `dock-wrap` marks the dock for note.css (`:root:has(.dock-wrap)` keeps
-    // the caret line above it); it carries no styles of its own.
-    <div className={`dock-wrap ${stylex.props(styles.wrap).className ?? ''}`}>
+    <div {...stylex.props(styles.wrap)}>
       <div
         ref={dockRef}
         {...stylex.props(styles.dock)}

@@ -337,9 +337,14 @@ export const editorTheme: EditorThemeClasses = {
  * block that stops being first. Update listeners run as Lexical commits, so
  * the title is styled in the same frame its block appears.
  */
-const TitleExtension = defineExtension({
+export const TitleExtension = defineExtension({
   name: 'jot/title',
-  register: (editor) => {
+  // The docs' inspector is a jot editor with a first line of its own style.
+  config: { disabled: false },
+  register: (editor, { disabled }) => {
+    if (disabled) {
+      return () => {};
+    }
     const classes = (stylex.props(styles.title).className ?? '').split(' ');
     let current: HTMLElement | null = null;
     const mark = () => {
