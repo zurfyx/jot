@@ -30,7 +30,7 @@ for (const viewport of [
 
       test('an empty note does not scroll', async ({ page }) => {
         await openNote(page, freshNoteId());
-        await expect(page.locator('.note-placeholder')).toBeVisible();
+        await expect(page.getByTestId('placeholder')).toBeVisible();
         expect(await overflow(page)).toBeLessThanOrEqual(0);
       });
     });
@@ -47,7 +47,7 @@ for (const viewport of [
       await editor(page).click();
       await page.keyboard.press('ControlOrMeta+A');
       await page.keyboard.press('Backspace');
-      await expect(page.locator('.note-placeholder')).toBeVisible();
+      await expect(page.getByTestId('placeholder')).toBeVisible();
       await expect(page.getByTestId('example-banner')).toBeVisible();
       await expect.poll(() => overflow(page)).toBeLessThanOrEqual(0);
     });

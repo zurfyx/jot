@@ -18,7 +18,7 @@ async function expectNotePage(page: Page, kind: 'new' | 'example' = 'new') {
     await expect(page.getByTestId('example-banner')).toBeVisible();
   }
   // The landing page's styles stay loaded; the editor's own must still win.
-  await expect(page.locator('.note-avatar').first()).not.toHaveCSS(
+  await expect(page.getByTestId('avatar').first()).not.toHaveCSS(
     'background-color',
     'rgba(0, 0, 0, 0)',
   );

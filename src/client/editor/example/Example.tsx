@@ -1,6 +1,9 @@
+import * as stylex from '@stylexjs/stylex';
 import { type MouseEvent, useLayoutEffect } from 'react';
 
+import { colors, motion } from '../../theme/tokens.stylex';
 import { copyNoteLink, linkCopied, startNewNote } from '../actions';
+import { swap } from '../chrome.styles';
 import { MenuItem } from '../menu';
 import type { NoteSession } from '../session';
 import { useSignal } from '../useSignal';
@@ -17,6 +20,62 @@ export function ExampleSurface({ session }: { session: NoteSession }) {
   return null;
 }
 
+const fadeIn = stylex.keyframes({ from: { opacity: 0 } });
+
+// The example note's banner, above the title (D20).
+const styles = stylex.create({
+  banner: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    rowGap: '4px',
+    columnGap: '8px',
+    width: 'max-content',
+    maxWidth: '100%',
+    marginTop: 0,
+    marginInline: 0,
+    marginBottom: '18px',
+    paddingTop: '5px',
+    paddingRight: '6px',
+    paddingBottom: '5px',
+    paddingLeft: '12px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors['--rule'],
+    borderRadius: '12px',
+    backgroundColor: colors['--bg'],
+    boxShadow: `0 6px 18px ${colors['--shadow-soft']}`,
+    fontSize: '13px',
+    lineHeight: 1.4,
+    animationName: fadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  title: {
+    color: colors['--ink'],
+    fontWeight: 650,
+  },
+  text: {
+    color: colors['--muted'],
+  },
+  actions: {
+    display: 'inline-flex',
+    gap: '6px',
+  },
+  // A button and a link, alike (the reset gives the button the banner's font).
+  button: {
+    paddingBlock: '6px',
+    paddingInline: '9px',
+    borderRadius: '8px',
+    backgroundColor: { default: colors['--hover'], ':hover': colors['--rule'] },
+    color: colors['--ink'],
+    fontSize: '12.5px',
+    fontWeight: 600,
+    textDecoration: 'none',
+    cursor: 'pointer',
+  },
+});
+
 /** Above the title, in the tab that runs the demo collaborators. */
 export function ExampleBanner({ session }: { session: NoteSession }) {
   const active = useSignal(exampleState(session).active);
@@ -32,21 +91,21 @@ export function ExampleBanner({ session }: { session: NoteSession }) {
     startNewNote();
   };
   return (
-    <div className="example-banner" role="note" data-testid="example-banner">
-      <b>Example note</b>
-      <span className="example-banner-text">Ana and jot AI are demos in your browser</span>
-      <span className="example-banner-actions">
+    <div {...stylex.props(styles.banner)} role="note" data-testid="example-banner">
+      <b {...stylex.props(styles.title)}>Example note</b>
+      <span {...stylex.props(styles.text)}>Ana and jot AI are demos in your browser</span>
+      <span {...stylex.props(styles.actions)}>
         <button
           type="button"
-          className="example-banner-button"
+          {...stylex.props(styles.button)}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => void copyNoteLink(session)}
         >
-          <span key={String(copied)} className="swap" aria-live="polite">
+          <span key={String(copied)} {...stylex.props(swap.label)} aria-live="polite">
             {copied ? 'Link copied' : 'Copy link'}
           </span>
         </button>
-        <a className="example-banner-button" href="/new" onClick={startBlank}>
+        <a {...stylex.props(styles.button)} href="/new" onClick={startBlank}>
           Start blank
         </a>
       </span>

@@ -1,8 +1,10 @@
 import { INSERT_TABLE_COMMAND } from '@lexical/table';
+import * as stylex from '@stylexjs/stylex';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { navigate } from '../router';
 import { toggleTheme } from '../theme';
+import { colors, motion } from '../theme/tokens.stylex';
 import { copyNoteLink, startNewNote } from './actions';
 import { isMac } from './Dock';
 import type { NoteSession } from './session';
@@ -13,6 +15,77 @@ interface Command {
   hint?: string;
   run: () => void;
 }
+
+const fadeIn = stylex.keyframes({ from: { opacity: 0 } });
+
+const menuIn = stylex.keyframes({
+  from: { opacity: 0, transform: 'translate(-50%, -6px)' },
+});
+
+const styles = stylex.create({
+  scrim: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 40,
+    backgroundColor: colors['--scrim'],
+    animationName: fadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  menu: {
+    position: 'fixed',
+    top: '18vh',
+    left: '50%',
+    width: 'min(520px, calc(100vw - 32px))',
+    overflow: 'hidden',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors['--rule'],
+    borderRadius: '12px',
+    backgroundColor: colors['--bg'],
+    boxShadow: `0 16px 48px ${colors['--shadow']}`,
+    transform: 'translateX(-50%)',
+    animationName: menuIn,
+    animationDuration: motion['--pop'],
+    animationTimingFunction: motion['--ease'],
+  },
+  input: {
+    width: '100%',
+    paddingBlock: '15px',
+    paddingInline: '16px',
+    borderWidth: 0,
+    borderBottomWidth: '1px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: colors['--rule'],
+    backgroundColor: 'transparent',
+    color: colors['--ink'],
+    font: 'inherit',
+    fontSize: '15px',
+    outlineStyle: 'none',
+    '::placeholder': {
+      color: colors['--muted'],
+    },
+  },
+  list: {
+    margin: 0,
+    padding: '6px',
+    listStyleType: 'none',
+  },
+  item: {
+    paddingBlock: '9px',
+    paddingInline: '10px',
+    borderRadius: '7px',
+    fontSize: '14.5px',
+    cursor: 'pointer',
+  },
+  selected: {
+    backgroundColor: colors['--hover'],
+  },
+  empty: {
+    color: colors['--muted'],
+    cursor: 'default',
+  },
+});
 
 /** ⌘K: a small menu that performs actions. */
 export function CommandMenu({ session }: { session: NoteSession }) {
@@ -86,9 +159,9 @@ export function CommandMenu({ session }: { session: NoteSession }) {
   };
 
   return (
-    <div className="command-scrim" onMouseDown={close}>
+    <div {...stylex.props(styles.scrim)} onMouseDown={close}>
       <div
-        className="command-menu"
+        {...stylex.props(styles.menu)}
         role="dialog"
         aria-modal="true"
         aria-label="Commands"
@@ -96,7 +169,7 @@ export function CommandMenu({ session }: { session: NoteSession }) {
       >
         <input
           ref={inputRef}
-          className="command-input"
+          {...stylex.props(styles.input)}
           value={query}
           placeholder="Type a command"
           aria-label="Command"
@@ -122,21 +195,23 @@ export function CommandMenu({ session }: { session: NoteSession }) {
             }
           }}
         />
-        <ul className="command-list" id="command-list" role="listbox">
+        <ul {...stylex.props(styles.list)} id="command-list" role="listbox">
           {visible.map((command, i) => (
             <li
               key={command.id}
               id={`command-${command.id}`}
               role="option"
               aria-selected={i === index}
-              className={i === index ? 'is-selected' : undefined}
+              {...stylex.props(styles.item, i === index && styles.selected)}
               onMouseEnter={() => setIndex(i)}
               onClick={() => run(command)}
             >
               {command.label}
             </li>
           ))}
-          {visible.length === 0 && <li className="command-empty">No matching command</li>}
+          {visible.length === 0 && (
+            <li {...stylex.props(styles.item, styles.empty)}>No matching command</li>
+          )}
         </ul>
       </div>
     </div>

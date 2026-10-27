@@ -1,4 +1,7 @@
+import * as stylex from '@stylexjs/stylex';
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
+
+import { colors, motion } from '../../theme/tokens.stylex';
 
 import { ago } from '../format';
 import { MenuToggle, moveMenuFocus, useFocusFirstItem, usePopover } from '../menu';
@@ -214,6 +217,81 @@ interface Card {
   y: number;
 }
 
+const surfaceFadeIn = stylex.keyframes({ from: { opacity: 0 } });
+
+// Blame over the note's surface: the margin's bars and names, and the hover
+// card. Each person's colour is `--peer`, set by peerStyle.
+const surfaceStyles = stylex.create({
+  margin: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    animationName: surfaceFadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  // Under 640px, no room for names beside the column: bars only, in the padding.
+  run: {
+    position: 'absolute',
+    left: { default: '-22px', '@media (max-width: 640px)': '-12px' },
+    width: '3px',
+    borderRadius: '2px',
+    backgroundColor: 'var(--peer)',
+    transitionProperty: 'opacity',
+    transitionDuration: motion['--enter'],
+    transitionTimingFunction: motion['--ease'],
+  },
+  runFaded: {
+    opacity: colors['--blame-faded-opacity'],
+  },
+  // Names need the margin beside the column; narrower windows keep the bars.
+  name: {
+    position: 'absolute',
+    top: '3px',
+    right: '14px',
+    display: { default: null, '@media (max-width: 900px)': 'none' },
+    width: '88px',
+    overflow: 'hidden',
+    color: 'var(--peer)',
+    fontSize: '11.5px',
+    fontWeight: 600,
+    lineHeight: 1.4,
+    textAlign: 'right',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  card: {
+    position: 'fixed',
+    zIndex: 30,
+    display: 'flex',
+    maxWidth: 'min(320px, calc(100vw - 16px))',
+    flexDirection: 'column',
+    gap: '2px',
+    paddingBlock: '8px',
+    paddingInline: '10px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors['--rule'],
+    borderRadius: '10px',
+    backgroundColor: colors['--bg'],
+    boxShadow: `0 10px 28px ${colors['--shadow-soft']}`,
+    color: colors['--ink'],
+    fontSize: '13px',
+    lineHeight: 1.4,
+    pointerEvents: 'none',
+    animationName: surfaceFadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  cardName: {
+    fontWeight: 600,
+  },
+  cardDetails: {
+    color: colors['--muted'],
+    fontSize: '12px',
+  },
+});
+
 /** Minimum gap between two names in the margin, in px. */
 const NAME_GAP = 18;
 
@@ -372,24 +450,25 @@ function BlameLayer({
 
   return (
     <>
-      <div
-        className={`blame-margin${focus === null ? '' : ' is-focused'}`}
-        aria-hidden="true"
-        data-testid="blame-margin"
-      >
-        {bars.map((bar) => (
-          <div
-            key={bar.key}
-            className={`blame-run${focus === null || focus === bar.person.id ? '' : ' is-faded'}`}
-            style={{ ...peerStyle(bar.person.color), top: bar.top, height: bar.height }}
-          >
-            {bar.named && (
-              <span className="blame-name" data-testid="blame-name">
-                {displayName(bar.person)}
-              </span>
-            )}
-          </div>
-        ))}
+      <div {...stylex.props(surfaceStyles.margin)} aria-hidden="true" data-testid="blame-margin">
+        {bars.map((bar) => {
+          const faded = focus !== null && focus !== bar.person.id;
+          return (
+            <div
+              key={bar.key}
+              {...stylex.props(surfaceStyles.run, faded && surfaceStyles.runFaded)}
+              style={{ ...peerStyle(bar.person.color), top: bar.top, height: bar.height }}
+              data-testid="blame-run"
+              data-faded={faded ? '' : undefined}
+            >
+              {bar.named && (
+                <span {...stylex.props(surfaceStyles.name)} data-testid="blame-name">
+                  {displayName(bar.person)}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
       {card !== null && <HoverCard card={card} />}
     </>
@@ -419,13 +498,13 @@ function HoverCard({ card }: { card: Card }) {
   return (
     <div
       ref={ref}
-      className="blame-card"
+      {...stylex.props(surfaceStyles.card)}
       role="tooltip"
       style={{ ...peerStyle(person.color), ...style }}
       data-testid="blame-card"
     >
-      <b>{displayName(person)}</b>
-      <span>{details.join(' · ')}</span>
+      <b {...stylex.props(surfaceStyles.cardName)}>{displayName(person)}</b>
+      <span {...stylex.props(surfaceStyles.cardDetails)}>{details.join(' · ')}</span>
     </div>
   );
 }

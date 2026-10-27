@@ -142,3 +142,23 @@ body {
 ::highlight(jot-ai-target) {
   background-color: var(--ai-tint);
 }
+
+/*
+ * The note page. Typing at the bottom keeps the caret line above the dock:
+ * Lexical's scroll-into-view stops short of the root's scroll-padding. The
+ * dock sits max(18px, safe area) from the bottom and is 46px tall; 30px more
+ * clears it. The root is no component's element, so the note page marks
+ * itself while it shows the dock (data-dock) and the root reads that.
+ */
+:root:has([data-dock]) {
+  scroll-padding-bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px);
+}
+
+/*
+ * A table selection (Lexical's theme puts this class on the table) hides the
+ * browser's selection in every element inside, plain text spans that carry
+ * no class included, so no single element's style can say it.
+ */
+.jot-table-selection *::selection {
+  background: transparent;
+}

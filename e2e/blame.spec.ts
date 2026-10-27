@@ -99,9 +99,9 @@ test('blame shows who wrote what, from two people', async ({ context, otherConte
   const anaRow = legend.getByTestId('blame-person').first();
   await anaRow.click();
   await expect(anaRow).toHaveAttribute('aria-checked', 'true');
-  await expect(gerard.locator('.blame-run.is-faded')).toHaveCount(1);
+  await expect(gerard.locator('[data-testid="blame-run"][data-faded]')).toHaveCount(1);
   await anaRow.click();
-  await expect(gerard.locator('.blame-run.is-faded')).toHaveCount(0);
+  await expect(gerard.locator('[data-testid="blame-run"][data-faded]')).toHaveCount(0);
 
   // Ana's window sees the same people, with herself as "You".
   await toggleBlame(ana);
@@ -221,6 +221,6 @@ test('cells side by side from different people keep their margin bars apart', as
   await expect
     .poll(async () => Object.values(await highlightedText(gerard)).sort())
     .toEqual(['a two', 'g one|g three']);
-  await expect(gerard.locator('.blame-run')).toHaveCount(3);
+  await expect(gerard.getByTestId('blame-run')).toHaveCount(3);
   expect(errors.filter((text) => text.includes('same key'))).toEqual([]);
 });
