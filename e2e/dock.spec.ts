@@ -107,9 +107,13 @@ test('Note info shows the size, who is here and how long the note is kept', asyn
   await expect(info.getByTestId('note-info-size')).toHaveText(/^\d+(\.\d)? (B|KB)$/);
   await expect(info).toContainText('of 2 MB');
   await expect(info.getByRole('meter', { name: 'Yjs size' })).toBeVisible();
-  await expect(info.locator('.note-info-people li')).toHaveCount(2);
-  await expect(info.locator('.note-info-people li').first()).toContainText('(you)');
-  await expect(info.locator('.note-info-people li').first()).toContainText('editing');
+  await expect(info.getByTestId('note-info-people').getByRole('listitem')).toHaveCount(2);
+  await expect(info.getByTestId('note-info-people').getByRole('listitem').first()).toContainText(
+    '(you)',
+  );
+  await expect(info.getByTestId('note-info-people').getByRole('listitem').first()).toContainText(
+    'editing',
+  );
   await expect(info).toContainText('90 days after the last visit');
 
   // The pill carries the same size (read together: a save or the people

@@ -1,6 +1,10 @@
+import * as stylex from '@stylexjs/stylex';
 import { useEffect, useRef, useState } from 'react';
 
-import { MenuItem } from '../menu';
+import { colors } from '../../theme/tokens.stylex';
+import { panelButton } from '../dock.styles';
+import { MenuItem, popoverProps } from '../menu';
+import { infoStyles } from '../NoteInfo';
 import type { NoteSession } from '../session';
 import { useSignal } from '../useSignal';
 import { aiModels } from './choice';
@@ -14,6 +18,101 @@ import {
   MODELS,
   STATE_TEXT,
 } from './models';
+
+const styles = stylex.create({
+  panel: {
+    width: 'min(360px, calc(100vw - 24px))',
+  },
+  lede: {
+    marginTop: 4,
+    marginInline: 0,
+    marginBottom: 8,
+    color: colors['--muted'],
+    fontSize: 12,
+    lineHeight: 1.4,
+  },
+  list: {
+    display: 'grid',
+    gap: 2,
+  },
+  row: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingBlock: 8,
+    paddingInline: 6,
+    borderRadius: 8,
+    backgroundColor: { default: null, ':hover': colors['--hover'] },
+  },
+  rowUnsupported: {
+    backgroundColor: null,
+  },
+  choice: {
+    display: 'flex',
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '0%',
+    minWidth: 0,
+    alignItems: 'flex-start',
+    gap: 10,
+    cursor: 'pointer',
+  },
+  choiceUnsupported: {
+    cursor: 'default',
+  },
+  radio: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    marginTop: 3,
+    marginInline: 0,
+    marginBottom: 0,
+    accentColor: colors['--ai'],
+  },
+  text: {
+    display: 'grid',
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '0%',
+    minWidth: 0,
+    gap: 1,
+  },
+  head: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  name: {
+    color: colors['--ink'],
+    fontWeight: 550,
+  },
+  sub: {
+    color: colors['--muted'],
+    fontSize: 12,
+    fontWeight: 400,
+  },
+  muted: {
+    color: colors['--muted'],
+  },
+  state: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    color: colors['--muted'],
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  stateOk: {
+    color: colors['--ok'],
+  },
+  delete: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    alignSelf: 'center',
+  },
+});
 
 /** "AI model" in ⋯, with the model Ask AI uses as its hint. */
 export function ModelMenuItem({ open }: { session: NoteSession; open: () => void }) {
@@ -74,18 +173,18 @@ export function ModelPanel({
   return (
     <div
       ref={ref}
-      className="popover note-info model-panel"
+      {...popoverProps(infoStyles.panel, styles.panel)}
       role="dialog"
       aria-label="AI model"
       tabIndex={-1}
       data-testid="model-panel"
     >
-      <h2 className="note-info-title">AI model</h2>
-      <p className="model-lede">
+      <h2 {...stylex.props(infoStyles.title)}>AI model</h2>
+      <p {...stylex.props(styles.lede)}>
         Ask AI's model runs on this device, so your text never leaves it.
       </p>
       {device === null ? (
-        <p className="note-info-muted">Looking at this device…</p>
+        <p {...stylex.props(infoStyles.muted)}>Looking at this device…</p>
       ) : (
         <ModelList
           device={device}
@@ -125,7 +224,7 @@ function ModelList({
   const active = activeModel(device, chosen);
   const fallback = defaultModel(device);
   return (
-    <div className="model-list" role="radiogroup" aria-label="AI model">
+    <div {...stylex.props(styles.list)} role="radiogroup" aria-label="AI model">
       {MODEL_IDS.map((id) => {
         const info = MODELS[id];
         const state = models.state(id, device);
@@ -139,43 +238,47 @@ function ModelList({
         return (
           <div
             key={id}
-            className={`model-row${unsupported ? ' is-unsupported' : ''}`}
+            {...stylex.props(styles.row, unsupported && styles.rowUnsupported)}
             data-testid={`model-${id}`}
           >
-            <label className="model-choice">
+            <label {...stylex.props(styles.choice, unsupported && styles.choiceUnsupported)}>
               <input
                 type="radio"
+                {...stylex.props(styles.radio)}
                 name="jot-ai-model"
                 value={id}
                 checked={active === id}
                 disabled={unsupported}
                 onChange={() => models.choose(id)}
               />
-              <span className="model-text">
-                <span className="model-head">
-                  <span className="model-name">
+              <span {...stylex.props(styles.text)}>
+                <span {...stylex.props(styles.head)}>
+                  <span {...stylex.props(styles.name, unsupported && styles.muted)}>
                     {info.label}
-                    {fallback === id && <span className="model-default"> · default here</span>}
+                    {fallback === id && <span {...stylex.props(styles.sub)}> · default here</span>}
                   </span>
                   <span
-                    className={`model-state is-${state}`}
+                    {...stylex.props(
+                      styles.state,
+                      (state === 'ready' || state === 'downloaded') && styles.stateOk,
+                    )}
                     data-testid={`model-${id}-state`}
                     aria-live={inFlight ? 'polite' : undefined}
                   >
                     {status}
                   </span>
                 </span>
-                <span className="model-sub">
+                <span {...stylex.props(styles.sub)}>
                   {info.name} · {info.download === null ? 'no download' : info.download.text}
                 </span>
-                <span className="model-sub">{info.where}</span>
+                <span {...stylex.props(styles.sub)}>{info.where}</span>
               </span>
             </label>
             {(state === 'downloaded' || state === 'ready' || state === 'partial') &&
               info.webllm !== null && (
                 <button
                   type="button"
-                  className="ask-quiet model-delete"
+                  {...stylex.props(panelButton.quiet, styles.delete)}
                   disabled={busy || deleting !== null}
                   aria-label={`Delete ${info.label} (${info.name}) from this browser`}
                   data-testid={`model-${id}-delete`}

@@ -71,7 +71,7 @@ test('jot AI rewrites the current block as its own peer, attributed to it in bla
   await page.keyboard.press('Escape');
   await page.getByTestId('blame-chip').click();
   await expect(
-    page.getByTestId('blame-legend').getByTestId('blame-person').locator('.person-name'),
+    page.getByTestId('blame-legend').getByTestId('blame-person').getByTestId('person-name'),
   ).toHaveText(['jot AI', 'You']);
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('blame-name')).toHaveText(['You', 'jot AI']);

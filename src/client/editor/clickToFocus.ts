@@ -25,9 +25,9 @@ const OWN_PRESSES = [
   'iframe',
   '[role="menu"]',
   '[role="dialog"]',
-  '.popover',
+  '[data-popover]',
   '.command-scrim',
-  '.dock',
+  '[data-dock]',
   '.note-chrome',
   '.note-banner',
   '.note-notice',
@@ -36,7 +36,7 @@ const OWN_PRESSES = [
 ].join(', ');
 
 /** Open overlays: a press outside one only closes it. */
-const OVERLAYS = '.popover, .command-scrim';
+const OVERLAYS = '[data-popover], .command-scrim';
 
 /** How far a press may travel and still count as a click, not a drag. */
 const CLICK_SLOP_PX = 5;

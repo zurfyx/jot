@@ -3,7 +3,6 @@ import '@fontsource-variable/geist-mono';
 import './theme/jot.css';
 import './globals.css';
 import './shared.css';
-import './editor/dock.css';
 import './editor/motion.css';
 
 import { StrictMode } from 'react';

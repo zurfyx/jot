@@ -26,11 +26,20 @@ import {
   type LexicalNode,
   type TextFormatType,
 } from 'lexical';
+import * as stylex from '@stylexjs/stylex';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 
 import { normalizeLinkUrl } from '../../shared/links';
+import { colors, fonts } from '../theme/tokens.stylex';
+import { dockButton } from './dock.styles';
 import { Icon, type IconName, isIconName } from './icons';
-import { keepEditorFocus, moveMenuFocus, useFocusFirstItem } from './menu';
+import {
+  keepEditorFocus,
+  menuStyles,
+  moveMenuFocus,
+  popoverProps,
+  useFocusFirstItem,
+} from './menu';
 import type { NoteSession } from './session';
 
 export type BlockType =
@@ -47,6 +56,46 @@ const BLOCKS: { type: BlockType; label: string; icon: IconName | string; hint: s
   { type: 'quote', label: 'Quote', icon: 'quote', hint: '>' },
   { type: 'code', label: 'Code', icon: 'codeblock', hint: '```' },
 ];
+
+const styles = stylex.create({
+  /** A markdown shortcut, in mono (at the hint's size). */
+  shortcut: {
+    fontFamily: fonts['--mono'],
+  },
+  formatRow: {
+    display: 'flex',
+    gap: 2,
+    marginTop: 6,
+    paddingTop: 6,
+    paddingInline: 2,
+    paddingBottom: 0,
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors['--rule'],
+  },
+  linkForm: {
+    padding: 2,
+  },
+  linkInput: {
+    width: '100%',
+    paddingBlock: 8,
+    paddingInline: 10,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: { default: colors['--rule'], ':focus': colors['--accent'] },
+    borderRadius: 8,
+    backgroundColor: colors['--bg'],
+    color: colors['--ink'],
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    fontWeight: 'inherit',
+    fontStyle: 'inherit',
+    fontStretch: 'inherit',
+    fontVariantNumeric: 'inherit',
+    lineHeight: 'inherit',
+    outlineStyle: 'none',
+  },
+});
 
 type InlineFormat = Extract<
   TextFormatType,
@@ -241,17 +290,17 @@ export function FormatMenu({
   return (
     <div
       ref={menuRef}
-      className="popover format-menu"
+      {...popoverProps()}
       role="menu"
       aria-label="Format"
       onKeyDown={linking ? undefined : moveMenuFocus}
       onMouseDown={keepEditorFocus}
     >
       {linking ? (
-        <form className="link-form" onSubmit={submitLink} noValidate>
+        <form {...stylex.props(styles.linkForm)} onSubmit={submitLink} noValidate>
           <input
             ref={inputRef}
-            className="link-input"
+            {...stylex.props(styles.linkInput)}
             type="url"
             inputMode="url"
             placeholder="Paste a link"
@@ -268,30 +317,41 @@ export function FormatMenu({
         </form>
       ) : (
         <>
-          <div className="menu-group" role="group" aria-label="Turn into">
-            {BLOCKS.map((block) => (
-              <button
-                key={block.type}
-                type="button"
-                role="menuitemradio"
-                aria-checked={state.block === block.type}
-                className="menu-item"
-                tabIndex={-1}
-                onClick={() => setBlock(block.type)}
-              >
-                {isIconName(block.icon) ? (
-                  <Icon name={block.icon} />
-                ) : (
-                  <span className="menu-glyph" aria-hidden="true">
-                    {block.icon}
-                  </span>
-                )}
-                <span className="menu-label">{block.label}</span>
-                {block.hint !== '' && <span className="menu-hint mono">{block.hint}</span>}
-              </button>
-            ))}
+          <div role="group" aria-label="Turn into">
+            {BLOCKS.map((block) => {
+              const checked = state.block === block.type;
+              return (
+                <button
+                  key={block.type}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={checked}
+                  {...stylex.props(menuStyles.item, checked && menuStyles.itemChecked)}
+                  tabIndex={-1}
+                  onClick={() => setBlock(block.type)}
+                >
+                  {isIconName(block.icon) ? (
+                    <Icon
+                      name={block.icon}
+                      xstyle={[menuStyles.icon, checked && menuStyles.iconChecked]}
+                    />
+                  ) : (
+                    <span
+                      {...stylex.props(menuStyles.glyph, checked && menuStyles.iconChecked)}
+                      aria-hidden="true"
+                    >
+                      {block.icon}
+                    </span>
+                  )}
+                  <span {...stylex.props(menuStyles.label)}>{block.label}</span>
+                  {block.hint !== '' && (
+                    <span {...stylex.props(menuStyles.hint, styles.shortcut)}>{block.hint}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <div className="format-row" role="group" aria-label="Text">
+          <div {...stylex.props(styles.formatRow)} role="group" aria-label="Text">
             {FORMATS.map(({ format, label, icon }) => (
               <button
                 key={format}
@@ -300,7 +360,11 @@ export function FormatMenu({
                 aria-checked={state.formats[format]}
                 aria-label={label}
                 title={label}
-                className="icon-button"
+                {...stylex.props(
+                  dockButton.base,
+                  dockButton.format,
+                  state.formats[format] && dockButton.formatChecked,
+                )}
                 tabIndex={-1}
                 onClick={() => toggleFormat(format)}
               >
@@ -313,7 +377,11 @@ export function FormatMenu({
               aria-checked={state.link}
               aria-label={state.link ? 'Remove link' : 'Link'}
               title={state.link ? 'Remove link' : 'Link'}
-              className="icon-button"
+              {...stylex.props(
+                dockButton.base,
+                dockButton.format,
+                state.link && dockButton.formatChecked,
+              )}
               tabIndex={-1}
               disabled={!state.link && state.collapsed}
               onClick={() => {
