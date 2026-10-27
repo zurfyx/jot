@@ -25,18 +25,16 @@ const OWN_PRESSES = [
   'iframe',
   '[role="menu"]',
   '[role="dialog"]',
-  '.popover',
-  '.command-scrim',
-  '.dock',
-  '.note-chrome',
-  '.note-banner',
-  '.note-notice',
-  '.example-banner',
-  '.blame-card',
+  '[data-popover]',
+  '[data-command-scrim]',
+  '[data-dock]',
+  // The top bar, the read-only and full banners, the near-cap notice, the
+  // example's banner and blame's hover card mark themselves.
+  '[data-own-press]',
 ].join(', ');
 
 /** Open overlays: a press outside one only closes it. */
-const OVERLAYS = '.popover, .command-scrim';
+const OVERLAYS = '[data-popover], [data-command-scrim]';
 
 /** How far a press may travel and still count as a click, not a drag. */
 const CLICK_SLOP_PX = 5;

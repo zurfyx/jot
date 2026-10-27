@@ -1,10 +1,106 @@
+import * as stylex from '@stylexjs/stylex';
 import { useEffect, useRef, useState } from 'react';
 
 import { NOTE_MAX_BYTES } from '../../shared/limits';
+import { colors, motion } from '../theme/tokens.stylex';
 import { formatBytes, keptUntil } from './format';
+import { popoverProps } from './menu';
 import { peerStyle, usePeople } from './people';
 import type { NoteSession } from './session';
 import { useSignal } from './useSignal';
+
+/** Note info's panel, and its parts the AI model panel and blame's legend share. */
+export const infoStyles = stylex.create({
+  panel: {
+    width: 'min(300px, calc(100vw - 24px))',
+    padding: 14,
+    fontSize: '13.5px',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 650,
+  },
+  key: {
+    marginTop: 12,
+    marginInline: 0,
+    marginBottom: 4,
+    color: colors['--muted'],
+    fontSize: 12,
+    fontWeight: 500,
+  },
+  line: {
+    margin: 0,
+  },
+  size: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    margin: 0,
+  },
+  muted: {
+    color: colors['--muted'],
+    fontSize: 12,
+  },
+  people: {
+    margin: 0,
+    padding: 0,
+    listStyleType: 'none',
+  },
+  person: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    paddingBlock: 3,
+    paddingInline: 0,
+  },
+  personState: {
+    marginLeft: 'auto',
+  },
+  /** A person's colour, from the --peer their row sets (peerStyle). */
+  dot: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: 9,
+    height: 9,
+    borderRadius: '50%',
+    backgroundColor: 'var(--peer)',
+  },
+  name: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+});
+
+/** A meter: Note info's Yjs size against the cap, and Ask AI's download. */
+export const meterStyles = stylex.create({
+  track: {
+    height: 6,
+    marginTop: 6,
+    overflow: 'hidden',
+    borderRadius: 3,
+    backgroundColor: colors['--hover'],
+  },
+  fill: {
+    display: 'block',
+    height: '100%',
+    backgroundColor: colors['--accent'],
+    transformOrigin: 'left',
+    transitionProperty: 'transform',
+    transitionDuration: motion['--enter'],
+    transitionTimingFunction: motion['--ease'],
+  },
+  ok: {},
+  warn: {
+    backgroundColor: colors['--warn'],
+  },
+  full: {
+    backgroundColor: colors['--bad'],
+  },
+  ai: {
+    backgroundColor: colors['--ai'],
+  },
+});
 
 /** Note info: the Yjs size against the cap, who is here, and how long it is kept. */
 export function NoteInfo({ session, viaKeyboard }: { session: NoteSession; viaKeyboard: boolean }) {
@@ -24,21 +120,21 @@ export function NoteInfo({ session, viaKeyboard }: { session: NoteSession; viaKe
   return (
     <div
       ref={ref}
-      className="popover note-info"
+      {...popoverProps(infoStyles.panel)}
       role="dialog"
       aria-label="Note info"
       tabIndex={-1}
       data-testid="note-info"
     >
-      <h2 className="note-info-title">This note</h2>
+      <h2 {...stylex.props(infoStyles.title)}>This note</h2>
 
-      <h3 className="note-info-key">Yjs size</h3>
-      <p className="note-info-size">
+      <h3 {...stylex.props(infoStyles.key)}>Yjs size</h3>
+      <p {...stylex.props(infoStyles.size)}>
         <span data-testid="note-info-size">{formatBytes(bytes)}</span>
-        <span className="note-info-muted">of {formatBytes(NOTE_MAX_BYTES)}</span>
+        <span {...stylex.props(infoStyles.muted)}>of {formatBytes(NOTE_MAX_BYTES)}</span>
       </p>
       <div
-        className={`meter meter-${cap}`}
+        {...stylex.props(meterStyles.track)}
         role="meter"
         aria-label="Yjs size"
         aria-valuemin={0}
@@ -46,25 +142,32 @@ export function NoteInfo({ session, viaKeyboard }: { session: NoteSession; viaKe
         aria-valuenow={Math.min(bytes, NOTE_MAX_BYTES)}
         aria-valuetext={`${formatBytes(bytes)} of ${formatBytes(NOTE_MAX_BYTES)}`}
       >
-        <span style={{ transform: `scaleX(${share})` }} />
+        <span
+          {...stylex.props(meterStyles.fill, meterStyles[cap])}
+          style={{ transform: `scaleX(${share})` }}
+        />
       </div>
 
-      <h3 className="note-info-key">Here now</h3>
-      <ul className="note-info-people">
+      <h3 {...stylex.props(infoStyles.key)}>Here now</h3>
+      <ul {...stylex.props(infoStyles.people)} data-testid="note-info-people">
         {people.map((person) => (
-          <li key={person.clientID} style={peerStyle(person.color)}>
-            <span className="person-dot" aria-hidden="true" />
-            <span className="person-name">
+          <li
+            key={person.clientID}
+            {...stylex.props(infoStyles.person)}
+            style={peerStyle(person.color)}
+          >
+            <span {...stylex.props(infoStyles.dot)} aria-hidden="true" />
+            <span {...stylex.props(infoStyles.name)} data-testid="person-name">
               {person.name}
               {person.self ? ' (you)' : ''}
             </span>
-            <span className="note-info-muted">{person.state}</span>
+            <span {...stylex.props(infoStyles.muted, infoStyles.personState)}>{person.state}</span>
           </li>
         ))}
       </ul>
 
-      <h3 className="note-info-key">Kept until</h3>
-      <p className="note-info-line">{keptUntil(openedAt)} · 90 days after the last visit</p>
+      <h3 {...stylex.props(infoStyles.key)}>Kept until</h3>
+      <p {...stylex.props(infoStyles.line)}>{keptUntil(openedAt)} · 90 days after the last visit</p>
     </div>
   );
 }

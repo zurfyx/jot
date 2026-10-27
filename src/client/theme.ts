@@ -1,4 +1,10 @@
-/** Light and dark themes: a `data-theme` attribute on <html> picks the token set. */
+import { useSyncExternalStore } from 'react';
+
+/**
+ * Light and dark themes: a `data-theme` attribute on <html> picks the token
+ * set (the dark values are in globals.css). index.html sets it before the
+ * first paint; setTheme changes it.
+ */
 
 export type Theme = 'light' | 'dark';
 
@@ -27,4 +33,9 @@ export function toggleTheme(): void {
 export function subscribeTheme(onChange: () => void): () => void {
   window.addEventListener(CHANGE_EVENT, onChange);
   return () => window.removeEventListener(CHANGE_EVENT, onChange);
+}
+
+/** The current theme, following every change. */
+export function useThemeName(): Theme {
+  return useSyncExternalStore(subscribeTheme, currentTheme);
 }

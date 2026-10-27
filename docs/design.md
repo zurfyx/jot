@@ -8,10 +8,12 @@ and card-free sections below it (D07).
 
 ## Tokens
 
-Every colour is a CSS custom property in `src/client/styles.css`, defined twice: light and
-dark. `<html data-theme>` picks the set; an inline script in `index.html` sets it before
-the first paint from the stored choice or `prefers-color-scheme`. ⋯ → Dark theme and ⌘K →
-Toggle theme flip and remember it.
+Every colour is a StyleX variable in `src/client/theme/tokens.stylex.ts` (`defineVars`,
+light values), with its dark value in `globals.css` under `:root[data-theme='dark']`. The
+variables keep their literal names (`--bg`), so plain CSS reads them too. `<html data-theme>`
+picks the set: an inline script in `index.html` sets it before the first paint from the
+stored choice or `prefers-color-scheme`, so dark mode never flashes white. ⋯ → Dark theme and
+⌘K → Toggle theme flip and remember it.
 
 | Token                                    | Use                                                       |
 | ---------------------------------------- | --------------------------------------------------------- |
@@ -28,9 +30,9 @@ Toggle theme flip and remember it.
 | `--ai`, `--ai-tint`                      | jot AI's violet (`--peer-2`); the tint on Ask AI's target |
 | `--scrollbar`                            | the scrollbar thumb, on a transparent track               |
 
-The landing page scopes a second set under `.landing`. In dark it re-points the base tokens
-to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles read the
-same names.
+The landing page scopes a second set on its root (`landing` in `tokens.stylex.ts`, its dark
+values in `themes.ts`). In dark it re-points the base tokens to the Night treatment (a deep
+navy `--landing-bg`, a brighter glow), so its styles read the same names.
 
 | Token                                 | Use                                                  |
 | ------------------------------------- | ---------------------------------------------------- |
@@ -49,6 +51,20 @@ Safari without `scrollbar-color` they would turn macOS overlay scrollbars into p
 classic ones that take width from the column, so such a Safari keeps its native scrollbars.
 The landing page's code block is dark in both themes, so it points `--scrollbar` at the
 light `--code-scrollbar`.
+
+## Styling
+
+Styles are StyleX (D28): `stylex.create` beside each component, compiled at build time
+(`scripts/vite-stylex.ts`) into atomic classes. Each module's rules travel with its chunk,
+so the landing page loads only its own styles and the note page's and the docs' arrive with
+their lazy chunks; every StyleX priority is a cascade layer declared up front, so the order
+stylesheets load in doesn't change the result. Motion is `stylex.keyframes` and, for opening
+a note, `stylex.viewTransitionClass`; hover, focus and sibling rules use `stylex.when.*` with
+markers; Lexical's theme (`editor/extensions.ts`) maps node types to StyleX classes.
+`src/client/globals.css` holds only what StyleX can't write, each rule with a one-line
+reason: `color-scheme` and the dark token values, the element defaults (in the `reset` layer,
+under every StyleX class), `<body>`, the reduced-motion switch, `::highlight()` for Ask AI
+and a table selection's `::selection`; the inspector keeps one rule in `docs/docs.css`.
 
 ## Type
 
@@ -156,7 +172,8 @@ playground needs: no toolbar is always there.
 
 ## Landing page
 
-`src/client/landing/`, with its styles in `landing.css` (tokens only). Content stops at
+`src/client/landing/`, styled with StyleX beside each component (tokens only; shared section
+styles in `section.styles.ts`, relational markers in `markers.stylex.ts`). Content stops at
 1040px with 40px gutters (20px under 760px); there are no boxed card grids.
 
 - **Top bar:** the "jot" wordmark with a blinking violet caret, then Docs and GitHub.
@@ -187,11 +204,14 @@ The copy is a playground's, never a hosted service's: no sign-up or retention re
 
 ## Docs
 
-`src/client/docs/`, with its styles in `docs.css` (tokens only). The base tokens, light
-and dark, plus a `.docs` scope: the example people's colours (`--you`, `--ana`, `--ai`),
-their tints for the home's hero and the diagram (`--docs-tint-*`), the inspector's
-highlight (`--docs-hl`), callouts (`--docs-callout-*`, `--docs-warn-*`) and light code
-blocks (`--docs-code-*`).
+`src/client/docs/`, styled with StyleX in each component's file (tokens only). The prose
+elements are small components in `ui.tsx` (`P`, `H2`, `Ul`, `Li`, `B`, `C` for inline
+code), so a page's JSX carries its look. The base tokens, light and dark, plus the `docs`
+set (`docsDark` on the docs root): the people's tints for the home's hero and the diagram
+(`--docs-tint-*`), the inspector's highlight (`--docs-hl`), callouts (`--docs-callout-*`,
+`--docs-warn-*`) and light code blocks (`--docs-code-*`). The pages and the diagram are
+marked with the peer colours of you, Ana and jot AI (`tint.ts`). One plain rule is left in
+`docs.css`: the classless `<code>` Lexical wraps inline code in, inside the inspector.
 
 - **Header:** "jot docs", then Guides, API (`@lexical/y`'s README at the pinned Lexical
   commit) and GitHub. Under 860px the nav folds behind a Pages button.

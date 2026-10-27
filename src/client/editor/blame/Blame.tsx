@@ -1,7 +1,18 @@
+import * as stylex from '@stylexjs/stylex';
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
 
+import { colors, motion } from '../../theme/tokens.stylex';
+import { dockButton } from '../dock.styles';
 import { ago } from '../format';
-import { MenuToggle, moveMenuFocus, useFocusFirstItem, usePopover } from '../menu';
+import {
+  menuStyles,
+  MenuToggle,
+  moveMenuFocus,
+  popoverProps,
+  useFocusFirstItem,
+  usePopover,
+} from '../menu';
+import { infoStyles } from '../NoteInfo';
 import { peerStyle } from '../people';
 import { localUser } from '../presence';
 import type { NoteSession } from '../session';
@@ -49,6 +60,75 @@ export function BlameMenuToggle({ session }: { session: NoteSession }) {
   );
 }
 
+const chipStyles = stylex.create({
+  dots: {
+    display: 'inline-flex',
+    paddingLeft: 3,
+  },
+  /** Overlapping dots, each ringed in the chip's colour. */
+  dot: {
+    width: 8,
+    height: 8,
+    marginLeft: -3,
+    borderRadius: '50%',
+    backgroundColor: 'var(--peer)',
+    boxShadow: `0 0 0 2px ${colors['--select']}`,
+  },
+  legend: {
+    width: 'min(250px, calc(100vw - 24px))',
+    padding: 8,
+    fontSize: '13.5px',
+  },
+  focused: {
+    backgroundColor: colors['--hover'],
+  },
+  name: {
+    fontWeight: 600,
+  },
+  share: {
+    fontVariantNumeric: 'tabular-nums',
+  },
+  empty: {
+    marginTop: 4,
+    marginInline: 8,
+    marginBottom: 8,
+    color: colors['--muted'],
+  },
+  foot: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    paddingTop: 6,
+    paddingInline: 8,
+    paddingBottom: 2,
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors['--rule'],
+    color: colors['--muted'],
+    fontSize: 12,
+  },
+  hide: {
+    marginBlock: -4,
+    marginInline: -6,
+    paddingBlock: 4,
+    paddingInline: 6,
+    borderRadius: 6,
+    color: {
+      default: colors['--muted'],
+      ':hover': colors['--ink'],
+      ':focus-visible': colors['--ink'],
+    },
+    fontSize: 12,
+    backgroundColor: {
+      default: null,
+      ':hover': colors['--hover'],
+      ':focus-visible': colors['--hover'],
+    },
+    outlineStyle: { default: null, ':hover': 'none', ':focus-visible': 'none' },
+  },
+});
+
 /** The "Blame ●●●" chip in the dock while blame shows, and its legend. */
 export function BlameChip({ session }: { session: NoteSession }) {
   const state = blameState(session);
@@ -70,10 +150,10 @@ export function BlameChip({ session }: { session: NoteSession }) {
   }
   const dots = snapshot.shares.slice(0, 4);
   return (
-    <span ref={slotRef} className="blame-slot">
+    <span ref={slotRef}>
       <button
         type="button"
-        className="dock-button blame-chip"
+        {...stylex.props(dockButton.base, dockButton.blame)}
         aria-haspopup="menu"
         aria-expanded={open === 'legend'}
         title="Blame: who wrote what"
@@ -83,9 +163,13 @@ export function BlameChip({ session }: { session: NoteSession }) {
       >
         Blame
         {dots.length > 0 && (
-          <span className="blame-dots" aria-hidden="true">
+          <span {...stylex.props(chipStyles.dots)} aria-hidden="true">
             {dots.map(({ person }) => (
-              <i key={person.id} style={peerStyle(person.color)} />
+              <i
+                key={person.id}
+                {...stylex.props(chipStyles.dot)}
+                style={peerStyle(person.color)}
+              />
             ))}
           </span>
         )}
@@ -120,14 +204,16 @@ function BlameLegend({
   return (
     <div
       ref={ref}
-      className="popover blame-legend"
+      {...popoverProps(chipStyles.legend)}
       role="menu"
       aria-label="Blame"
       data-testid="blame-legend"
       onKeyDown={moveMenuFocus}
       onMouseDown={(event) => event.preventDefault()}
     >
-      {snapshot.shares.length === 0 && <p className="blame-empty">Nobody has written here yet.</p>}
+      {snapshot.shares.length === 0 && (
+        <p {...stylex.props(chipStyles.empty)}>Nobody has written here yet.</p>
+      )}
       {snapshot.shares.map(({ person, chars }) => (
         <button
           key={person.id}
@@ -135,7 +221,7 @@ function BlameLegend({
           role="menuitemcheckbox"
           aria-checked={focus === person.id}
           tabIndex={-1}
-          className="menu-item blame-person"
+          {...stylex.props(menuStyles.item, focus === person.id && chipStyles.focused)}
           style={peerStyle(person.color)}
           title={person.name}
           data-testid="blame-person"
@@ -144,20 +230,25 @@ function BlameLegend({
             state.setFocus(focus === person.id ? null : person.id);
           }}
         >
-          <span className="person-dot" aria-hidden="true" />
-          <span className="menu-label person-name">{displayName(person)}</span>
-          <span className="menu-hint" data-testid="blame-share">
+          <span {...stylex.props(infoStyles.dot)} aria-hidden="true" />
+          <span
+            {...stylex.props(menuStyles.label, infoStyles.name, chipStyles.name)}
+            data-testid="person-name"
+          >
+            {displayName(person)}
+          </span>
+          <span {...stylex.props(menuStyles.hint, chipStyles.share)} data-testid="blame-share">
             {percent(chars, snapshot.total)}
           </span>
         </button>
       ))}
-      <div className="blame-legend-foot">
+      <div {...stylex.props(chipStyles.foot)}>
         <span>Click a name to focus</span>
         <button
           type="button"
           role="menuitem"
           tabIndex={-1}
-          className="blame-hide"
+          {...stylex.props(chipStyles.hide)}
           onClick={() => {
             state.setOn(false);
             close();
@@ -213,6 +304,81 @@ interface Card {
   x: number;
   y: number;
 }
+
+const surfaceFadeIn = stylex.keyframes({ from: { opacity: 0 } });
+
+// Blame over the note's surface: the margin's bars and names, and the hover
+// card. Each person's colour is `--peer`, set by peerStyle.
+const surfaceStyles = stylex.create({
+  margin: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    animationName: surfaceFadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  // Under 640px, no room for names beside the column: bars only, in the padding.
+  run: {
+    position: 'absolute',
+    left: { default: '-22px', '@media (max-width: 640px)': '-12px' },
+    width: '3px',
+    borderRadius: '2px',
+    backgroundColor: 'var(--peer)',
+    transitionProperty: 'opacity',
+    transitionDuration: motion['--enter'],
+    transitionTimingFunction: motion['--ease'],
+  },
+  runFaded: {
+    opacity: colors['--blame-faded-opacity'],
+  },
+  // Names need the margin beside the column; narrower windows keep the bars.
+  name: {
+    position: 'absolute',
+    top: '3px',
+    right: '14px',
+    display: { default: null, '@media (max-width: 900px)': 'none' },
+    width: '88px',
+    overflow: 'hidden',
+    color: 'var(--peer)',
+    fontSize: '11.5px',
+    fontWeight: 600,
+    lineHeight: 1.4,
+    textAlign: 'right',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  card: {
+    position: 'fixed',
+    zIndex: 30,
+    display: 'flex',
+    maxWidth: 'min(320px, calc(100vw - 16px))',
+    flexDirection: 'column',
+    gap: '2px',
+    paddingBlock: '8px',
+    paddingInline: '10px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors['--rule'],
+    borderRadius: '10px',
+    backgroundColor: colors['--bg'],
+    boxShadow: `0 10px 28px ${colors['--shadow-soft']}`,
+    color: colors['--ink'],
+    fontSize: '13px',
+    lineHeight: 1.4,
+    pointerEvents: 'none',
+    animationName: surfaceFadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  cardName: {
+    fontWeight: 600,
+  },
+  cardDetails: {
+    color: colors['--muted'],
+    fontSize: '12px',
+  },
+});
 
 /** Minimum gap between two names in the margin, in px. */
 const NAME_GAP = 18;
@@ -372,24 +538,25 @@ function BlameLayer({
 
   return (
     <>
-      <div
-        className={`blame-margin${focus === null ? '' : ' is-focused'}`}
-        aria-hidden="true"
-        data-testid="blame-margin"
-      >
-        {bars.map((bar) => (
-          <div
-            key={bar.key}
-            className={`blame-run${focus === null || focus === bar.person.id ? '' : ' is-faded'}`}
-            style={{ ...peerStyle(bar.person.color), top: bar.top, height: bar.height }}
-          >
-            {bar.named && (
-              <span className="blame-name" data-testid="blame-name">
-                {displayName(bar.person)}
-              </span>
-            )}
-          </div>
-        ))}
+      <div {...stylex.props(surfaceStyles.margin)} aria-hidden="true" data-testid="blame-margin">
+        {bars.map((bar) => {
+          const faded = focus !== null && focus !== bar.person.id;
+          return (
+            <div
+              key={bar.key}
+              {...stylex.props(surfaceStyles.run, faded && surfaceStyles.runFaded)}
+              style={{ ...peerStyle(bar.person.color), top: bar.top, height: bar.height }}
+              data-testid="blame-run"
+              data-faded={faded ? '' : undefined}
+            >
+              {bar.named && (
+                <span {...stylex.props(surfaceStyles.name)} data-testid="blame-name">
+                  {displayName(bar.person)}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
       {card !== null && <HoverCard card={card} />}
     </>
@@ -419,13 +586,14 @@ function HoverCard({ card }: { card: Card }) {
   return (
     <div
       ref={ref}
-      className="blame-card"
+      {...stylex.props(surfaceStyles.card)}
       role="tooltip"
       style={{ ...peerStyle(person.color), ...style }}
       data-testid="blame-card"
+      data-own-press=""
     >
-      <b>{displayName(person)}</b>
-      <span>{details.join(' · ')}</span>
+      <b {...stylex.props(surfaceStyles.cardName)}>{displayName(person)}</b>
+      <span {...stylex.props(surfaceStyles.cardDetails)}>{details.join(' · ')}</span>
     </div>
   );
 }

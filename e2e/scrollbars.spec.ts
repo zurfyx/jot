@@ -50,13 +50,13 @@ for (const colorScheme of ['light', 'dark'] as const) {
       const nav = await scrollbar(page.getByTestId('docs-nav'));
       expect(nav.track).toBe(TRANSPARENT);
       expect(nav.thumb).toBe((await scrollbar(page.locator('html'))).thumb);
-      const code = await scrollbar(page.locator('.docs-code pre').first());
+      const code = await scrollbar(page.getByTestId('docs-code').first().locator('pre'));
       expect(code).toEqual(nav);
     });
 
     test("the landing page's dark code block has a light thumb", async ({ page }) => {
       await page.goto('/');
-      const code = await scrollbar(page.locator('.code-block'));
+      const code = await scrollbar(page.getByLabel('Quick start', { exact: true }));
       expect(code.track).toBe(TRANSPARENT);
       expect(code.thumb).toBe('rgba(231, 233, 238, 0.24)');
     });

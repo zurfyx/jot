@@ -123,7 +123,7 @@ test('the download shows its progress, then jot AI writes, credited in blame', a
   await expect(page.getByTestId('ask-meta')).toHaveText(
     'Downloading Qwen3 1.7B · 50% · Esc to cancel',
   );
-  await expect(page.locator('.ask-meter')).toBeVisible();
+  await expect(page.getByTestId('ask-meter')).toBeVisible();
   await expect(askButton(page)).toHaveText('jot AI is writing…');
   // Fetched: WebLLM loads the files onto the GPU, and the field says so.
   await expect(page.getByTestId('ask-meta')).toHaveText(/^Loading Qwen3 1\.7B/);

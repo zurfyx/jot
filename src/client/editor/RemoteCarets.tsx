@@ -1,12 +1,60 @@
 import { createDOMRange, createRectsFromDOMRange } from '@lexical/selection';
+import * as stylex from '@stylexjs/stylex';
 import type { YCursor } from '@lexical/y';
 import { type CSSProperties, type RefObject, useEffect, useState } from 'react';
 
+import { colors, motion } from '../theme/tokens.stylex';
 import { parsePeerUser } from './presence';
 import type { NoteSession } from './session';
 
 /** A name label shows while its caret moves, then shrinks to the bar. */
 const LABEL_MS = 3000;
+
+// Each collaborator's colour is `--peer`, set on their caret's wrapper.
+const styles = stylex.create({
+  layer: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+  },
+  selection: {
+    position: 'absolute',
+    backgroundColor: 'color-mix(in srgb, var(--peer) 22%, transparent)',
+    borderRadius: '2px',
+  },
+  caret: {
+    position: 'absolute',
+    width: '2px',
+    marginLeft: '-1px',
+    backgroundColor: 'var(--peer)',
+    borderRadius: '1px',
+    transitionProperty: 'top, left',
+    transitionDuration: '80ms',
+    transitionTimingFunction: 'linear',
+  },
+  name: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    paddingBlock: '3px',
+    paddingInline: '5px',
+    borderRadius: '4px 4px 4px 0',
+    backgroundColor: 'var(--peer)',
+    color: colors['--peer-ink'],
+    fontSize: '11px',
+    fontWeight: 600,
+    lineHeight: 1,
+    whiteSpace: 'nowrap',
+    transformOrigin: 'bottom left',
+    transitionProperty: 'opacity, transform',
+    transitionDuration: motion['--enter'],
+    transitionTimingFunction: motion['--ease'],
+  },
+  nameIdle: {
+    opacity: 0,
+    transform: 'scale(0.85)',
+  },
+});
 
 interface Box {
   top: number;
@@ -202,19 +250,21 @@ export function RemoteCarets({
   }, [awareness, binding, editor, session, surfaceRef]);
 
   return (
-    <div className="remote-layer" aria-hidden="true">
+    <div {...stylex.props(styles.layer)} aria-hidden="true">
       {carets.map((caret) => {
         const style = { '--peer': `var(--peer-${caret.color})` } as CSSProperties;
         return (
-          <div key={caret.clientID} className="remote" style={style} data-testid="remote-caret">
+          <div key={caret.clientID} style={style} data-testid="remote-caret">
             {caret.selection.map((rect, i) => (
-              <div key={i} className="remote-selection" style={rect} />
+              <div key={i} {...stylex.props(styles.selection)} style={rect} />
             ))}
             <div
-              className="remote-caret"
+              {...stylex.props(styles.caret)}
               style={{ top: caret.caret.top, left: caret.caret.left, height: caret.caret.height }}
             >
-              <span className={`remote-name${caret.labelled ? '' : ' is-idle'}`}>{caret.name}</span>
+              <span {...stylex.props(styles.name, !caret.labelled && styles.nameIdle)}>
+                {caret.name}
+              </span>
             </div>
           </div>
         );

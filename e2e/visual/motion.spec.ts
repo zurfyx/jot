@@ -280,6 +280,18 @@ test('the status pill changing its state', async ({ context }) => {
   await settle(page);
   await holdNewAnimations(page);
   await page.getByTestId('status-pill').click();
+  // Reconnect appears under the pointer, which still rests where it clicked:
+  // wait for the hover to reach it (Chromium applies it after the layout), so
+  // its colour transition has started, and is held, before the inventory.
+  const reconnect = chrome(page).getByRole('button', { name: 'Reconnect' });
+  await expect.poll(() => reconnect.evaluate((element) => element.matches(':hover'))).toBe(true);
+  await expect
+    .poll(() =>
+      reconnect.evaluate((element) =>
+        element.getAnimations().some((animation) => animation instanceof CSSTransition),
+      ),
+    )
+    .toBe(true);
   await expectMotion(page, 'motion-pill-change');
   await freeze(page, { fraction: 0.5 });
   await frame(chrome(page), 'motion-pill-change-half');

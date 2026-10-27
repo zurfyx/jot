@@ -1,10 +1,14 @@
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
 import { defineConfig } from 'vitest/config';
 
+import { stylex } from './scripts/vite-stylex.ts';
+
 export default defineConfig({
   test: {
     projects: [
       {
+        // Modules under test may hold StyleX styles (D28): compile them as the app does.
+        plugins: [stylex({ rootDir: import.meta.dirname })],
         test: {
           name: 'unit',
           include: [

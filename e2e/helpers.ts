@@ -1,4 +1,10 @@
-import { test as base, type BrowserContext, expect, type Page } from '@playwright/test';
+import {
+  test as base,
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+} from '@playwright/test';
 
 const SINGLE_PROCESS = !!process.env.JOT_E2E_SINGLE_PROCESS;
 
@@ -12,8 +18,19 @@ const SINGLE_PROCESS = !!process.env.JOT_E2E_SINGLE_PROCESS;
  * of its own (pages of one context share localStorage, so they are one
  * person).
  */
+type ContextOptions = Parameters<Browser['newContext']>[0];
+
+interface Fixtures {
+  otherContext: BrowserContext;
+  /**
+   * A fresh browser context with these options (and the project's), closed
+   * after the test: a browser of its own in single-process mode.
+   */
+  newContext: (options?: ContextOptions) => Promise<BrowserContext>;
+}
+
 export const test = SINGLE_PROCESS
-  ? base.extend<{ otherContext: BrowserContext }>({
+  ? base.extend<Fixtures>({
       context: async ({ playwright, contextOptions }, use) => {
         const browser = await playwright.chromium.launch({ args: ['--single-process'] });
         const context = await browser.newContext(contextOptions);
@@ -26,12 +43,30 @@ export const test = SINGLE_PROCESS
         await use(context);
         await browser.close();
       },
+      newContext: async ({ playwright, contextOptions }, use) => {
+        const browsers: Awaited<ReturnType<typeof playwright.chromium.launch>>[] = [];
+        await use(async (options) => {
+          const browser = await playwright.chromium.launch({ args: ['--single-process'] });
+          browsers.push(browser);
+          return browser.newContext({ ...contextOptions, ...options });
+        });
+        await Promise.all(browsers.map((browser) => browser.close()));
+      },
     })
-  : base.extend<{ otherContext: BrowserContext }>({
+  : base.extend<Fixtures>({
       otherContext: async ({ browser, contextOptions }, use) => {
         const context = await browser.newContext(contextOptions);
         await use(context);
         await context.close();
+      },
+      newContext: async ({ browser, contextOptions }, use) => {
+        const contexts: BrowserContext[] = [];
+        await use(async (options) => {
+          const context = await browser.newContext({ ...contextOptions, ...options });
+          contexts.push(context);
+          return context;
+        });
+        await Promise.all(contexts.map((context) => context.close()));
       },
     });
 

@@ -1,8 +1,12 @@
+import * as stylex from '@stylexjs/stylex';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 
+import { colors } from '../../theme/tokens.stylex';
 import { highlightsSupported } from '../blame/highlights';
+import { dockButton, panelButton } from '../dock.styles';
 import { Icon } from '../icons';
-import { usePopover } from '../menu';
+import { popoverProps, usePopover } from '../menu';
+import { meterStyles } from '../NoteInfo';
 import type { NoteSession } from '../session';
 import { useEditable, useSignal } from '../useSignal';
 import { aiModels } from './choice';
@@ -17,6 +21,129 @@ export const TARGET_HIGHLIGHT = 'jot-ai-target';
 const SUGGESTIONS = ['Make it a list', 'Shorter', 'Fix the spelling'];
 
 const MAX_INSTRUCTION = 500;
+
+const styles = stylex.create({
+  spark: {
+    color: colors['--ai'],
+  },
+  panel: {
+    width: 'min(420px, calc(100vw - 24px))',
+    padding: 8,
+  },
+  box: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    height: 46,
+    paddingBlock: 0,
+    paddingLeft: 12,
+    paddingRight: 6,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors['--ai'],
+    borderRadius: 12,
+    backgroundColor: colors['--bg'],
+  },
+  input: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '0%',
+    minWidth: 0,
+    height: '100%',
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    color: colors['--ink'],
+    fontFamily: 'inherit',
+    fontSize: 15,
+    fontWeight: 'inherit',
+    fontStyle: 'inherit',
+    fontStretch: 'inherit',
+    fontVariantNumeric: 'inherit',
+    lineHeight: 'inherit',
+    outlineStyle: 'none',
+    '::placeholder': {
+      color: colors['--muted'],
+    },
+  },
+  chips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  chip: {
+    paddingBlock: 5,
+    paddingInline: 10,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: {
+      default: colors['--rule'],
+      ':hover': colors['--rule-strong'],
+      ':focus-visible': colors['--rule-strong'],
+    },
+    borderRadius: 999,
+    color: colors['--body'],
+    fontSize: '12.5px',
+    lineHeight: 1.2,
+    backgroundColor: {
+      default: null,
+      ':hover': colors['--hover'],
+      ':focus-visible': colors['--hover'],
+    },
+    outlineStyle: { default: null, ':hover': 'none', ':focus-visible': 'none' },
+  },
+  meta: {
+    marginTop: 8,
+    marginInline: 4,
+    marginBottom: 2,
+    color: colors['--muted'],
+    fontSize: 12,
+    lineHeight: 1.4,
+  },
+  error: {
+    color: colors['--bad'],
+  },
+  meter: {
+    marginTop: 6,
+    marginInline: 4,
+    marginBottom: 2,
+  },
+  unavailable: {
+    marginBlock: 6,
+    marginInline: 8,
+    color: colors['--body'],
+    lineHeight: 1.45,
+  },
+  consent: {
+    marginTop: 8,
+    marginInline: 4,
+    marginBottom: 2,
+    color: colors['--body'],
+    fontSize: 13,
+    lineHeight: 1.45,
+  },
+  consentText: {
+    margin: 0,
+  },
+  consentNote: {
+    marginTop: 4,
+    marginInline: 0,
+    marginBottom: 0,
+    color: colors['--muted'],
+    fontSize: 12,
+  },
+  consentActions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  consentHint: {
+    color: colors['--muted'],
+    fontSize: 12,
+  },
+});
 
 function isBusy(phase: AiPhase): boolean {
   return phase.kind === 'downloading' || phase.kind === 'thinking';
@@ -53,10 +180,10 @@ export function AskAIDockItem({ session }: { session: NoteSession }) {
   }, [editable, open, busy, close]);
 
   return (
-    <span ref={slotRef} className="ask-slot">
+    <span ref={slotRef}>
       <button
         type="button"
-        className={`dock-button ask-button${busy ? ' is-busy' : ''}`}
+        {...stylex.props(dockButton.base, dockButton.ask, busy && dockButton.askBusy)}
         aria-haspopup="dialog"
         aria-expanded={open === 'ask'}
         title={editable ? 'Ask AI' : 'Ask AI (this note is read only)'}
@@ -75,8 +202,8 @@ export function AskAIDockItem({ session }: { session: NoteSession }) {
           toggle('ask', event.detail);
         }}
       >
-        <Icon name="spark" />
-        <span className="ask-label">{busy ? 'jot AI is writing…' : 'Ask AI…'}</span>
+        <Icon name="spark" xstyle={styles.spark} />
+        <span>{busy ? 'jot AI is writing…' : 'Ask AI…'}</span>
       </button>
       {open === 'ask' && <AskPanel ai={ai} />}
     </span>
@@ -122,8 +249,13 @@ function AskPanel({ ai }: { ai: AiState }) {
 
   if (unavailable) {
     return (
-      <div className="popover ask-panel" role="dialog" aria-label="Ask AI" data-testid="ask-panel">
-        <p className="ask-unavailable" data-testid="ask-unavailable">
+      <div
+        {...popoverProps(styles.panel)}
+        role="dialog"
+        aria-label="Ask AI"
+        data-testid="ask-panel"
+      >
+        <p {...stylex.props(styles.unavailable)} data-testid="ask-unavailable">
           {reason ?? MESSAGES.unavailable}
         </p>
       </div>
@@ -145,12 +277,12 @@ function AskPanel({ ai }: { ai: AiState }) {
   };
 
   return (
-    <div className="popover ask-panel" role="dialog" aria-label="Ask AI" data-testid="ask-panel">
-      <form className="ask-box" onSubmit={submit}>
-        <Icon name="spark" />
+    <div {...popoverProps(styles.panel)} role="dialog" aria-label="Ask AI" data-testid="ask-panel">
+      <form {...stylex.props(styles.box)} onSubmit={submit}>
+        <Icon name="spark" xstyle={styles.spark} />
         <input
           ref={inputRef}
-          className="ask-input"
+          {...stylex.props(styles.input)}
           type="text"
           value={text}
           maxLength={MAX_INSTRUCTION}
@@ -168,38 +300,43 @@ function AskPanel({ ai }: { ai: AiState }) {
         {busy ? (
           <button
             type="button"
-            className="ask-go"
+            {...stylex.props(panelButton.go)}
             data-testid="ask-stop"
             onClick={() => ai.cancel()}
           >
             Stop
           </button>
         ) : (
-          <button type="submit" className="ask-go" disabled={!canAsk} data-testid="ask-submit">
+          <button
+            type="submit"
+            {...stylex.props(panelButton.go)}
+            disabled={!canAsk}
+            data-testid="ask-submit"
+          >
             Ask
           </button>
         )}
       </form>
       {consent !== null && (
         <div
-          className="ask-consent"
+          {...stylex.props(styles.consent)}
           role="group"
           aria-labelledby="ask-consent-text"
           data-testid="ask-consent"
         >
-          <p id="ask-consent-text" className="ask-consent-text" aria-live="assertive">
+          <p id="ask-consent-text" {...stylex.props(styles.consentText)} aria-live="assertive">
             {consentLine(consent.model, consent.size)}
           </p>
           {device?.small === true && (
-            <p className="ask-consent-note" data-testid="ask-mobile-data">
+            <p {...stylex.props(styles.consentNote)} data-testid="ask-mobile-data">
               {MOBILE_DATA_WARNING}
             </p>
           )}
-          <div className="ask-consent-actions">
+          <div {...stylex.props(styles.consentActions)}>
             <button
               ref={downloadRef}
               type="button"
-              className="ask-go"
+              {...stylex.props(panelButton.go)}
               aria-describedby="ask-consent-text"
               data-testid="ask-download"
               onClick={() => void ai.ask(text, { consent: consent.ask })}
@@ -208,7 +345,7 @@ function AskPanel({ ai }: { ai: AiState }) {
             </button>
             <button
               type="button"
-              className="ask-quiet"
+              {...stylex.props(panelButton.quiet)}
               data-testid="ask-decline"
               onClick={() => {
                 ai.cancel();
@@ -217,17 +354,17 @@ function AskPanel({ ai }: { ai: AiState }) {
             >
               Not now
             </button>
-            <span className="ask-consent-hint">Or pick another in ⋯ → AI model</span>
+            <span {...stylex.props(styles.consentHint)}>Or pick another in ⋯ → AI model</span>
           </div>
         </div>
       )}
       {!busy && consent === null && (
-        <div className="ask-chips">
+        <div {...stylex.props(styles.chips)}>
           {SUGGESTIONS.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
-              className="ask-chip"
+              {...stylex.props(styles.chip)}
               onClick={() => {
                 setText(suggestion);
                 ai.dismiss();
@@ -241,7 +378,7 @@ function AskPanel({ ai }: { ai: AiState }) {
       )}
       {consent === null && (
         <p
-          className={`ask-meta${phase.kind === 'error' ? ' is-error' : ''}`}
+          {...stylex.props(styles.meta, phase.kind === 'error' && styles.error)}
           aria-live="polite"
           data-testid="ask-meta"
         >
@@ -249,8 +386,15 @@ function AskPanel({ ai }: { ai: AiState }) {
         </p>
       )}
       {phase.kind === 'downloading' && (
-        <div className="meter ask-meter" aria-hidden="true">
-          <span style={{ transform: `scaleX(${phase.progress ?? 0})` }} />
+        <div
+          {...stylex.props(meterStyles.track, styles.meter)}
+          aria-hidden="true"
+          data-testid="ask-meter"
+        >
+          <span
+            {...stylex.props(meterStyles.fill, meterStyles.ai)}
+            style={{ transform: `scaleX(${phase.progress ?? 0})` }}
+          />
         </div>
       )}
     </div>

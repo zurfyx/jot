@@ -1,6 +1,8 @@
+import * as stylex from '@stylexjs/stylex';
 import type { Awareness } from '@y/protocols/awareness';
 import { type CSSProperties, useEffect, useState } from 'react';
 
+import { colors, motion } from '../theme/tokens.stylex';
 import { parsePeerUser } from './presence';
 import type { NoteSession } from './session';
 
@@ -105,6 +107,42 @@ function initial(name: string): string {
 
 const MAX_AVATARS = 4;
 
+const fadeIn = stylex.keyframes({ from: { opacity: 0 } });
+
+// The people here: overlapping initials in their colours (`--peer`, set by peerStyle).
+const styles = stylex.create({
+  avatars: {
+    display: { default: 'inline-flex', '@media (max-width: 640px)': 'none' },
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    paddingLeft: '6px',
+    marginRight: '2px',
+  },
+  avatar: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '24px',
+    height: '24px',
+    marginLeft: '-6px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--peer)',
+    boxShadow: `0 0 0 2px ${colors['--bg']}`,
+    color: colors['--peer-ink'],
+    fontSize: '11px',
+    fontWeight: 650,
+    lineHeight: 1,
+    animationName: fadeIn,
+    animationDuration: motion['--enter'],
+    animationTimingFunction: motion['--ease'],
+  },
+  more: {
+    backgroundColor: colors['--hover'],
+    color: colors['--muted'],
+  },
+});
+
 /** The people here, top right: up to four circles, then "+N". */
 export function Avatars({ session }: { session: NoteSession }) {
   const people = usePeople(session);
@@ -116,7 +154,7 @@ export function Avatars({ session }: { session: NoteSession }) {
   const names = people.map((person) => (person.self ? `${person.name} (you)` : person.name));
   return (
     <span
-      className="note-avatars"
+      {...stylex.props(styles.avatars)}
       role="img"
       aria-label={`Here now: ${names.join(', ')}`}
       data-testid="avatars"
@@ -125,14 +163,19 @@ export function Avatars({ session }: { session: NoteSession }) {
       {shown.map((person) => (
         <span
           key={person.clientID}
-          className="note-avatar"
+          {...stylex.props(styles.avatar)}
           style={peerStyle(person.color)}
+          data-testid="avatar"
           title={person.self ? `${person.name} (you)` : person.name}
         >
           {initial(person.name)}
         </span>
       ))}
-      {more > 0 && <span className="note-avatar note-avatar-more">+{more}</span>}
+      {more > 0 && (
+        <span {...stylex.props(styles.avatar, styles.more)} data-testid="avatar">
+          +{more}
+        </span>
+      )}
     </span>
   );
 }

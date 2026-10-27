@@ -1,0 +1,159 @@
+/*
+ * The only global CSS (D28): what StyleX, which styles one element through
+ * its own class, can't express. Tokens are StyleX variables with literal
+ * names (theme/tokens.stylex.ts), so these rules read them too. @font-face
+ * comes from the @fontsource packages imported in main.tsx.
+ */
+
+/* `data-theme` is set on <html> before the first paint (index.html); the browser's own controls follow it. */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* The dark token values: they must apply before the first paint, before any script runs (index.html sets data-theme). */
+:root[data-theme='dark'] {
+  --bg: #121316;
+  --ink: #eceef1;
+  --body: #d5d8dd;
+  --muted: #a3a9b3;
+  --rule: #2a2d33;
+  --rule-strong: #3a3e46;
+  --hover: #1c1e22;
+  --accent: #9db4ff;
+  --select: #26324f;
+  --btn: #eceef1;
+  --btn-ink: #121316;
+  --ok: #5fd07d;
+  --warn: #e3b341;
+  --bad: #ff8a7a;
+  --shadow: rgb(0 0 0 / 0.5);
+  --shadow-soft: rgb(0 0 0 / 0.4);
+  --scrim: rgb(0 0 0 / 0.4);
+  --scrollbar: rgb(236 238 241 / 0.2);
+  --peer-ink: #121316;
+  --peer-0: #5fd07d;
+  --peer-1: #fb923c;
+  --peer-2: #b8a1fb;
+  --peer-3: #22d3ee;
+  --peer-4: #f472b6;
+  --peer-5: #facc15;
+  --peer-6: #7cb0fb;
+  --peer-7: #a3e635;
+  --ai: var(--peer-2);
+  --ai-tint: color-mix(in srgb, var(--peer-2) 18%, transparent);
+  --blame-faded: 28%;
+  --blame-faded-opacity: 0.32;
+  --landing-bg: #0d1020;
+}
+
+/* Element defaults (type selectors no class can stand for), in a layer every StyleX class beats. */
+@layer reset {
+  /* Every element and pseudo-element: no class can reach them all. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* The document element is no component's. */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Thin themed scrollbars on every scrolling element; each resolves the tokens of its own scope. */
+  * {
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: thin;
+  }
+
+  /* The document's selection colour. */
+  ::selection {
+    background: var(--select);
+    color: var(--ink);
+  }
+
+  /* The focus ring for every focusable element, including Lexical's and the browser's own. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Element default: links, which Lexical and the docs' prose render without a class. */
+  a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  /* Element defaults: no browser margins on headings, and balanced wrapping for headings and text. */
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  /* Element default: the browser's own monospace on code beats the inherited font, so code is Geist Mono. */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--mono);
+  }
+
+  /* Element default: buttons start bare. */
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+}
+
+/* <body> is outside React: no component can give it a class. */
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.6 var(--sans),
+    sans-serif;
+  font-optical-sizing: auto;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Reduced motion stops every animation and transition on every element and its ::before and ::after; view transitions have their own reduced-motion timing (landing/open.ts). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Ask AI's target tint: a CSS Custom Highlight (blame's are constructed in blame/highlights.ts). */
+::highlight(jot-ai-target) {
+  background-color: var(--ai-tint);
+}
+
+/* A table selection hides the native selection in every element inside, classless text spans included. */
+.jot-table-selection *::selection {
+  background: transparent;
+}

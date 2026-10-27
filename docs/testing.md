@@ -174,7 +174,7 @@ Durable Objects, over real WebSockets.
   view transition (held paused to read it) whose group starts at the card's width and
   ends at the page's, with both pictures filling it (cover, never pinned top-left) and the
   cross-fade over by a quarter (card picture at 0, page at 1), and
-  under reduced motion only a 150ms cross-fade with no card named; under reduced motion
+  under reduced motion only a 150ms cross-fade with no card named; and the switch to the note page, inside the transition, takes under 750 ms (it waits for the note page's root, marked from its first render, with a 1.5 s limit); under reduced motion
   nothing animates and the final states show; and it loads without the editor chunk;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
@@ -291,6 +291,33 @@ Durable Objects, over real WebSockets.
   shortcuts, pairs lines and rows on hover and with the caret (whichever moved last, so a
   pointer move after typing takes the lead back), and Tab leaves it.
 
+## Production build (`pnpm e2e`, project `production`)
+
+A setup step builds the app; the tests then serve `dist/client` to the browser themselves
+(`e2e/production/serve.ts`: no server, no Worker; a note's socket never connects). Their contexts come from the `newContext` fixture (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`. They
+check the StyleX output (D28):
+
+- every StyleX rule ships in exactly one stylesheet, the one the build chose for it, with no
+  marker left; the note page's and the docs' own rules are in their chunks, and few rules
+  are moved to the entry;
+- only the listed global rules (color-scheme, the dark tokens, `<body>`, reduced motion,
+  `::highlight()`, a table selection's `::selection`, the inspector's code) sit outside a
+  layer, since unlayered CSS beats every component style;
+- the entry stylesheet puts `reset` and every `stylex.p<priority>` layer in priority order
+  before its first rule, and every layer any stylesheet uses is in that order;
+- in dark and in light, the theme's background is on the page before the app's script runs
+  (the script is held back);
+- a lazy page's stylesheet that arrives 1.5 s late is in before the page's heading is;
+- the docs page and a note page compute the same styles for every element whether opened
+  directly or reached from the landing page or each other (their stylesheets load in a
+  different order).
+
+Plain unit tests (`scripts/vite-stylex.test.ts`) cover the plugin: a module imports its own
+rules, layered by priority; the order declaration; a priority it can't order fails loudly;
+where the build places rules (once, shared ones in the entry, a property's conditions kept
+in one order); and `src/client/theme/tokens.test.ts` keeps the dark token list in step with
+the light one.
+
 ## Visual (`pnpm e2e:docker`)
 
 Screenshots of every screen and state, compared with `toHaveScreenshot` against the
@@ -313,7 +340,8 @@ and dark, at 1440x900 and 390x844.
   focused author and the hover card; the example with its banner and both demo carets;
 - Ask AI: the panel, the download question on a phone, the download's progress, the
   unavailable message, and jot AI's caret after it writes;
-- every docs page, whole, the phone's page list and the inspector following a hovered row;
+- every docs page, whole, the phone's page list, the inspector following a hovered row, and
+  the inspector with a typed quote and code block (its own size at every width);
 - a read-only note and a malformed link (and an unknown path going home).
 
 `e2e/visual/motion.spec.ts` runs in the light 1440 project only. For the landing page's
