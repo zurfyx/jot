@@ -70,7 +70,8 @@ How expensive is this to get wrong?
 
 ## Tier 3: open, or deferred until something forces it
 
-| ID                                    | Decision                                                              | Status     | Forced by                   |
-| ------------------------------------- | --------------------------------------------------------------------- | ---------- | --------------------------- |
-| [D13](D13-offline-edits-in-memory.md) | Offline edits stay in memory until a Yjs 14 IndexedDB provider exists | `DEFERRED` | a Yjs 14 IndexedDB provider |
-| [D16](D16-abuse-limits.md)            | Abuse limits: rate limits and connection caps                         | `DEFERRED` | traffic or abuse            |
+| ID                                    | Decision                                                              | Status     | Forced by                       |
+| ------------------------------------- | --------------------------------------------------------------------- | ---------- | ------------------------------- |
+| [D13](D13-offline-edits-in-memory.md) | Offline edits stay in memory until a Yjs 14 IndexedDB provider exists | `DEFERRED` | a Yjs 14 IndexedDB provider     |
+| [D16](D16-abuse-limits.md)            | Abuse limits: rate limits and connection caps                         | `DEFERRED` | traffic or abuse                |
+| [D28](D28-stylex-and-astryx.md)       | Styles in StyleX, Astryx components where identical (an experiment)   | `PROPOSED` | Gerard's call on PR B's numbers |

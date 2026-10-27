@@ -48,7 +48,8 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
   `src/shared/`. Client and Worker import them from there; never duplicate them.
 - **Docs are rewritten, never amended** (D09): when reality changes, rewrite the doc to
   read as if written fresh today. Git is the changelog.
-- Design: tokens in `src/client/styles.css` only, no raw colours elsewhere; one accent;
+- Design: tokens in `src/client/theme/tokens.stylex.ts` (dark in `themes.ts`) only, no raw
+  colours elsewhere; styles in StyleX beside each component (D28); one accent;
   motion only on state change, off under reduced motion (D07, `docs/design.md`).
 - **Every feature ships with tests**: unit or workers tests in Vitest, a Playwright
   spec for anything a person does in the browser, and visual baselines (D27) for anything

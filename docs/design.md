@@ -8,10 +8,13 @@ and card-free sections below it (D07).
 
 ## Tokens
 
-Every colour is a CSS custom property in `src/client/styles.css`, defined twice: light and
-dark. `<html data-theme>` picks the set; an inline script in `index.html` sets it before
-the first paint from the stored choice or `prefers-color-scheme`. ⋯ → Dark theme and ⌘K →
-Toggle theme flip and remember it.
+Every colour is a StyleX variable in `src/client/theme/tokens.stylex.ts` (`defineVars`,
+light values), with its dark value in `theme/themes.ts` (`createTheme`). The variables keep
+their literal names (`--bg`), so the global stylesheet and Astryx's theme read them too.
+`<html data-theme>` picks the set: an inline script in `index.html` sets it before the
+first paint from the stored choice or `prefers-color-scheme`, and `theme.ts` puts the dark
+theme's class on `<html>` before React renders. ⋯ → Dark theme and ⌘K → Toggle theme flip
+and remember it.
 
 | Token                                    | Use                                                       |
 | ---------------------------------------- | --------------------------------------------------------- |
@@ -49,6 +52,24 @@ Safari without `scrollbar-color` they would turn macOS overlay scrollbars into p
 classic ones that take width from the column, so such a Safari keeps its native scrollbars.
 The landing page's code block is dark in both themes, so it points `--scrollbar` at the
 light `--code-scrollbar`.
+
+## Styling
+
+Styles are StyleX (D28): `stylex.create` beside each component, compiled at build time into
+one atomic stylesheet in the `product` cascade layer. Motion is `stylex.keyframes` and, for
+opening a note, `stylex.viewTransitionClass`. Lexical's theme (`editor/extensions.ts`) maps
+node types to StyleX class names. `src/client/globals.css` holds only what StyleX can't
+write, each rule with its reason: the element reset and browser defaults (in the `reset`
+layer, under StyleX), `<body>`, `::highlight()` for Ask AI, the reduced-motion switch, the
+caret's scroll padding while the dock is up and a table selection's `::selection`; the
+inspector keeps one rule in `docs/docs.css`.
+
+Astryx (`@astryxdesign/core`, compiled from source by `@astryxdesign/build`) supplies the
+components that render identically to jot's own: the avatars (`Avatar`, `AvatarGroup`), ⋯
+and Aa's format toggles (`IconButton`) and Ask AI's download bar (`ProgressBar`). Its theme
+(`theme/jotTheme.ts`, Neutral's tokens without its icons, pointed at jot's tokens, built to
+`theme/jot.css`) wraps the app; menus, popovers, tooltips, switches and labelled buttons stay
+jot's own, because Astryx's change behaviour (focus, dismissal, layering, motion).
 
 ## Type
 
