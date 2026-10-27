@@ -67,8 +67,7 @@ read` permissions, checkouts with `persist-credentials: false`. The `zizmor` CI 
 
 - After UI changes: run `pnpm e2e:docker e2e/visual` (docs/testing.md), then `pnpm dev`,
   open the landing page and a note in light and dark, at 1440px and 390px wide, and look
-  at them. Open the same note in two windows and type in
-  both.
+  at them. Open the same note in two windows and type in both.
 - After Worker changes: `pnpm test` (the workers project runs the Durable Object in
   workerd with real SQLite storage, eviction and alarms), then `pnpm e2e`.
 - Before a PR: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm e2e`

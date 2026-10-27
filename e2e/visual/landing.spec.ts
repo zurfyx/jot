@@ -1,13 +1,14 @@
 import type { Locator, Page } from '@playwright/test';
 
-import { FIXED_TIME, expect, rest, shoot, shootElement, test } from './setup';
+import { expect, rest, shoot, shootElement, test } from './setup';
 
 /**
- * The landing page. Its timers (the example card's typing, the two-windows
- * story) run on a paused clock, so each shot is taken at a chosen moment.
+ * The landing page, under reduced motion: its loops (the fan's sway, the
+ * example card's typing, the two windows' story) rest on their final states,
+ * the same in every run. motion.spec.ts covers the motion itself.
  */
 async function openLanding(page: Page) {
-  await page.clock.install({ time: FIXED_TIME });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await rest(page);
@@ -18,9 +19,8 @@ function hero(page: Page) {
 }
 
 /**
- * The fan's cards sway, so they are never "stable" for Playwright's hover:
- * move the mouse to a corner of the card instead, one the card in front
- * doesn't cover.
+ * The fan's cards overlap and lean: hover a corner of a card that the card in
+ * front doesn't cover.
  */
 async function hoverCard(page: Page, card: Locator, corner: 'left' | 'right' = 'left') {
   const box = await card.boundingBox();
@@ -35,10 +35,6 @@ test('the hero at rest', async ({ page }) => {
 });
 
 test('the hero fan, hovered and lifted', async ({ page }) => {
-  // The cards sway, so a card under a still pointer can slip out from under
-  // it between two shots. Reduced motion stops the sway and shows each hover's
-  // end state at once (the motion spec covers the lift itself).
-  await page.emulateMedia({ reducedMotion: 'reduce' });
   await openLanding(page);
   // Hovering the fan (the recipe card is not a link) spreads it.
   await hoverCard(page, page.getByText("Grandma's pancakes", { exact: true }));
@@ -54,7 +50,6 @@ test('the two windows, at the end of the story', async ({ page }) => {
   await openLanding(page);
   const section = page.getByRole('region', { name: 'Start a note. Share it. Type together.' });
   await section.scrollIntoViewIfNeeded();
-  await page.clock.runFor(5000);
   await expect(page.getByTestId('how-steps').getByRole('listitem').nth(2)).toHaveClass(/is-on/);
   await shootElement(section, 'landing-two-windows');
 });
@@ -90,10 +85,8 @@ test('the sections below: developers, questions, the ending and the footer', asy
   await shootElement(page.getByRole('contentinfo'), 'landing-footer');
 });
 
-test('the whole page, under reduced motion', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await rest(page);
+test('the whole page', async ({ page }) => {
+  await openLanding(page);
   await expect(page.getByTestId('example-card')).toContainText('Send the agenda');
-  await shoot(page, 'landing-reduced-motion', { fullPage: true });
+  await shoot(page, 'landing-whole', { fullPage: true });
 });

@@ -50,7 +50,9 @@ CSS could change how jot looks without failing anything.
 
 - An intended change to the look updates baselines in the same PR, through
   `pnpm e2e:docker --update-snapshots` (docs/testing.md). Reviewers see the PNGs change.
-- The `e2e` job runs the visual projects too, so it takes longer.
+- The visual projects run with the end-to-end tests, about three times as many tests, so
+  CI splits them into three shards (`e2e (1/3)` to `e2e (3/3)`) and the required `e2e`
+  check passes when all three do.
 - The suite reads Yjs's client-id draw (`random.uint53`, eight 32-bit words): a Yjs change
   there would make ids random again, and sizes could then differ by a byte. The suite
   would show it as a size diff.

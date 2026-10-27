@@ -1,8 +1,9 @@
 # Testing
 
 Four layers. Unit, Durable Object and end-to-end tests each run in CI as their own job
-(D10); the visual suite runs inside the end-to-end job, in the same Playwright image (D27).
-A fifth CI job, `zizmor`, audits the workflows themselves.
+(D10); the visual suite runs with the end-to-end tests, in the same Playwright image (D27),
+split across three shards that the `e2e` check waits for. A fifth CI job, `zizmor`, audits
+the workflows themselves.
 
 ## Unit (`pnpm test`, project `unit`)
 
@@ -295,9 +296,10 @@ Screenshots of every screen and state, compared with `toHaveScreenshot` against 
 baselines in `e2e/visual/baselines/<project>/` (D27). Four projects run every test: light
 and dark, at 1440x900 and 390x844.
 
-- the landing page: the hero at rest, the fan hovered and with each card lifted, the two
-  windows at the end of their story, each feature tab, the developers section, the
-  questions, the ending and the footer, and the whole page under reduced motion;
+- the landing page, under reduced motion so its loops rest on their final states: the hero,
+  the fan hovered and with each card lifted, the two windows at the end of their story,
+  each feature tab, the developers section, the questions, the ending, the footer and the
+  whole page;
 - a note: empty; with every block and format (headings, the three lists with a checked
   to-do, a quote, a code block, a table, a link, bold, italic, underline, strikethrough and
   inline code); the dock, Aa, Aa's link field, ⋯, Note info, the AI model setting, ⌘K,
