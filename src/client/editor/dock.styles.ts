@@ -3,16 +3,13 @@ import * as stylex from '@stylexjs/stylex';
 import { colors, motion } from '../theme/tokens.stylex';
 
 /*
- * The dock's buttons, jot's own rather than Astryx's Button and IconButton
- * (D28). Astryx's Button puts its label in a span with `overflow: hidden`,
- * which at jot's `line-height: 1` clips the glyphs' bottom row and, on an
- * opaque button, has Chromium draw the text with subpixel antialiasing
- * instead of grayscale; it leaves out `title` (jot keeps native tooltips);
- * and making it look like jot's means undoing its press scale, overlays,
- * release animation, disabled fade and position. IconButton (no label) can
- * be made pixel-identical that way, but brings Astryx's tooltip, layer and
- * i18n code with it: about 34 kB gzipped of JS on the note page and 6.6 kB
- * of CSS on every page, for two kinds of buttons.
+ * The dock's buttons. ⋯ and Aa's format toggles are Astryx IconButtons,
+ * restyled through `xstyle` (astryxButtonReset, then dockButton). The ones
+ * with a text label (Aa, Ask AI, the blame chip, the Ask AI panel's buttons)
+ * are jot's own, styled with the same dockButton: Astryx's Button puts its
+ * label in a span with `overflow: hidden`, which at jot's `line-height: 1`
+ * clips the glyphs' bottom row and, on an opaque button, has Chromium draw
+ * the text with subpixel antialiasing instead of grayscale.
  */
 
 const fadeIn = stylex.keyframes({
@@ -42,6 +39,11 @@ export const dockButton = stylex.create({
     transitionProperty: 'background-color, color',
     transitionDuration: '120ms',
     transitionTimingFunction: 'ease-out',
+  },
+  /** ⋯: an icon with the dock's padding, not a square. */
+  iconOnly: {
+    aspectRatio: 'auto',
+    flexShrink: 1,
   },
   /** "✦ Ask AI…": a field-like button (D21). */
   ask: {
@@ -82,6 +84,27 @@ export const dockButton = stylex.create({
   formatChecked: {
     backgroundColor: colors['--select'],
     color: colors['--accent'],
+  },
+});
+
+/**
+ * What Astryx's Button paints that jot's dock buttons don't, set back
+ * before `dockButton` (xstyle lands after Astryx's own styles): its press
+ * feedback (the scale, the hover and pressed overlays, the touch release
+ * animation), its disabled fade, its `relative` position (for a loading
+ * spinner jot never shows), its padding and its nowrap. Its focus ring is
+ * jot's already (the theme points it at --accent, 2px, offset 2px).
+ */
+export const astryxButtonReset = stylex.create({
+  reset: {
+    position: 'static',
+    maxWidth: 'none',
+    paddingBlock: 0,
+    whiteSpace: 'normal',
+    backgroundImage: 'none',
+    transform: 'none',
+    animationName: 'none',
+    opacity: 1,
   },
 });
 
@@ -130,3 +153,14 @@ export const panelButton = stylex.create({
     cursor: { default: null, ':disabled': 'default' },
   },
 });
+
+/**
+ * Astryx's Button leaves `title` out of its props (it offers its own
+ * Tooltip, which isn't the browser's: it shows sooner, looks different, and
+ * turns a disabled button into an aria-disabled one). jot keeps native
+ * tooltips, so the attribute reaches the <button> through the props the
+ * Button spreads on it.
+ */
+export function nativeTitle(title: string): Record<string, string> {
+  return { title };
+}

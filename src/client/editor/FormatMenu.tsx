@@ -1,3 +1,4 @@
+import { IconButton } from '@astryxdesign/core/IconButton';
 import { $createCodeNode, $isCodeNode } from '@lexical/code-core';
 import { $isLinkNode, $toggleLink } from '@lexical/link';
 import {
@@ -31,7 +32,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 
 import { normalizeLinkUrl } from '../../shared/links';
 import { colors, fonts } from '../theme/tokens.stylex';
-import { dockButton } from './dock.styles';
+import { astryxButtonReset, dockButton, nativeTitle } from './dock.styles';
 import { Icon, type IconName, isIconName } from './icons';
 import {
   keepEditorFocus,
@@ -353,37 +354,39 @@ export function FormatMenu({
           </div>
           <div {...stylex.props(styles.formatRow)} role="group" aria-label="Text">
             {FORMATS.map(({ format, label, icon }) => (
-              <button
+              <IconButton
                 key={format}
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={state.formats[format]}
-                aria-label={label}
-                title={label}
-                {...stylex.props(
+                label={label}
+                variant="ghost"
+                icon={<Icon name={icon} />}
+                xstyle={[
+                  astryxButtonReset.reset,
                   dockButton.base,
                   dockButton.format,
                   state.formats[format] && dockButton.formatChecked,
-                )}
+                ]}
+                role="menuitemcheckbox"
+                aria-checked={state.formats[format]}
+                {...nativeTitle(label)}
                 tabIndex={-1}
                 onClick={() => toggleFormat(format)}
-              >
-                <Icon name={icon} />
-              </button>
+              />
             ))}
-            <button
-              type="button"
-              role="menuitemcheckbox"
-              aria-checked={state.link}
-              aria-label={state.link ? 'Remove link' : 'Link'}
-              title={state.link ? 'Remove link' : 'Link'}
-              {...stylex.props(
+            <IconButton
+              label={state.link ? 'Remove link' : 'Link'}
+              variant="ghost"
+              icon={<Icon name="link" />}
+              xstyle={[
+                astryxButtonReset.reset,
                 dockButton.base,
                 dockButton.format,
                 state.link && dockButton.formatChecked,
-              )}
+              ]}
+              role="menuitemcheckbox"
+              aria-checked={state.link}
+              {...nativeTitle(state.link ? 'Remove link' : 'Link')}
               tabIndex={-1}
-              disabled={!state.link && state.collapsed}
+              isDisabled={!state.link && state.collapsed}
               onClick={() => {
                 if (state.link) {
                   act(() => $toggleLink(null));
@@ -391,9 +394,7 @@ export function FormatMenu({
                   setLinking(true);
                 }
               }}
-            >
-              <Icon name="link" />
-            </button>
+            />
           </div>
         </>
       )}

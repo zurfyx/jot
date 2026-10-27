@@ -1,10 +1,11 @@
+import { IconButton } from '@astryxdesign/core/IconButton';
 import * as stylex from '@stylexjs/stylex';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { currentTheme, setTheme, subscribeTheme } from '../theme';
 import { colors } from '../theme/tokens.stylex';
 import { copyNoteLink, startNewNote } from './actions';
-import { dockButton } from './dock.styles';
+import { astryxButtonReset, dockButton, nativeTitle } from './dock.styles';
 import { NOTE_FEATURES } from './features';
 import { formatBytes } from './format';
 import { FormatMenu } from './FormatMenu';
@@ -113,22 +114,21 @@ export function Dock({ session }: { session: NoteSession }) {
             ({ id, dockEnd: Item }) => Item && <Item key={id} session={session} />,
           )}
         </span>
-        <button
-          type="button"
-          {...stylex.props(dockButton.base)}
-          aria-label="More"
+        <IconButton
+          label="More"
+          variant="ghost"
+          icon={<Icon name="more" />}
+          xstyle={[astryxButtonReset.reset, dockButton.base, dockButton.iconOnly]}
           aria-haspopup="menu"
           aria-expanded={open !== null && open !== 'format'}
-          title="More"
+          {...nativeTitle('More')}
           onMouseDown={(event) => event.preventDefault()}
           onClick={(event) =>
             open !== null && open !== 'format' && open !== 'more'
               ? close()
               : toggle('more', event.detail)
           }
-        >
-          <Icon name="more" />
-        </button>
+        />
 
         {open === 'format' && editable && (
           <FormatMenu session={session} viaKeyboard={viaKeyboard} close={close} />
