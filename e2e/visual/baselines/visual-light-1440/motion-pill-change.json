@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "CSSAnimation",
+    "target": "[status-pill] > span",
+    "property": "opacity",
+    "duration": 180,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "none"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "[status-pill] > span",
+    "property": "background-color",
+    "duration": 180,
+    "delay": 0,
+    "easing": "cubic-bezier(0.2, 0, 0, 1)",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "[status-pill]",
+    "property": "background-color",
+    "duration": 150,
+    "delay": 0,
+    "easing": "ease-out",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "button \"Reconnect\"",
+    "property": "background-color",
+    "duration": 150,
+    "delay": 0,
+    "easing": "ease-out",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  }
+]

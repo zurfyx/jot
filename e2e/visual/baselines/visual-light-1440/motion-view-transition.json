@@ -1,0 +1,110 @@
+[
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-group(jot-note)",
+    "property": "backdropFilter height transform width",
+    "duration": 450,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-group(root)",
+    "property": "backdropFilter height transform width",
+    "duration": 250,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "ease",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-image-pair(jot-note)",
+    "property": "borderBottomLeftRadius borderBottomRightRadius borderTopLeftRadius borderTopRightRadius",
+    "duration": 450,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-new(jot-note)",
+    "property": "opacity",
+    "duration": 450,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-new(root)",
+    "property": "mixBlendMode",
+    "duration": 300,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-new(root)",
+    "property": "opacity",
+    "duration": 300,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-old(jot-note)",
+    "property": "opacity",
+    "duration": 450,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-old(root)",
+    "property": "mixBlendMode",
+    "duration": 300,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  },
+  {
+    "kind": "CSSAnimation",
+    "target": "::view-transition-old(root)",
+    "property": "opacity",
+    "duration": 300,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "both"
+  }
+]

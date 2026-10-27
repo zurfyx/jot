@@ -1,7 +1,8 @@
 # Testing
 
-Three layers, each run in CI as its own job (D10). A fourth CI job, `zizmor`, audits the
-workflows themselves.
+Four layers. Unit, Durable Object and end-to-end tests each run in CI as their own job
+(D10); the visual suite runs inside the end-to-end job, in the same Playwright image (D27).
+A fifth CI job, `zizmor`, audits the workflows themselves.
 
 ## Unit (`pnpm test`, project `unit`)
 
@@ -267,6 +268,20 @@ Durable Objects, over real WebSockets.
   compute a transparent track, a thin width and the theme's thumb; the landing page's dark
   code block has the light thumb;
 - a note in a newer layout opens read only with its banner.
+- the keyboard and pointer paths between features: Aa from the keyboard (the first item
+  takes the focus, arrows wrap past the last enabled item, Home goes back, Enter applies
+  and gives the caret to the note); Aa → Link focuses its field and Esc returns to the
+  note; Esc after ⋯ opened from the keyboard gives the focus to the note, while Esc after
+  a pointer-opened Aa closes it and leaves the note, as Esc does anywhere in it; a second
+  click closes a dock menu and opening one closes the other; Tab runs pill, Share, and Aa,
+  Ask AI, Blame (when on), ⋯; Note info and the AI model setting open from the keyboard,
+  take the focus, and close with Esc (arrow keys move the model choice, which holds); Ask
+  AI's field takes the focus, Tab reaches its suggestions, Esc returns to the note; ⌘K
+  filters, moves with the arrows, closes with Esc, a click on the scrim or ⌘K again (the
+  pointer picks the option under it); blame's legend from the keyboard; the status pill
+  and its Reconnect from the keyboard; ⋯ → Work offline from the keyboard keeps the menu
+  open; Share from the keyboard; the feature tabs' Home, End and wrapping arrows with one
+  tab in the tab order; the landing page's tab order; the docs' Pages button on a phone;
 - the docs: every page renders with no em dashes; code blocks have their file name, a
   GitHub link and a working Copy; the nav, Previous and Next and in-page links move without
   a reload; an unknown page goes to `/docs`; the landing page links open them; on a phone,
@@ -274,11 +289,67 @@ Durable Objects, over real WebSockets.
   shortcuts, pairs lines and rows on hover and with the caret (whichever moved last, so a
   pointer move after typing takes the lead back), and Tab leaves it.
 
+## Visual (`pnpm e2e:docker`)
+
+Screenshots of every screen and state, compared with `toHaveScreenshot` against the
+baselines in `e2e/visual/baselines/<project>/` (D27). Four projects run every test: light
+and dark, at 1440x900 and 390x844.
+
+- the landing page: the hero at rest, the fan hovered and with each card lifted, the two
+  windows at the end of their story, each feature tab, the developers section, the
+  questions, the ending and the footer, and the whole page under reduced motion;
+- a note: empty; with every block and format (headings, the three lists with a checked
+  to-do, a quote, a code block, a table, a link, bold, italic, underline, strikethrough and
+  inline code); the dock, Aa, Aa's link field, ⋯, Note info, the AI model setting, ⌘K,
+  Share after a copy, and focus rings from the keyboard;
+- the status pill in each state, with the top bar: Synced, Connecting, Offline with edits
+  waiting, Syncing, Back online, near the cap (amber, with its notice) and Full (red, with
+  the full-note banner);
+- two people: each one's view of the other's caret and selection; blame on, its legend, a
+  focused author and the hover card; the example with its banner and both demo carets;
+- Ask AI: the panel, the download question on a phone, the download's progress, the
+  unavailable message, and jot AI's caret after it writes;
+- every docs page, whole, the phone's page list and the inspector following a hovered row;
+- a read-only note and a malformed link (and an unknown path going home).
+
+`e2e/visual/motion.spec.ts` runs in the light 1440 project only. For the landing page's
+load, the fan's lift, a dock menu, the status pill changing, Share confirming, blame's
+legend and the view transition into a note, it records every animation and transition
+started (target, property, duration, delay, easing, iterations, fill; no names) as a JSON
+baseline, and screenshots frames with every animation paused at the same moment. Under
+reduced motion the note page's triggers start nothing.
+
+What would vary is fixed rather than masked (`e2e/visual/setup.ts`): the clock, each
+person's name and colour, and the magnitude and order of Yjs client ids; shots wait for
+the fonts and for the status pill's size to settle. A still shot fails past a colour
+threshold of 0.1 or 40 differing pixels; a mid-motion frame past 0.3% of its pixels.
+
+### Running it and updating baselines
+
+The baselines are the Playwright image's pixels, so run the suite in that image:
+`pnpm e2e:docker` runs `playwright test` inside the same image as CI (pinned in
+`.github/workflows/ci.yml`; emulated x86-64 on Apple silicon), with its own
+`node_modules` in a Docker volume. Arguments go to Playwright:
+
+```bash
+pnpm e2e:docker e2e/visual                      # the visual suite only
+pnpm e2e:docker e2e/visual/note.spec.ts --project=visual-dark-390
+pnpm e2e:docker e2e/visual --update-snapshots   # rewrite baselines on purpose
+```
+
+Update baselines only for an intended change to the look or motion, in the same PR as the
+change, and look at every PNG and JSON that changed before committing. A failing run
+leaves `<name>-actual.png`, `<name>-expected.png` and `<name>-diff.png` in `test-results/`
+(CI uploads them as `playwright-traces`). Outside the image, `pnpm e2e` leaves the visual
+projects out (CI, or `JOT_E2E_VISUAL=1`, turns them on).
+
+## Traces and ports
+
 Traces are kept on failure and uploaded by CI. In sandboxed macOS shells that can't run
 Chromium's multi-process mode, set `JOT_E2E_SINGLE_PROCESS=1`. `JOT_E2E_PORT` moves the
 test server off 5174, so two checkouts on one machine don't share a server.
 
 ## By hand
 
-After UI changes, open the landing page and a note in light and dark at 1440px and 390px,
-and type into one note from two windows.
+After UI changes, run the visual suite, open the landing page and a note in light and dark
+at 1440px and 390px, and type into one note from two windows.

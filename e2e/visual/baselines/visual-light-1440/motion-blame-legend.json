@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "CSSAnimation",
+    "target": "[blame-legend]",
+    "property": "opacity transform",
+    "duration": 220,
+    "delay": 0,
+    "easing": "linear",
+    "keyframeEasing": "cubic-bezier(0.2, 0, 0, 1)",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "none"
+  }
+]

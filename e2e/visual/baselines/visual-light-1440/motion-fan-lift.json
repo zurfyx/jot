@@ -1,0 +1,62 @@
+[
+  {
+    "kind": "CSSTransition",
+    "target": "[example-card]",
+    "property": "transform",
+    "duration": 800,
+    "delay": 0,
+    "easing": "cubic-bezier(0.22, 0.8, 0.2, 1)",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "[new-note-card] > span",
+    "property": "opacity",
+    "duration": 250,
+    "delay": 0,
+    "easing": "ease-out",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "[new-note-card] > span",
+    "property": "transform",
+    "duration": 250,
+    "delay": 0,
+    "easing": "ease-out",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "[new-note-card]",
+    "property": "transform",
+    "duration": 800,
+    "delay": 0,
+    "easing": "cubic-bezier(0.22, 0.8, 0.2, 1)",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  },
+  {
+    "kind": "CSSTransition",
+    "target": "body > div > div > div > main > section > div > div > div",
+    "property": "transform",
+    "duration": 800,
+    "delay": 0,
+    "easing": "cubic-bezier(0.22, 0.8, 0.2, 1)",
+    "keyframeEasing": "linear",
+    "iterations": 1,
+    "direction": "normal",
+    "fill": "backwards"
+  }
+]
