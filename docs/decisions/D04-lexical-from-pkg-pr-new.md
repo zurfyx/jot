@@ -12,7 +12,7 @@ editor state.
 
 - Every `lexical` and `@lexical/*` dependency comes from **one commit**, by its full-sha
   URL: `https://pkg.pr.new/facebook/lexical/<package>@<sha>`. Currently PR #9439's head,
-  `b3867b0b8f54cdd68e0e524c9a4925fd167cb8b4`, which carries the whole `@lexical/y` stack
+  `1eff767641553b12126c484696555be4ce094dae`, which carries the whole `@lexical/y` stack
   including the headless API.
 - Full shas, not 7-character ones: the published packages name their own Lexical
   dependencies by full-sha URL, so matching them keeps one resolution per package.
