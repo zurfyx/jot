@@ -48,8 +48,9 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
   `src/shared/`. Client and Worker import them from there; never duplicate them.
 - **Docs are rewritten, never amended** (D09): when reality changes, rewrite the doc to
   read as if written fresh today. Git is the changelog.
-- Design: tokens are StyleX `defineVars` in `src/client/theme/tokens.stylex.ts` (dark and
-  scoped sets with `createTheme` in `themes.ts`), no raw colours elsewhere; styles are
+- Design: tokens are StyleX `defineVars` in `src/client/theme/tokens.stylex.ts` (their dark
+  values in `globals.css`, scoped sets with `createTheme` in `themes.ts`), no raw colours
+  elsewhere; styles are
   `stylex.create` beside each component, and `src/client/globals.css` takes only what StyleX
   can't express, each rule with its reason (D28); one accent; motion only on state change,
   off under reduced motion (D07, `docs/design.md`).

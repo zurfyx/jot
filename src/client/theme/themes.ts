@@ -3,44 +3,10 @@ import * as stylex from '@stylexjs/stylex';
 import { colors, docs, landing } from './tokens.stylex';
 
 /*
- * The dark token sets (D07, D28). `applyTheme` (../theme.ts) puts `dark` on
- * <html>; the landing page and the docs add their own scopes on their roots.
+ * The scoped token sets (D07, D28): the landing page's and the docs' roots
+ * put these on themselves. The app's own dark set is in globals.css, where it
+ * applies before the first paint.
  */
-
-export const dark = stylex.createTheme(colors, {
-  '--bg': '#121316',
-  '--ink': '#eceef1',
-  '--body': '#d5d8dd',
-  '--muted': '#a3a9b3',
-  '--rule': '#2a2d33',
-  '--rule-strong': '#3a3e46',
-  '--hover': '#1c1e22',
-  '--accent': '#9db4ff',
-  '--select': '#26324f',
-  '--btn': '#eceef1',
-  '--btn-ink': '#121316',
-  '--ok': '#5fd07d',
-  '--warn': '#e3b341',
-  '--bad': '#ff8a7a',
-  '--shadow': 'rgb(0 0 0 / 0.5)',
-  '--shadow-soft': 'rgb(0 0 0 / 0.4)',
-  '--scrim': 'rgb(0 0 0 / 0.4)',
-  '--scrollbar': 'rgb(236 238 241 / 0.2)',
-  '--peer-ink': '#121316',
-  '--peer-0': '#5fd07d',
-  '--peer-1': '#fb923c',
-  '--peer-2': '#b8a1fb',
-  '--peer-3': '#22d3ee',
-  '--peer-4': '#f472b6',
-  '--peer-5': '#facc15',
-  '--peer-6': '#7cb0fb',
-  '--peer-7': '#a3e635',
-  '--ai': 'var(--peer-2)',
-  '--ai-tint': 'color-mix(in srgb, var(--peer-2) 18%, transparent)',
-  '--blame-faded': '28%',
-  '--blame-faded-opacity': '0.32',
-  '--landing-bg': '#0d1020',
-});
 
 /** The landing page's scope in light: its background is --landing-bg. */
 export const landingLight = stylex.createTheme(colors, {

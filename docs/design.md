@@ -9,12 +9,11 @@ and card-free sections below it (D07).
 ## Tokens
 
 Every colour is a StyleX variable in `src/client/theme/tokens.stylex.ts` (`defineVars`,
-light values), with its dark value in `theme/themes.ts` (`createTheme`). The variables keep
-their literal names (`--bg`), so the global stylesheet reads them too.
-`<html data-theme>` picks the set: an inline script in `index.html` sets it before the
-first paint from the stored choice or `prefers-color-scheme`, and `theme.ts` puts the dark
-theme's class on `<html>` before React renders. ⋯ → Dark theme and ⌘K → Toggle theme flip
-and remember it.
+light values), with its dark value in `globals.css` under `:root[data-theme='dark']`. The
+variables keep their literal names (`--bg`), so plain CSS reads them too. `<html data-theme>`
+picks the set: an inline script in `index.html` sets it before the first paint from the
+stored choice or `prefers-color-scheme`, so dark mode never flashes white. ⋯ → Dark theme and
+⌘K → Toggle theme flip and remember it.
 
 | Token                                    | Use                                                       |
 | ---------------------------------------- | --------------------------------------------------------- |
@@ -56,16 +55,16 @@ light `--code-scrollbar`.
 ## Styling
 
 Styles are StyleX (D28): `stylex.create` beside each component, compiled at build time
-(`scripts/vite-stylex.ts`) into atomic classes. Each module's rules travel with it, so a
-page's CSS is in its own chunk: the landing page loads only its own styles, and the note
-page's and the docs' arrive with their lazy chunks. Motion is `stylex.keyframes` and, for
-opening a note, `stylex.viewTransitionClass`; hover, focus and sibling rules use
-`stylex.when.*` with markers; Lexical's theme (`editor/extensions.ts`) maps node types to
-StyleX classes. `src/client/globals.css` holds only what StyleX can't write, each rule with a
-one-line reason: `color-scheme`, the element reset and browser defaults (in the `reset` layer,
-under every StyleX class), Geist Mono for code, `<body>`, the reduced-motion switch,
-`::highlight()` for Ask AI, the caret's scroll padding while the dock is up and a table
-selection's `::selection`; the inspector keeps one rule in `docs/docs.css`.
+(`scripts/vite-stylex.ts`) into atomic classes. Each module's rules travel with its chunk,
+so the landing page loads only its own styles and the note page's and the docs' arrive with
+their lazy chunks; every StyleX priority is a cascade layer declared up front, so the order
+stylesheets load in doesn't change the result. Motion is `stylex.keyframes` and, for opening
+a note, `stylex.viewTransitionClass`; hover, focus and sibling rules use `stylex.when.*` with
+markers; Lexical's theme (`editor/extensions.ts`) maps node types to StyleX classes.
+`src/client/globals.css` holds only what StyleX can't write, each rule with a one-line
+reason: `color-scheme` and the dark token values, the element defaults (in the `reset` layer,
+under every StyleX class), `<body>`, the reduced-motion switch, `::highlight()` for Ask AI
+and a table selection's `::selection`; the inspector keeps one rule in `docs/docs.css`.
 
 ## Type
 

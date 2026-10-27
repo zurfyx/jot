@@ -19,6 +19,7 @@ import {
 import * as stylex from '@stylexjs/stylex';
 import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { editorScope } from '../editor/editor.stylex';
 import { editorTheme, jotEditorExtension, TitleExtension } from '../editor/extensions';
 import { colors, docs, fonts } from '../theme/tokens.stylex';
 import { frame } from './inspectorFrame';
@@ -391,19 +392,11 @@ const styles = stylex.create({
     backgroundColor: docs['--docs-hl'],
     pointerEvents: 'none',
   },
+  // The editor's box; its type is the theme's root (rootStyles below).
   editor: {
     position: 'relative',
     zIndex: 1,
-    flexGrow: 1,
-    flexShrink: 0,
-    flexBasis: 'auto',
     minHeight: 200,
-    outline: 'none',
-    color: colors['--ink'],
-    fontSize: 15,
-    lineHeight: 1.55,
-    caretColor: colors['--accent'],
-    overflowWrap: 'break-word',
   },
   tree: {
     marginTop: 0,
@@ -526,7 +519,27 @@ const cls = (...styles: stylex.StyleXStyles[]) => stylex.props(...styles).classN
 
 const h3 = cls(blocks.heading, blocks.h3);
 
+/*
+ * The inspector's root replaces the note's (theme.root): the note's type at a
+ * smaller size, with no phone size of its own, so 15px holds at any width.
+ */
+const rootStyles = stylex.create({
+  root: {
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    outlineStyle: 'none',
+    color: colors['--ink'],
+    fontSize: 15,
+    lineHeight: 1.55,
+    caretColor: colors['--accent'],
+    overflowWrap: 'break-word',
+  },
+});
+
 const inspectorTheme: EditorThemeClasses = {
+  // `jot-editor` and the editor marker, as the note's root carries them.
+  root: `jot-editor ${stylex.props(editorScope, rootStyles.root).className ?? ''}`,
   paragraph: cls(blocks.margin, blocks.first, blocks.p),
   quote: cls(blocks.margin, blocks.quote, blocks.first),
   code: cls(blocks.code),

@@ -12,6 +12,9 @@ export const EXAMPLE_PATH = '/new?example';
 /** The shared view-transition name: a card on the landing page, then the note page. */
 export const NOTE_TRANSITION_NAME = 'jot-note';
 
+/** The note page's root carries this from its first render (editor/NotePage.tsx). */
+export const NOTE_PAGE_ROOT = '[data-note-page-root]';
+
 const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
 
 const sheetSquare = stylex.keyframes({
@@ -173,8 +176,9 @@ async function transitionTo(
 
   const transition = document.startViewTransition(async () => {
     flushSync(go);
-    // The note page's (loaded) chunk mounts a moment later.
-    await until(() => root?.querySelector('.note-page') != null, 1500);
+    // The note page's (loaded) chunk mounts a moment later, with this marker
+    // on its root from its first render.
+    await until(() => root?.querySelector(NOTE_PAGE_ROOT) != null, 1500);
     if (shared) {
       root.style.viewTransitionName = NOTE_TRANSITION_NAME;
       root.style.setProperty('view-transition-class', noteTransition);

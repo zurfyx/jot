@@ -1,6 +1,6 @@
 import * as stylex from '@stylexjs/stylex';
 import { $getRoot, $isElementNode } from 'lexical';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { copyNoteLink, startNewNote } from './actions';
 import { registerClickToFocus } from './clickToFocus';
@@ -20,6 +20,31 @@ import { colors, motion } from '../theme/tokens.stylex';
 const fadeIn = stylex.keyframes({ from: { opacity: 0 } });
 
 const PHONE = '@media (max-width: 640px)';
+
+/*
+ * On <html> while a note shows the dock: typing at the bottom keeps the caret
+ * line above the dock, because Lexical's scroll-into-view stops short of the
+ * root's scroll-padding. The dock sits max(18px, safe area) from the bottom
+ * and is 46px tall; 30px more clears it.
+ */
+const root = stylex.create({
+  withDock: {
+    scrollPaddingBottom: 'calc(max(18px, env(safe-area-inset-bottom)) + 76px)',
+  },
+});
+
+/** Puts the note page's root style on <html>, beside its other classes, while `on`. */
+function useRootStyle(on: boolean): void {
+  useLayoutEffect(() => {
+    if (!on) {
+      return;
+    }
+    const classes = (stylex.props(root.withDock).className ?? '').split(' ').filter(Boolean);
+    const html = document.documentElement;
+    html.classList.add(...classes);
+    return () => html.classList.remove(...classes);
+  }, [on]);
+}
 
 const styles = stylex.create({
   /*
@@ -154,6 +179,8 @@ export default function NotePage({ id }: { id: string }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [session]);
 
+  useRootStyle(session !== null);
+
   // A click on the blank page puts the caret in the note.
   useEffect(() => {
     const page = pageRef.current;
@@ -164,12 +191,9 @@ export default function NotePage({ id }: { id: string }) {
   }, [session]);
 
   return (
-    // data-note-page: the root keeps the caret line clear of the dock (globals.css).
-    <div
-      {...stylex.props(styles.page)}
-      ref={pageRef}
-      data-note-page={session === null ? undefined : ''}
-    >
+    // data-note-page-root: present from the first render, before a session
+    // exists; opening a note from the landing page waits for it (landing/open.ts).
+    <div {...stylex.props(styles.page)} ref={pageRef} data-note-page-root="">
       <header {...stylex.props(styles.chrome)} data-own-press="">
         {session && (
           <>

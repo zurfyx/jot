@@ -12,6 +12,8 @@ const ORIGIN = `http://127.0.0.1:${PORT}`;
 // fonts and antialiasing differ, so a plain `pnpm e2e` on a laptop leaves it out.
 const VISUAL = !!process.env.CI || !!process.env.JOT_E2E_VISUAL;
 const VISUAL_DIR = /e2e\/visual\//;
+// The production build, served from dist/client by the tests themselves (D28).
+const PRODUCTION_DIR = /e2e\/production\//;
 
 const visualProjects = (['light', 'dark'] as const).flatMap((colorScheme) =>
   [
@@ -57,8 +59,15 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: VISUAL_DIR,
+      testIgnore: [VISUAL_DIR, PRODUCTION_DIR],
       // JOT_E2E_SINGLE_PROCESS (sandboxed shells): see e2e/helpers.ts.
+      use: { ...devices['Desktop Chrome'] },
+    },
+    { name: 'production-build', testMatch: /e2e\/production\/build\.setup\.ts$/ },
+    {
+      name: 'production',
+      testMatch: /e2e\/production\/.*\.spec\.ts$/,
+      dependencies: ['production-build'],
       use: { ...devices['Desktop Chrome'] },
     },
     ...(VISUAL ? visualProjects : []),

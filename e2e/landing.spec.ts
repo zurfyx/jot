@@ -270,6 +270,50 @@ for (const width of [1440, 390]) {
   });
 }
 
+for (const trigger of ['new-note-card', 'start-button'] as const) {
+  test(`opening from the ${trigger} hands over to the note page at once`, async ({ page }) => {
+    // Times the view transition's update (the switch to the note page): the
+    // card waits for the note page's root before the new picture is taken,
+    // with a 1.5 s limit that freezes rendering while it waits.
+    await page.addInitScript(() => {
+      const start = document.startViewTransition.bind(document);
+      document.startViewTransition = (update) => {
+        const began = performance.now();
+        const transition = start(update);
+        void transition.updateCallbackDone.then(
+          () => {
+            (window as unknown as { __handoff: number }).__handoff = performance.now() - began;
+          },
+          () => undefined,
+        );
+        return transition;
+      };
+    });
+    await page.goto('/');
+    // Hovering the fan fetches the editor chunk (as a person's pointer does), so
+    // only the handoff is timed, not the download.
+    const loaded = page.waitForResponse(/NotePage/);
+    await page.getByTestId('example-card').hover({ force: true });
+    await loaded;
+    if (trigger === 'start-button') {
+      await page
+        .getByRole('button', { name: /^Start a new note/ })
+        .first()
+        .click();
+    } else {
+      await page
+        .getByTestId(trigger)
+        .click({ position: await visiblePoint(page, trigger), force: true });
+    }
+    await expect(page.locator('[data-note-page-root]')).toBeAttached();
+    const handoff = await page
+      .waitForFunction(() => (window as unknown as { __handoff?: number }).__handoff)
+      .then((value) => value.jsonValue());
+    expect(handoff).toBeLessThan(750);
+    await expectNotePage(page);
+  });
+}
+
 /**
  * Holds every view transition at its start: once it is ready, its animations
  * are paused, so a test can read the pseudo-elements, then let it finish.
