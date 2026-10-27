@@ -35,27 +35,74 @@
   color-scheme: dark;
 }
 
-/* The element reset: every element, and the document itself. */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
 /*
- * Scrollbars, as in Notion: no track, a thin thumb in the theme's colour.
- * Every element resolves the tokens itself, so a scope that re-points them
- * (the landing page's code block) gets its own thumb. No ::-webkit-scrollbar
- * rules: in a Safari without scrollbar-color they would turn macOS overlay
- * scrollbars into permanent classic ones that take width from the column.
+ * The element reset and the browser-default element styles, in the reset
+ * layer: StyleX's rules (in the product layer) must beat them, as the old
+ * class rules beat element rules by specificity. Unlayered CSS would win
+ * over every layer.
  */
-* {
-  scrollbar-color: var(--scrollbar) transparent;
-  scrollbar-width: thin;
+@layer reset {
+  /* The element reset: every element, and the document itself. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /*
+   * Scrollbars, as in Notion: no track, a thin thumb in the theme's colour.
+   * Every element resolves the tokens itself, so a scope that re-points them
+   * (the landing page's code block) gets its own thumb. No ::-webkit-scrollbar
+   * rules: in a Safari without scrollbar-color they would turn macOS overlay
+   * scrollbars into permanent classic ones that take width from the column.
+   */
+  * {
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: thin;
+  }
+
+  /* Document-wide pseudo-elements and the browser's default element styles. */
+  ::selection {
+    background: var(--select);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
 }
 
 /* <body> is outside React: no component can give it a class. */
@@ -71,45 +118,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-/* Document-wide pseudo-elements and the browser's default element styles. */
-::selection {
-  background: var(--select);
-  color: var(--ink);
-}
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-a {
-  color: var(--accent);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
-}
-
-h1,
-h2,
-h3 {
-  margin: 0;
-  text-wrap: balance;
-}
-
-p,
-li {
-  text-wrap: pretty;
-}
-
-button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
 }
 
 /*
