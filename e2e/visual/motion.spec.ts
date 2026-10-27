@@ -172,6 +172,14 @@ async function expectMotion(page: Page, name: string): Promise<void> {
 
 test('the landing page as it loads', async ({ page }) => {
   await page.clock.install();
+  // Every animation starts paused, so a slow machine reads the same moment:
+  // otherwise the feature tabs' 3-second progress line can end and move on
+  // to the next tab before the inventory is taken. `freeze` seeks them.
+  await page.addInitScript(() => {
+    const style = document.createElement('style');
+    style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
+    document.documentElement.append(style);
+  });
   await page.goto('/');
   await settle(page);
   await rest(page);

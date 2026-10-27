@@ -89,12 +89,28 @@ async function steadyPill(page: Page): Promise<void> {
   }
 }
 
+const warmed = new WeakSet<Page>();
+
+/**
+ * Text in a system font (the browser's `monospace`, which <code> gets from
+ * the user-agent stylesheet) can resolve to one fallback font in the
+ * Playwright image and switch to another at the page's first capture,
+ * changing line heights. One throwaway capture per page settles it.
+ */
+async function resolveSystemFonts(page: Page): Promise<void> {
+  if (!warmed.has(page)) {
+    warmed.add(page);
+    await page.screenshot({ fullPage: true });
+  }
+}
+
 /**
  * Waits for the web fonts, a steady status pill and two frames, so text is
  * laid out in Geist and nothing is about to change.
  */
 export async function settle(page: Page): Promise<void> {
   await steadyPill(page);
+  await resolveSystemFonts(page);
   await page.evaluate(async () => {
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));

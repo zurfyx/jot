@@ -323,7 +323,9 @@ reduced motion the note page's triggers start nothing.
 
 What would vary is fixed rather than masked (`e2e/visual/setup.ts`): the clock, each
 person's name and colour, and the magnitude and order of Yjs client ids; shots wait for
-the fonts and for the status pill's size to settle. A still shot fails past a colour
+the fonts and for the status pill's size to settle, and each page is captured once before
+its first comparison, because text in a system font (the `monospace` that `<code>` gets
+from the browser) can switch fallback fonts at the first capture. A still shot fails past a colour
 threshold of 0.1 or 40 differing pixels; a mid-motion frame past 0.3% of its pixels.
 
 ### Running it and updating baselines
