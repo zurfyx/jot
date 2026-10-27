@@ -247,6 +247,9 @@ function BlameLayer({
       const people = snapshot.people;
       let lastName = -Infinity;
       const next: Bar[] = [];
+      // Cells side by side start at one height: Gerard, Ana, Gerard in a table
+      // row are three groups, two of them Gerard's at the same top.
+      const seen = new Map<string, number>();
       for (const group of marginGroups(plan.lines, surface.getBoundingClientRect())) {
         const person = people.get(group.author);
         if (person === undefined) {
@@ -256,7 +259,10 @@ function BlameLayer({
         if (named) {
           lastName = group.top;
         }
-        next.push({ key: `${group.author}:${Math.round(group.top)}`, person, ...group, named });
+        const base = `${group.author}:${Math.round(group.top)}`;
+        const repeat = seen.get(base) ?? 0;
+        seen.set(base, repeat + 1);
+        next.push({ key: repeat === 0 ? base : `${base}:${repeat}`, person, ...group, named });
       }
       setBars(next);
     };
