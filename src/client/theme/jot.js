@@ -6,8 +6,6 @@
  * Core: @astryxdesign/core@0.7.4
  */
 
-import { neutralTheme } from '@astryxdesign/theme-neutral';
-const themeIcons = neutralTheme["icons"];
 /**
  * jot theme — built by `pnpm exec astryx theme build`
  * Import the CSS file alongside this module:
@@ -580,7 +578,5 @@ export const jotTheme = {
       "ratio": 0.75
     }
   },
-  icons: themeIcons,
-};
 
-export { themeIcons };
+};

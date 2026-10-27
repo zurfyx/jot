@@ -10,7 +10,10 @@ import { neutralTheme } from '@astryxdesign/theme-neutral';
  */
 export const jotTheme = defineTheme({
   name: 'jot',
-  extends: neutralTheme,
+  // Neutral's tokens and component styles, without its icon set: jot draws
+  // its own icons, and Astryx's built-in fallbacks cover its components, so
+  // the app never loads Neutral (or lucide-react) at runtime.
+  extends: { ...neutralTheme, icons: {} },
   typography: {
     body: {
       family: 'Geist Variable',

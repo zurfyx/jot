@@ -8,6 +8,4 @@
 
 /// <reference path="./jot.variants.d.ts" />
 import type { DefinedTheme } from '@astryxdesign/core/theme';
-import type { IconRegistry } from '@astryxdesign/core/Icon';
-export declare const themeIcons: IconRegistry;
 export declare const jotTheme: DefinedTheme;
