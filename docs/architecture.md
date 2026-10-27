@@ -331,6 +331,9 @@ response noindex (D10, D24). GitHub Actions runs CI only: the
 required checks gate merges, and no Cloudflare credential lives in GitHub.
 
 The WebLLM worker builds as an ES module worker (`worker.format: 'es'`) into one asset of
-about 6 MB (2.1 MB compressed) that only the worker loads. The models themselves are not
+about 6 MB (2.1 MB compressed), `assets/webllm-worker-<hash>.js`, that only the worker
+loads; `public/_headers` serves it with `Referrer-Policy: no-referrer`, so its requests to
+Hugging Face carry no Referer (huggingface.co refuses `*.workers.dev` Previews that send
+one). The models themselves are not
 part of the build: WebLLM fetches them from Hugging Face and raw.githubusercontent.com into
 the browser's Cache Storage (D26).

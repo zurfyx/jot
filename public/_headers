@@ -1,0 +1,6 @@
+# jot's WebLLM worker fetches the models from Hugging Face with no Referer (D26):
+# huggingface.co refuses a cross-origin request from a *.workers.dev page (the
+# branch Previews) that sends both an Origin and a Referer. A worker takes its
+# referrer policy from its own script's response.
+/assets/webllm-*
+  Referrer-Policy: no-referrer

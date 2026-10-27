@@ -199,6 +199,20 @@ describe("WebLLM's prebuilt models", () => {
   });
 });
 
+describe('the worker script', () => {
+  it('is served with no-referrer, which Hugging Face needs from a workers.dev Preview', () => {
+    const files = import.meta.glob<string>(['/vite.config.ts', '/public/_headers'], {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    });
+    expect(files['/vite.config.ts']).toContain("entryFileNames: 'assets/webllm-[name]-[hash].js'");
+    expect(files['/public/_headers']).toMatch(
+      /^\/assets\/webllm-\*\n {2}Referrer-Policy: no-referrer$/m,
+    );
+  });
+});
+
 describe('the reply budget', () => {
   it('is about twice the passage, within what the prompt leaves of the context window', () => {
     const system = 'x'.repeat(600);

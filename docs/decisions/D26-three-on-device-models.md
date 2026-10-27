@@ -52,6 +52,10 @@ them from Hugging Face into the browser's cache.
   minutes after its last use, then the worker stops. Models and their WebGPU libraries come
   from WebLLM's default hosts (huggingface.co and its CDN, raw.githubusercontent.com),
   never from R2 or the Worker; jot sends no Content-Security-Policy that would block them.
+  The worker script is served with `Referrer-Policy: no-referrer` (`public/_headers`, for
+  `/assets/webllm-*`): huggingface.co answers 404, with no CORS headers, to a request from
+  a `*.workers.dev` page that sends both an Origin and a Referer, which is every branch
+  Preview (D24); without the Referer it serves them, and Hugging Face learns less.
 - **The same safeguards for every model** (D21): explicit Ask, whole-list targets, the
   lossless snapshot check, the note's room, jot AI as an in-tab peer (kind `ai`,
   `askedBy`), Esc cancels, one request at a time. For WebLLM the passage limit comes from
