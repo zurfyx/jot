@@ -1,3 +1,4 @@
+import { astryxStylex } from '@astryxdesign/build/vite';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -6,8 +7,18 @@ import { defineConfig } from 'vite';
 // assets, and the Worker (with its Durable Object) runs in workerd during
 // `pnpm dev`.
 export default defineConfig({
-  plugins: [react(), cloudflare()],
+  plugins: [
+    // StyleX compiles jot's styles and Astryx's component source at build time
+    // (D28). It runs before React's plugin, which must see compiled code.
+    ...astryxStylex({ rootDir: import.meta.dirname }),
+    react(),
+    cloudflare(),
+  ],
   server: { port: 5173, strictPort: true },
+  // Astryx's packages are compiled from source, so Vite doesn't pre-bundle
+  // them or see what they import: pre-bundle the Neutral theme's icon set
+  // (lucide-react), or the dev server serves its ~1,900 modules one by one.
+  optimizeDeps: { include: ['lucide-react'] },
   // The note page chunk carries Lexical and Yjs (about 220 kB gzipped); the
   // landing page loads without it.
   build: { chunkSizeWarningLimit: 800 },

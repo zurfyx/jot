@@ -1,8 +1,11 @@
 import './docs.css';
 
+import * as stylex from '@stylexjs/stylex';
 import { type ComponentType, useEffect, useState } from 'react';
 
 import { redirect } from '../router';
+import { useThemeName } from '../theme';
+import { docsDark } from '../theme/themes';
 import { Ai, Blame, Size } from './content/features';
 import { ContentInYjs, Offline, Presence } from './content/concepts';
 import { Relay, ServerSideEditing } from './content/server';
@@ -29,6 +32,7 @@ export default function DocsPage({ slug }: { slug: string }) {
   const page = findDocsPage(slug);
   const Content = CONTENT[slug];
   const [menuOpen, setMenuOpen] = useState(false);
+  const theme = useThemeName();
 
   useEffect(() => {
     if (page === undefined) {
@@ -51,7 +55,7 @@ export default function DocsPage({ slug }: { slug: string }) {
   const { previous, next } = neighbours(slug);
 
   return (
-    <div className="docs">
+    <div className={`docs ${stylex.props(theme === 'dark' && docsDark).className ?? ''}`}>
       <header className="docs-head">
         <a className="docs-brand" href="/">
           jot<em>docs</em>

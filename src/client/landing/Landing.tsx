@@ -1,3 +1,4 @@
+import * as stylex from '@stylexjs/stylex';
 import { type ReactNode, useEffect, useRef } from 'react';
 
 import { prefetchNotePage } from '../loadNote';
@@ -9,6 +10,8 @@ import { classifyTarget, landingKeyAction, startShortcutLabel } from './keys';
 import './landing.css';
 import { NEW_NOTE_PATH, newNotePath } from '../notes';
 import { EXAMPLE_PATH, openNote, plainClick } from './open';
+import { useThemeName } from '../theme';
+import { landingCardsDark, landingDark, landingLight } from '../theme/themes';
 import { TwoWindows } from './TwoWindows';
 
 const GITHUB_URL = 'https://github.com/zurfyx/jot';
@@ -35,6 +38,10 @@ export function Landing() {
   const startNew = () => void openNote(newNotePath, newCard.current);
   const openExample = () => void openNote(EXAMPLE_PATH, exampleCard.current);
   const shortcut = startShortcutLabel(platform());
+  // The landing page's own token set: "Clean" in light, "Night" in dark (D07).
+  const scope = stylex.props(
+    useThemeName() === 'dark' ? [landingDark, landingCardsDark] : landingLight,
+  );
 
   useEffect(() => {
     document.title = 'jot · Just start typing';
@@ -81,7 +88,7 @@ export function Landing() {
   );
 
   return (
-    <div className="landing">
+    <div className={`landing ${scope.className ?? ''}`}>
       <div className="landing-inner">
         <header className="land-top">
           <a className="wordmark" href="/" aria-label="jot, home">

@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { Theme } from '@astryxdesign/core/theme';
+import { lazy, type ReactNode, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
 import { useExampleId } from './examples';
@@ -6,6 +7,8 @@ import { Landing } from './landing/Landing';
 import { loadNotePage } from './loadNote';
 import { newNotePath } from './notes';
 import { matchRoute, redirect, useLocationPath } from './router';
+import { useThemeName } from './theme';
+import { jotTheme } from './theme/jot';
 
 // The editor, Lexical and Yjs load only on a note page, so the landing page stays light.
 const NotePage = lazy(loadNotePage);
@@ -15,7 +18,27 @@ const DocsPage = lazy(() => import('./docs/DocsPage'));
 /** A `/new` redirect is being resolved (it waits for a legacy draft's lock). */
 let redirecting = false;
 
+/**
+ * Astryx's theme provider around every page (D28). It mirrors jot's light or
+ * dark choice: `mode` follows the theme jot keeps on <html>.
+ */
+function AstryxTheme({ children }: { children: ReactNode }) {
+  return (
+    <Theme theme={jotTheme} mode={useThemeName()}>
+      {children}
+    </Theme>
+  );
+}
+
 export function App() {
+  return (
+    <AstryxTheme>
+      <Page />
+    </AstryxTheme>
+  );
+}
+
+function Page() {
   const route = matchRoute(useLocationPath());
   const exampleId = useExampleId();
   const invalid = route.name === 'missing' || (route.name === 'note' && !isNoteId(route.id));

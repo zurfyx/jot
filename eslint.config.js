@@ -13,6 +13,8 @@ export default tseslint.config(
       'playwright-report/',
       'test-results/',
       'src/worker/worker-configuration.d.ts',
+      // Written by `astryx theme build` from theme/jotTheme.ts.
+      'src/client/theme/jot.*',
     ],
   },
   js.configs.recommended,

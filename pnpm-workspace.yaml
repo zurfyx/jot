@@ -42,3 +42,6 @@ allowBuilds:
   esbuild: true
   workerd: true
   sharp: true
+  # Astryx's postinstall only prints a hint to run `astryx init`.
+  '@astryxdesign/core': false
+  '@astryxdesign/cli': false

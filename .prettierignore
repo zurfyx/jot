@@ -6,3 +6,9 @@ test-results/
 src/worker/worker-configuration.d.ts
 # Screenshot and motion baselines are compared byte for byte.
 e2e/visual/baselines/
+# Written by `astryx theme build` from src/client/theme/jotTheme.ts.
+src/client/theme/jot.css
+src/client/theme/jot.css.d.ts
+src/client/theme/jot.d.ts
+src/client/theme/jot.js
+src/client/theme/jot.variants.d.ts
