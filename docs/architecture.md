@@ -267,8 +267,11 @@ URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWor
     on text nodes, so blocks that start or end with a line break export too), its lossless
     snapshot (every node's JSON), the prompt, the reply cleaned of an unambiguous
     `markdown` fence, and `$replaceBlocks` (`$generateNodesFromMarkdownString`, links
-    other than http, https and mailto unwrapped, inserted before the first target, then
-    the targets removed).
+    other than http, https and mailto unwrapped; when the reply has as many blocks as the
+    target, each of the same kind and holding plain text alone, each old block takes its
+    new text in place, its text nodes' text set, so the binding keeps the identity, and
+    the blame, of the characters a set keeps; otherwise the new blocks are inserted before
+    the first target, then the targets removed).
   - `controller.ts`: `aiState(session)`. Opening the field captures the page binding's
     `getCursor()` as the target and resolves the model. Ask resolves it again, checks the
     target in the page's editor, stops at the `consent` phase for a WebLLM model that isn't
