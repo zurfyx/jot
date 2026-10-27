@@ -503,6 +503,15 @@ export const jotTheme = {
       "base": {
         "padding": "var(--spacing-3)"
       }
+    },
+    "avatar-fallback": {
+      "base": {
+        "backgroundColor": "var(--peer)",
+        "color": "var(--peer-ink)",
+        "fontSize": "11px",
+        "fontWeight": "650",
+        "lineHeight": "1"
+      }
     }
   },
   __onDark: {

@@ -53,4 +53,16 @@ export const jotTheme = defineTheme({
     '--focus-outline-style': 'solid',
     '--focus-outline-offset': '2px',
   },
+  components: {
+    // The note's avatars (editor/people.tsx): initials on the person's colour.
+    'avatar-fallback': {
+      base: {
+        backgroundColor: 'var(--peer)',
+        color: 'var(--peer-ink)',
+        fontSize: '11px',
+        fontWeight: '650',
+        lineHeight: '1',
+      },
+    },
+  },
 });

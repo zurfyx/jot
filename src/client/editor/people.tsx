@@ -1,3 +1,5 @@
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { AvatarGroup, AvatarGroupOverflow } from '@astryxdesign/core/AvatarGroup';
 import * as stylex from '@stylexjs/stylex';
 import type { Awareness } from '@y/protocols/awareness';
 import { type CSSProperties, useEffect, useState } from 'react';
@@ -109,37 +111,36 @@ const MAX_AVATARS = 4;
 
 const fadeIn = stylex.keyframes({ from: { opacity: 0 } });
 
-// The people here: overlapping initials in their colours (`--peer`, set by peerStyle).
+// The people here: overlapping initials in their colours (`--peer`, set by
+// peerStyle). Astryx's AvatarGroup overlaps them; its ring is a border, kept
+// out of the layout as a shadow, and the initials' colours and type come from
+// the theme's avatar-fallback override (jotTheme.ts).
 const styles = stylex.create({
   avatars: {
     display: { default: 'inline-flex', '@media (max-width: 640px)': 'none' },
     flexGrow: 0,
     flexShrink: 0,
     flexBasis: 'auto',
-    paddingLeft: '6px',
     marginRight: '2px',
   },
   avatar: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '24px',
-    height: '24px',
-    marginLeft: '-6px',
-    borderRadius: '50%',
-    backgroundColor: 'var(--peer)',
+    borderWidth: 0,
     boxShadow: `0 0 0 2px ${colors['--bg']}`,
-    color: colors['--peer-ink'],
-    fontSize: '11px',
-    fontWeight: 650,
-    lineHeight: 1,
     animationName: fadeIn,
     animationDuration: motion['--enter'],
     animationTimingFunction: motion['--ease'],
   },
   more: {
+    minWidth: '24px',
+    height: '24px',
+    paddingInline: 0,
+    borderWidth: 0,
+    backgroundImage: 'none',
     backgroundColor: colors['--hover'],
     color: colors['--muted'],
+    fontSize: '11px',
+    fontWeight: 650,
+    lineHeight: 1,
   },
 });
 
@@ -160,22 +161,27 @@ export function Avatars({ session }: { session: NoteSession }) {
       data-testid="avatars"
       data-count={people.length}
     >
-      {shown.map((person) => (
-        <span
-          key={person.clientID}
-          {...stylex.props(styles.avatar)}
-          style={peerStyle(person.color)}
-          data-testid="avatar"
-          title={person.self ? `${person.name} (you)` : person.name}
-        >
-          {initial(person.name)}
-        </span>
-      ))}
-      {more > 0 && (
-        <span {...stylex.props(styles.avatar, styles.more)} data-testid="avatar">
-          +{more}
-        </span>
-      )}
+      <AvatarGroup size="sm">
+        {shown.map((person) => (
+          <Avatar
+            key={person.clientID}
+            name={initial(person.name)}
+            tooltip={false}
+            xstyle={styles.avatar}
+            style={peerStyle(person.color)}
+            // Astryx's props leave out `title`; the native tooltip stays.
+            {...{ title: person.self ? `${person.name} (you)` : person.name }}
+            data-testid="avatar"
+          />
+        ))}
+        {more > 0 && (
+          <AvatarGroupOverflow
+            count={more}
+            xstyle={[styles.avatar, styles.more]}
+            data-testid="avatar"
+          />
+        )}
+      </AvatarGroup>
     </span>
   );
 }
