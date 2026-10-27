@@ -1,3 +1,4 @@
+import * as stylex from '@stylexjs/stylex';
 import type { ReactNode } from 'react';
 
 /** The dock's icons: 16px strokes in currentColor, from the editor mocks. */
@@ -244,9 +245,25 @@ export function isIconName(name: string): name is IconName {
   return Object.hasOwn(PATHS, name);
 }
 
-export function Icon({ name }: { name: IconName }) {
+const styles = stylex.create({
+  icon: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: 16,
+    height: 16,
+  },
+});
+
+/** `xstyle` colours it (its strokes are currentColor) where its container's colour isn't right. */
+export function Icon({ name, xstyle }: { name: IconName; xstyle?: stylex.StyleXStyles }) {
   return (
-    <svg className="icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <svg
+      {...stylex.props(styles.icon, xstyle)}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
       {PATHS[name]}
     </svg>
   );

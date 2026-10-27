@@ -41,6 +41,7 @@
     "@lexical/utils": "https://pkg.pr.new/facebook/lexical/@lexical/utils@e240f42c712c828a1eaecbb12f8ca4dbd21faf56",
     "@lexical/y": "https://pkg.pr.new/facebook/lexical/@lexical/y@e240f42c712c828a1eaecbb12f8ca4dbd21faf56",
     "@mlc-ai/web-llm": "0.2.86",
+    "@stylexjs/stylex": "0.19.1",
     "@y/protocols": "1.0.6-rc.1",
     "@y/websocket": "4.0.0-rc.2",
     "@y/y": "14.0.0-rc.29",
@@ -50,10 +51,12 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.9",
     "@cloudflare/vite-plugin": "^1.65.0",
     "@cloudflare/vitest-plugin": "^1.4.7",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.64.1",
+    "@stylexjs/babel-plugin": "0.19.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

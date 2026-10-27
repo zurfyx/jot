@@ -28,7 +28,7 @@ test('every docs page renders, with code that has a file name and Copy', async (
   }
   await page.goto('/docs/quick-start');
   await expect(page).toHaveTitle('Quick start · jot docs');
-  const code = page.locator('.docs-code').first();
+  const code = page.getByTestId('docs-code').first();
   await expect(code.locator('figcaption a')).toHaveText('quick-start.ts');
   await expect(code.locator('figcaption a')).toHaveAttribute(
     'href',
@@ -124,15 +124,15 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   const budget = tree.getByTestId('inspector-row').filter({ hasText: /"Budget/ });
   await expect(budget).toContainText('{t: "heading", p:tag: "h2"}');
   // The caret's line is the highlighted row.
-  await expect(budget).toHaveClass(/is-active/);
+  await expect(budget).toHaveAttribute('data-active', 'true');
 
   // Hovering a row highlights its line, and hovering a line its row.
   const agendaRow = tree.getByTestId('inspector-row').filter({ hasText: '"Agenda"' });
   await agendaRow.hover();
-  await expect(agendaRow).toHaveClass(/is-active/);
-  await expect(page.locator('.insp-line-hl')).toBeVisible();
+  await expect(agendaRow).toHaveAttribute('data-active', 'true');
+  await expect(page.getByTestId('inspector-line-hl')).toBeVisible();
   const agendaBox = await editor.getByText('Agenda', { exact: true }).boundingBox();
-  const highlight = await page.locator('.insp-line-hl').boundingBox();
+  const highlight = await page.getByTestId('inspector-line-hl').boundingBox();
   expect(Math.abs((highlight?.y ?? 0) + 2 - (agendaBox?.y ?? 0))).toBeLessThan(8);
 
   const afternoon = editor.getByText('Afternoon: hack session');
@@ -140,18 +140,18 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
     .getByTestId('inspector-row')
     .filter({ hasText: '"Afternoon: hack session"' });
   await afternoon.hover();
-  await expect(afternoonRow).toHaveClass(/is-active/);
-  await expect(agendaRow).not.toHaveClass(/is-active/);
+  await expect(afternoonRow).toHaveAttribute('data-active', 'true');
+  await expect(agendaRow).not.toHaveAttribute('data-active');
 
   // Typing hands the lead to the caret; the next pointer move, even over the
   // same line, takes it back.
   await page.keyboard.type('!');
-  await expect(budget).toHaveClass(/is-active/);
-  await expect(afternoonRow).not.toHaveClass(/is-active/);
+  await expect(budget).toHaveAttribute('data-active', 'true');
+  await expect(afternoonRow).not.toHaveAttribute('data-active');
   const spot = (await afternoon.boundingBox())!;
   await page.mouse.move(spot.x + 6, spot.y + spot.height / 2);
-  await expect(afternoonRow).toHaveClass(/is-active/);
-  await expect(budget).not.toHaveClass(/is-active/);
+  await expect(afternoonRow).toHaveAttribute('data-active', 'true');
+  await expect(budget).not.toHaveAttribute('data-active');
 });
 
 test('Tab leaves the inspector instead of indenting', async ({ page }) => {

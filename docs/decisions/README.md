@@ -39,28 +39,29 @@ How expensive is this to get wrong?
 
 ## Tier 2: moderate
 
-| ID                                                      | Decision                                                                   | Radius | Status    |
-| ------------------------------------------------------- | -------------------------------------------------------------------------- | ------ | --------- |
-| [D04](D04-lexical-from-pkg-pr-new.md)                   | Lexical from pkg.pr.new at a pinned PR commit; single copy; bump script    | MED    | `DECIDED` |
-| [D06](D06-ninety-day-expiry.md)                         | 90-day expiry without visits                                               | MED    | `DECIDED` |
-| [D08](D08-pr-workflow.md)                               | PR workflow: protected main, required checks, squash merge                 | MED    | `DECIDED` |
-| [D10](D10-ci-gates-workers-builds-deploys.md)           | GitHub CI gates merges; Cloudflare Workers Builds deploys                  | MED    | `DECIDED` |
-| [D23](D23-new-notes-are-shared-at-once.md)              | A new note is shared from its first moment; `/new` opens a fresh link      | MED    | `DECIDED` |
-| [D19](D19-blame-from-yjs-attributions.md)               | Blame from Yjs 14 attributions in the browser, with a people registry      | MED    | `DECIDED` |
-| [D20](D20-example-note-with-in-tab-peers.md)            | The example is a real shared note, edited by in-tab Yjs peers              | MED    | `DECIDED` |
-| [D21](D21-ask-ai-with-an-on-device-model.md)            | Ask AI runs an on-device model; jot AI writes as an in-tab peer            | MED    | `DECIDED` |
-| [D26](D26-three-on-device-models.md)                    | Ask AI's models: Chrome's built-in, Small and Larger WebLLM; a setting     | LOW    | `DECIDED` |
-| [D27](D27-visual-regression-in-the-playwright-image.md) | Screenshots of every screen and state, baselines from the Playwright image | LOW    | `DECIDED` |
-| [D12](D12-presence-through-awareness.md)                | Presence: names, colours and carets through awareness                      | LOW    | `DECIDED` |
-| [D14](D14-lexical-without-lexical-react.md)             | The editor is built with the extension API, without `@lexical/react`       | LOW    | `DECIDED` |
-| [D07](D07-design-direction.md)                          | Design: editor direction A, the fan landing page, Geist                    | LOW    | `DECIDED` |
-| [D09](D09-docs-are-rewritten.md)                        | Docs are rewritten, never amended                                          | LOW    | `DECIDED` |
-| [D11](D11-workers-tests-on-vitest-plugin.md)            | Durable Object tests on `@cloudflare/vitest-plugin`                        | LOW    | `DECIDED` |
-| [D15](D15-no-public-note.md)                            | No public note: abuse on a personal domain, and anyone can fill it         | LOW    | `DECIDED` |
-| [D17](D17-notes-out-of-search-engines.md)               | Notes and the API are `noindex, nofollow` and disallowed in robots.txt     | LOW    | `DECIDED` |
-| [D22](D22-docs-in-the-app.md)                           | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`      | LOW    | `DECIDED` |
-| [D24](D24-previews-on-workers-dev.md)                   | Branch Previews on rovira.workers.dev, noindex, own Durable Objects        | LOW    | `DECIDED` |
-| [D25](D25-older-layout-notes-stay-read-only.md)         | Notes in an older `@lexical/y` layout stay read only; no conversion        | MED    | `DECIDED` |
+| ID                                                      | Decision                                                                      | Radius | Status    |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------- | ------ | --------- |
+| [D04](D04-lexical-from-pkg-pr-new.md)                   | Lexical from pkg.pr.new at a pinned PR commit; single copy; bump script       | MED    | `DECIDED` |
+| [D06](D06-ninety-day-expiry.md)                         | 90-day expiry without visits                                                  | MED    | `DECIDED` |
+| [D08](D08-pr-workflow.md)                               | PR workflow: protected main, required checks, squash merge                    | MED    | `DECIDED` |
+| [D10](D10-ci-gates-workers-builds-deploys.md)           | GitHub CI gates merges; Cloudflare Workers Builds deploys                     | MED    | `DECIDED` |
+| [D23](D23-new-notes-are-shared-at-once.md)              | A new note is shared from its first moment; `/new` opens a fresh link         | MED    | `DECIDED` |
+| [D19](D19-blame-from-yjs-attributions.md)               | Blame from Yjs 14 attributions in the browser, with a people registry         | MED    | `DECIDED` |
+| [D20](D20-example-note-with-in-tab-peers.md)            | The example is a real shared note, edited by in-tab Yjs peers                 | MED    | `DECIDED` |
+| [D21](D21-ask-ai-with-an-on-device-model.md)            | Ask AI runs an on-device model; jot AI writes as an in-tab peer               | MED    | `DECIDED` |
+| [D26](D26-three-on-device-models.md)                    | Ask AI's models: Chrome's built-in, Small and Larger WebLLM; a setting        | LOW    | `DECIDED` |
+| [D27](D27-visual-regression-in-the-playwright-image.md) | Screenshots of every screen and state, baselines from the Playwright image    | LOW    | `DECIDED` |
+| [D28](D28-styles-in-stylex.md)                          | Styles in StyleX, each page's CSS in its own chunk; a small global stylesheet | LOW    | `DECIDED` |
+| [D12](D12-presence-through-awareness.md)                | Presence: names, colours and carets through awareness                         | LOW    | `DECIDED` |
+| [D14](D14-lexical-without-lexical-react.md)             | The editor is built with the extension API, without `@lexical/react`          | LOW    | `DECIDED` |
+| [D07](D07-design-direction.md)                          | Design: editor direction A, the fan landing page, Geist                       | LOW    | `DECIDED` |
+| [D09](D09-docs-are-rewritten.md)                        | Docs are rewritten, never amended                                             | LOW    | `DECIDED` |
+| [D11](D11-workers-tests-on-vitest-plugin.md)            | Durable Object tests on `@cloudflare/vitest-plugin`                           | LOW    | `DECIDED` |
+| [D15](D15-no-public-note.md)                            | No public note: abuse on a personal domain, and anyone can fill it            | LOW    | `DECIDED` |
+| [D17](D17-notes-out-of-search-engines.md)               | Notes and the API are `noindex, nofollow` and disallowed in robots.txt        | LOW    | `DECIDED` |
+| [D22](D22-docs-in-the-app.md)                           | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`         | LOW    | `DECIDED` |
+| [D24](D24-previews-on-workers-dev.md)                   | Branch Previews on rovira.workers.dev, noindex, own Durable Objects           | LOW    | `DECIDED` |
+| [D25](D25-older-layout-notes-stay-read-only.md)         | Notes in an older `@lexical/y` layout stay read only; no conversion           | MED    | `DECIDED` |
 
 ## Superseded
 

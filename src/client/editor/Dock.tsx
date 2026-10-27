@@ -1,7 +1,10 @@
+import * as stylex from '@stylexjs/stylex';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { currentTheme, setTheme, subscribeTheme } from '../theme';
+import { colors } from '../theme/tokens.stylex';
 import { copyNoteLink, startNewNote } from './actions';
+import { dockButton } from './dock.styles';
 import { NOTE_FEATURES } from './features';
 import { formatBytes } from './format';
 import { FormatMenu } from './FormatMenu';
@@ -11,6 +14,7 @@ import {
   MenuSeparator,
   MenuToggle,
   moveMenuFocus,
+  popoverProps,
   useFocusFirstItem,
   usePopover,
 } from './menu';
@@ -20,6 +24,37 @@ import { useEditable, useSignal } from './useSignal';
 
 export const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 export const COPY_LINK_HINT = isMac ? '⌘⇧C' : 'Ctrl+Shift+C';
+
+const styles = stylex.create({
+  /** One floating row at the bottom, centred; only the dock itself takes the pointer. */
+  wrap: {
+    position: 'fixed',
+    right: 0,
+    bottom: 'max(18px, env(safe-area-inset-bottom))',
+    left: 0,
+    zIndex: 25,
+    display: 'flex',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  dock: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: 5,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors['--rule'],
+    borderRadius: 14,
+    backgroundColor: colors['--bg'],
+    boxShadow: `0 10px 30px ${colors['--shadow-soft']}`,
+    pointerEvents: 'auto',
+  },
+  slot: {
+    display: 'contents',
+  },
+});
 
 /** `panel:<feature id>`: a feature's ⋯ panel (NoteFeature.menuPanel). */
 type Open = 'format' | 'more' | 'info' | `panel:${string}`;
@@ -45,11 +80,18 @@ export function Dock({ session }: { session: NoteSession }) {
   }, [editable, open, close]);
 
   return (
-    <div className="dock-wrap">
-      <div ref={dockRef} className="dock" role="toolbar" aria-label="Note" data-testid="dock">
+    <div {...stylex.props(styles.wrap)}>
+      <div
+        ref={dockRef}
+        {...stylex.props(styles.dock)}
+        data-dock=""
+        role="toolbar"
+        aria-label="Note"
+        data-testid="dock"
+      >
         <button
           type="button"
-          className="dock-button"
+          {...stylex.props(dockButton.base)}
           aria-label="Format"
           aria-haspopup="menu"
           aria-expanded={open === 'format'}
@@ -61,7 +103,7 @@ export function Dock({ session }: { session: NoteSession }) {
           Aa
         </button>
         {/* A press on a feature's control closes Aa or ⋯ (features run their own popovers). */}
-        <span className="dock-slot" onPointerDown={() => open !== null && close()}>
+        <span {...stylex.props(styles.slot)} onPointerDown={() => open !== null && close()}>
           {NOTE_FEATURES.map(
             ({ id, dockStart: Item }) => Item && <Item key={id} session={session} />,
           )}
@@ -71,7 +113,7 @@ export function Dock({ session }: { session: NoteSession }) {
         </span>
         <button
           type="button"
-          className="dock-button"
+          {...stylex.props(dockButton.base)}
           aria-label="More"
           aria-haspopup="menu"
           aria-expanded={open !== null && open !== 'format'}
@@ -138,7 +180,7 @@ function MoreMenu({
   return (
     <div
       ref={ref}
-      className="popover more-menu"
+      {...popoverProps()}
       role="menu"
       aria-label="More"
       onKeyDown={moveMenuFocus}

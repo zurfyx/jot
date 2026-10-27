@@ -310,7 +310,8 @@ fresh `/n/<id>` (the example ones `/new?example`) through `landing/open.ts`: it 
 editor chunk, then navigates inside `document.startViewTransition`, so a cold start never
 freezes the page. The card (the clicked one, or the New note card for the button and the
 keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
-`#root` carries it in the new one. `landing.css` styles the pair: the group animates from
+`#root` carries it in the new one, both with a StyleX `viewTransitionClass` that styles the
+pair (`<html>` gets one too, for the page's own `root` group): the group animates from
 the card's box to the page's in 450ms; its `::view-transition-image-pair` is the sheet,
 `--bg` clipped to corners that go from 20px to square (the page's picture is otherwise
 transparent, and the clip keeps the card's shadow from scaling up);
@@ -326,7 +327,8 @@ component per page under `docs/content/`, and code blocks from real files import
 the app, and declarations cut out of jot's own source by `excerpt.ts`, linked to their
 lines on GitHub. The live inspector (`Inspector.tsx`) is a lazy chunk of its own: a jot
 editor on a local `Y.Doc` beside the `lexical-y` root as rows (`yjsTree.ts`), whose lines
-pair in document order with the editor's line elements (`lines.ts`).
+pair in document order with the editor's line elements (`lines.ts`). Its editor adds a
+theme of its own over jot's, so its blocks take the article's smaller sizes.
 
 There is no Yjs 14 IndexedDB provider yet, so a note's offline edits live in memory
 until the socket reconnects (D13).

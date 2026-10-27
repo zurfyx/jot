@@ -18,7 +18,7 @@ async function expectNotePage(page: Page, kind: 'new' | 'example' = 'new') {
     await expect(page.getByTestId('example-banner')).toBeVisible();
   }
   // The landing page's styles stay loaded; the editor's own must still win.
-  await expect(page.locator('.note-avatar').first()).not.toHaveCSS(
+  await expect(page.getByTestId('avatar').first()).not.toHaveCSS(
     'background-color',
     'rgba(0, 0, 0, 0)',
   );
@@ -163,7 +163,7 @@ for (const { testId, name, path, kind } of [
     const card = page.getByTestId(testId);
     await card.hover({ position: await visiblePoint(page, testId), force: true });
     await page.waitForTimeout(900); // the card lifts
-    await expect(card.locator('.card-open')).toHaveCSS('opacity', '1');
+    await expect(card.getByText('Open', { exact: true })).toHaveCSS('opacity', '1');
     await card.click({ position: await visiblePoint(page, testId), force: true });
     await expectNotePage(page, kind);
     const pushed = await pushes(page);
@@ -441,6 +441,9 @@ test('the landing page loads without the editor chunk', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
   expect(scripts.some((url) => /NotePage|lexical|@y\/y|yjs/i.test(url))).toBe(false);
+  // Nor the note page's or the docs' styles: each module's StyleX CSS travels with it (D28).
+  expect(scripts.filter((url) => url.endsWith('.stylex.css')).length).toBeGreaterThan(0);
+  expect(scripts.some((url) => /\/(editor|docs)\/.*\.stylex\.css$/.test(url))).toBe(false);
 });
 
 test('the paste field validates in place', async ({ page }) => {

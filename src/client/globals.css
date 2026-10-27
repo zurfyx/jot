@@ -1,0 +1,128 @@
+/*
+ * The only global CSS (D28): what StyleX, which styles one element through
+ * its own class, can't express. Tokens are StyleX variables with literal
+ * names (theme/tokens.stylex.ts), so these rules read them too. @font-face
+ * comes from the @fontsource packages imported in main.tsx.
+ */
+
+/* `data-theme` is set on <html> before the first paint (index.html); the browser's own controls follow it. */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* Element defaults, in a layer so every StyleX class beats them as class rules beat element rules. */
+@layer reset {
+  /* Every element and pseudo-element: no class can reach them all. */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* The document element is no component's. */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Thin themed scrollbars on every scrolling element; each resolves the tokens of its own scope. */
+  * {
+    scrollbar-color: var(--scrollbar) transparent;
+    scrollbar-width: thin;
+  }
+
+  /* The document's selection colour. */
+  ::selection {
+    background: var(--select);
+    color: var(--ink);
+  }
+
+  /* The focus ring for every focusable element, including Lexical's and the browser's own. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Links Lexical and the docs' prose render without a class. */
+  a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  /* Browser margins and wrapping for headings and text, under each component's own styles. */
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  /* The browser's monospace on code beats the inherited font: code is Geist Mono. */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--mono);
+  }
+
+  /* Buttons start bare. */
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+}
+
+/* <body> is outside React: no component can give it a class. */
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.6 var(--sans),
+    sans-serif;
+  font-optical-sizing: auto;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Reduced motion stops every animation and transition, view transitions included, at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Ask AI's target tint: a CSS Custom Highlight (blame's are constructed in blame/highlights.ts). */
+::highlight(jot-ai-target) {
+  background-color: var(--ai-tint);
+}
+
+/* The root keeps the caret line clear of the dock while a note page shows it; the root is no component's. */
+:root:has([data-note-page]) {
+  scroll-padding-bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px);
+}
+
+/* A table selection hides the native selection in every element inside, classless text spans included. */
+.jot-table-selection *::selection {
+  background: transparent;
+}

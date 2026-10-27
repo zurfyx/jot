@@ -105,7 +105,7 @@ test('the example opens as a shared note, its demo collaborators edit it live, a
   await chip.click();
   const people = page.getByTestId('blame-legend').getByTestId('blame-person');
   await expect(people).toHaveCount(3);
-  expect((await people.locator('.person-name').allInnerTexts()).sort()).toEqual([
+  expect((await people.getByTestId('person-name').allInnerTexts()).sort()).toEqual([
     'Ana (demo)',
     'You',
     'jot AI (demo)',

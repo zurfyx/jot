@@ -30,7 +30,7 @@ function hovered(page: Page) {
     const card = element?.closest('[data-testid="new-note-card"], [data-testid="example-card"]');
     return {
       card: card?.getAttribute('data-testid') ?? null,
-      inFan: card ? 'card' : element?.closest('.fan-cards') ? 'fan' : 'outside',
+      inFan: card ? 'card' : element?.closest('[data-fan-cards]') ? 'fan' : 'outside',
     };
   });
 }
@@ -66,7 +66,7 @@ test('the hero fan, hovered and lifted', async ({ page }) => {
     shots.push(await hero(page).screenshot({ animations: 'disabled', caret: 'hide' }));
   };
   // Hovering the fan (the recipe card is not a link) spreads it.
-  await hoverFan(page, null, page.locator('.fan-recipe'));
+  await hoverFan(page, null, page.locator('[data-fan-recipe]'));
   await state('landing-fan-hovered');
   // Hovering a card lifts it and shows Open.
   await hoverFan(page, 'new-note-card', page.getByTestId('new-note-card'));
