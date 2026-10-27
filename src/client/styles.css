@@ -325,9 +325,18 @@ button {
 
 /* ---------- note page ---------- */
 
+/*
+ * The page is exactly one window tall until the note outgrows it: the column
+ * fills the page with its padding inside that height, and the editor takes
+ * whatever the column leaves, so an empty note never scrolls. svh, not dvh or
+ * vh: phones size the root's client height to the small viewport, and a
+ * larger page would scroll by the toolbar's height.
+ */
 .note-page {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
 }
 
 .note-chrome {
@@ -484,10 +493,25 @@ button {
   animation: fade-in var(--enter) var(--ease);
 }
 
+/* The bottom padding lets the last line scroll up clear of the dock. */
 .note-column {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  width: 100%;
   max-width: 680px;
   margin: 0 auto;
   padding: 80px 32px 45vh;
+  padding-bottom: 45svh;
+}
+
+/*
+ * Typing at the bottom keeps the caret line above the dock: Lexical's
+ * scroll-into-view stops short of the root's scroll-padding. The dock sits
+ * max(18px, safe area) from the bottom and is 46px tall; 30px more clears it.
+ */
+:root:has(.dock-wrap) {
+  scroll-padding-bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px);
 }
 
 .note-banner,
@@ -520,6 +544,9 @@ button {
 
 .note-surface {
   position: relative;
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
 }
 
 .note-placeholder {
@@ -539,7 +566,7 @@ button {
 /* The editor. The first line is the title (no separate field). */
 
 .jot-editor {
-  min-height: 50vh;
+  flex: 1 0 auto;
   outline: none;
   color: var(--ink);
   /* 18px Geist in the 616px text column keeps lines near 70 characters. */
@@ -1518,6 +1545,7 @@ button {
 @media (max-width: 640px) {
   .note-column {
     padding: 68px 20px 45vh;
+    padding-bottom: 45svh;
   }
 
   .jot-editor,

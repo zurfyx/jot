@@ -53,7 +53,11 @@ playground needs: no toolbar is always there.
 
 - **The page.** The window is the document: a centred 680px column, 18px text, so lines
   stay near 70 characters. The note's first line is its title (styled large, and shown in
-  `document.title`). There is no title field.
+  `document.title`). There is no title field. The page is one window tall (`100svh`) until
+  the note outgrows it, so an empty note never scrolls. Below the last line the column
+  keeps 45% of the window (`45svh`), so a long note's last line can scroll up clear of the
+  dock, and while typing the caret line stays above the dock: the root's
+  `scroll-padding-bottom` covers the dock, and Lexical's scroll-into-view respects it.
 - **Top right,** floating on the page colour: the avatars of the people here (initials on
   their `--peer-*` colour, up to four, then "+N"; hidden under 640px), the status pill, then
   Share.
