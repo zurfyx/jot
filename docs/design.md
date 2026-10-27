@@ -58,6 +58,12 @@ playground needs: no toolbar is always there.
   keeps 45% of the window (`45svh`), so a long note's last line can scroll up clear of the
   dock, and while typing the caret line stays above the dock: the root's
   `scroll-padding-bottom` covers the dock, and Lexical's scroll-into-view respects it.
+- **The whole page writes,** as in Notion: a click or tap anywhere on the blank page puts
+  the caret in the note. Below the text it goes to the end, on a new empty line when the
+  note ends in an image, a code block, a table or a quote; beside a line, in the margins,
+  to the nearest point of that line; above the title, into the first line. Controls,
+  links, images, menus and banners keep their clicks, a press outside an open menu only
+  closes it, a selection drag keeps its selection, and nothing scrolls.
 - **Top right,** floating on the page colour: the avatars of the people here (initials on
   their `--peer-*` colour, up to four, then "+N"; hidden under 640px), the status pill, then
   Share.
