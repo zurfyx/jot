@@ -1,13 +1,20 @@
 /**
  * The page's side of the WebLLM models (D26): a backend per model, over one
- * worker per page. The worker (and with it WebLLM) starts only when a
- * WebLLM model is used: an Ask, or Delete in the AI model setting. Never on
- * page load.
+ * worker per page. The worker (and with it WebLLM) starts only to load a
+ * model, on an Ask; never on page load. What is downloaded comes from Cache
+ * Storage (cache.ts), which the page reads and clears itself.
  */
 import { type AiBackend, type AiSession, ModelError } from '../backend';
-import { type ModelInfo, webllmMaxPassage } from '../models';
+import { type ModelInfo, type WebLLMBuild, webllmMaxPassage } from '../models';
 import type { AiAvailability } from '../prompt-api';
-import type { ChatResult, FromWorker, ToWorker } from './protocol';
+import { cacheState, clearCache } from './cache';
+import {
+  type ChatResult,
+  type FromWorker,
+  type LoadStage,
+  NEEDS_DOWNLOAD,
+  type ToWorker,
+} from './protocol';
 
 /** What the page needs of a Worker; e2e tests stand in for it (see `spawn`). */
 export interface WorkerLike {
@@ -26,7 +33,8 @@ declare global {
 
 /**
  * The model leaves GPU memory this long after its last use (the worker
- * stops), and loads again from the cache on the next Ask.
+ * stops), and loads again from the cache on the next Ask. A worker with no
+ * model loaded stops as soon as it has nothing to do.
  */
 export const IDLE_UNLOAD_MS = 5 * 60_000;
 
@@ -48,7 +56,7 @@ function abortError(): DOMException {
 interface Pending {
   resolve(value: unknown): void;
   reject(error: unknown): void;
-  onProgress?: (progress: number, loading: boolean) => void;
+  onProgress?: (progress: number, stage: LoadStage) => void;
 }
 
 /** One worker per page; it loads one model at a time. */
@@ -57,8 +65,13 @@ export class WebLLMEngine {
   private pending = new Map<number, Pending>();
   private nextId = 1;
   private idle: ReturnType<typeof setTimeout> | null = null;
-  /** The model the worker has in memory. */
+  /** The build the worker has in memory. */
   loaded: string | null = null;
+
+  /** Whether a worker is running (for tests and the idle rule). */
+  get running(): boolean {
+    return this.worker !== null;
+  }
 
   private start(): WorkerLike {
     if (this.worker !== null) {
@@ -72,7 +85,7 @@ export class WebLLMEngine {
         return;
       }
       if (message.type === 'progress') {
-        pending.onProgress?.(message.progress, message.loading);
+        pending.onProgress?.(message.progress, message.stage);
         return;
       }
       this.pending.delete(message.id);
@@ -94,7 +107,7 @@ export class WebLLMEngine {
 
   private request<T>(
     message: ToWorker & { id: number },
-    onProgress?: (progress: number, loading: boolean) => void,
+    onProgress?: (progress: number, stage: LoadStage) => void,
   ): Promise<T> {
     const worker = this.start();
     return new Promise<T>((resolve, reject) => {
@@ -105,6 +118,21 @@ export class WebLLMEngine {
       });
       worker.postMessage(message);
     });
+  }
+
+  /**
+   * After every request (its caller has updated `loaded`): a worker with no
+   * model stops now; one with a model stops IDLE_UNLOAD_MS after its last use.
+   */
+  private settled(): void {
+    if (this.worker === null || this.pending.size > 0) {
+      return;
+    }
+    if (this.loaded === null) {
+      this.stop();
+    } else {
+      this.touch();
+    }
   }
 
   /** Stops the worker: whatever it was doing ends with `error`. */
@@ -135,37 +163,38 @@ export class WebLLMEngine {
     }, IDLE_UNLOAD_MS);
   }
 
-  has(model: string): Promise<boolean> {
-    return this.request<boolean>({ id: this.nextId++, type: 'has', model });
-  }
-
-  async delete(model: string): Promise<void> {
-    await this.request<null>({ id: this.nextId++, type: 'delete', model });
-    if (this.loaded === model) {
-      this.loaded = null;
-    }
-  }
-
-  /** Loads `model`, downloading what the cache lacks. Aborting stops the worker. */
+  /**
+   * Loads `build`. `offline`: every file is cached and nobody agreed to a
+   * download, so the worker refuses the network. Aborting stops the worker.
+   */
   async load(
-    model: string,
-    signal: AbortSignal,
-    onProgress: (progress: number, loading: boolean) => void,
+    build: WebLLMBuild,
+    options: {
+      signal: AbortSignal;
+      offline: boolean;
+      onProgress: (progress: number, stage: LoadStage) => void;
+    },
   ): Promise<void> {
-    if (this.loaded === model && this.worker !== null) {
+    const { signal } = options;
+    if (this.loaded === build.id && this.worker !== null) {
       this.touch();
       return;
     }
     signal.throwIfAborted();
+    // Another build may be loaded: it goes first.
+    this.loaded = null;
     const onAbort = () => this.stop();
     signal.addEventListener('abort', onAbort, { once: true });
     try {
-      await this.request<null>({ id: this.nextId++, type: 'load', model }, onProgress);
+      await this.request<null>(
+        { id: this.nextId++, type: 'load', build, offline: options.offline },
+        options.onProgress,
+      );
+      this.loaded = build.id;
     } finally {
       signal.removeEventListener('abort', onAbort);
+      this.settled();
     }
-    this.loaded = model;
-    this.touch();
   }
 
   /** One rewrite. Aborting interrupts it; the model stays loaded. */
@@ -190,7 +219,7 @@ export class WebLLMEngine {
       return result;
     } finally {
       signal.removeEventListener('abort', onAbort);
-      this.touch();
+      this.settled();
     }
   }
 }
@@ -201,42 +230,6 @@ let shared: WebLLMEngine | null = null;
 export function webllmEngine(): WebLLMEngine {
   shared ??= new WebLLMEngine();
   return shared;
-}
-
-const DOWNLOADED_KEY = 'jot:ai-downloaded';
-
-/**
- * WebLLM model ids this browser downloaded, as jot remembers them: a hint
- * that spares loading WebLLM to look in its cache. The cache may have been
- * evicted since (Safari does that), so an Ask checks it before loading.
- */
-export function downloadedModels(): Set<string> {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(DOWNLOADED_KEY) ?? '[]');
-    return new Set(Array.isArray(value) ? value.filter((v) => typeof v === 'string') : []);
-  } catch {
-    return new Set();
-  }
-}
-
-export function markDownloaded(model: string, downloaded: boolean): void {
-  const models = downloadedModels();
-  if (downloaded) {
-    models.add(model);
-  } else {
-    models.delete(model);
-  }
-  try {
-    localStorage.setItem(DOWNLOADED_KEY, JSON.stringify([...models]));
-  } catch {
-    // Storage is off: the next Ask checks the cache anyway.
-  }
-}
-
-/** Removes a downloaded model from this browser. */
-export async function deleteModel(model: string): Promise<void> {
-  await webllmEngine().delete(model);
-  markDownloaded(model, false);
 }
 
 /** Qwen3 may still open its reply with an empty thinking block. */
@@ -256,46 +249,73 @@ export function replyBudget(contextWindow: number, system: string, input: string
   return Math.max(128, Math.min(contextWindow - promptTokens - 64, inputTokens * 2 + 384));
 }
 
-/** A WebLLM model (`info.webllm`, built as `model`) as a backend. */
+/** What a backend needs of Cache Storage; tests stand in for it. */
+export interface CacheAccess {
+  state: typeof cacheState;
+  clear: typeof clearCache;
+}
+
+const CACHE: CacheAccess = {
+  state: (build) => cacheState(build),
+  clear: (build) => clearCache(build),
+};
+
+/** A WebLLM model (`info.webllm`, built as `build`) as a backend. */
 export function webllmBackend(
   info: ModelInfo,
-  model: string,
+  build: WebLLMBuild,
   engine: WebLLMEngine = webllmEngine(),
+  cache: CacheAccess = CACHE,
 ): AiBackend {
   const contextWindow = info.webllm?.contextWindow ?? 4096;
   const maxPassage = webllmMaxPassage(contextWindow);
   return {
     id: info.id,
+    build: build.id,
     name: info.name,
     consent: info.download,
     maxPassage,
-    availability(): Promise<AiAvailability> {
-      return Promise.resolve(
-        engine.loaded === model || downloadedModels().has(model) ? 'available' : 'downloadable',
-      );
+    async availability(): Promise<AiAvailability> {
+      if (engine.loaded === build.id) {
+        return 'available';
+      }
+      return (await cache.state(build)) === 'complete' ? 'available' : 'downloadable';
     },
     async open({ system, signal, onProgress, consented }): Promise<AiSession> {
-      if (!consented && engine.loaded !== model) {
-        // jot remembers it downloaded: make sure the cache still has it, so
-        // nothing downloads without a yes.
-        const here = downloadedModels().has(model) && (await engine.has(model));
+      let download = false;
+      if (engine.loaded !== build.id) {
+        // Every file must be here, or the person must have agreed to fetch
+        // what is missing: nothing downloads without a yes.
+        download = (await cache.state(build)) !== 'complete';
         signal.throwIfAborted();
-        if (!here) {
-          markDownloaded(model, false);
+        if (download && !consented) {
           throw new ModelError('consent');
         }
       }
       try {
-        await engine.load(model, signal, onProgress);
+        await engine.load(build, {
+          signal,
+          offline: !download,
+          onProgress(progress, stage) {
+            // A download fetches, then loads onto the GPU; a cached model only loads.
+            onProgress(progress, !download || stage === 'load' || stage === 'finish');
+          },
+        });
       } catch (error) {
         if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+          if (download) {
+            // A cancelled download leaves no partial files behind.
+            await cache.clear(build).catch(() => undefined);
+          }
           throw error;
+        }
+        if (error instanceof Error && error.name === NEEDS_DOWNLOAD) {
+          throw new ModelError('consent');
         }
         console.warn('jot: the model could not load', error);
         throw new ModelError('load', error instanceof Error ? error.message : String(error));
       }
-      markDownloaded(model, true);
-      if (consented) {
+      if (download) {
         // Ask the browser to keep the download (Safari evicts storage otherwise).
         void navigator.storage?.persist?.().catch(() => false);
       }

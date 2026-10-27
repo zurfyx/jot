@@ -66,17 +66,37 @@ export const MESSAGES = {
   full: 'This note is too full for what jot AI wrote.',
   empty: 'jot AI had nothing to write. Try another instruction.',
   changed: 'The text changed while jot AI was thinking. Ask again.',
+  modelChanged: 'The AI model changed since you agreed to the download. Ask again.',
   failed: "jot AI couldn't answer. Try again.",
 } as const;
 
 export type AiPhase =
   | { kind: 'idle' }
   /** A WebLLM model isn't here: the field asks before downloading it. */
-  | { kind: 'consent'; model: string; size: string }
+  | { kind: 'consent'; model: string; size: string; ask: ConsentAsk }
   /** `loading`: from this browser's cache, not the network. */
   | { kind: 'downloading'; model: string; loading: boolean; progress: number | null }
   | { kind: 'thinking' }
   | { kind: 'error'; message: string };
+
+/**
+ * The download a consent question asked about: the model, its exact build and
+ * its size. Download hands it back to `ask`, which goes on only if the model
+ * it would use now is still that one.
+ */
+export interface ConsentAsk {
+  id: string;
+  build: string | null;
+  bytes: number;
+}
+
+function consentAsk(backend: AiBackend): ConsentAsk {
+  return { id: backend.id, build: backend.build ?? null, bytes: backend.consent?.bytes ?? 0 };
+}
+
+function sameConsent(a: ConsentAsk, b: ConsentAsk): boolean {
+  return a.id === b.id && a.build === b.build && a.bytes === b.bytes;
+}
 
 /** What a request applies to, described for the field. */
 export interface TargetInfo {
@@ -138,9 +158,10 @@ export interface AiState {
   /**
    * Sends the instruction and the target to the model. Resolves true once
    * jot AI wrote. A WebLLM model that isn't here stops at the `consent`
-   * phase, unless `consented` (the person pressed Download).
+   * phase; `consent` (from Download) lets it download, but only if it is
+   * still the model, build and size the question named.
    */
-  ask(instruction: string, options?: { consented?: boolean }): Promise<boolean>;
+  ask(instruction: string, options?: { consent?: ConsentAsk }): Promise<boolean>;
   /** Stops the running request, or declines a download; nothing is written. */
   cancel(): void;
   /** Clears an error. */
@@ -460,7 +481,9 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         }
       }
       targetInfo.value = info;
-      if (phase.peek().kind === 'error') {
+      // A question or an error from before belongs to a field that closed.
+      const kind = phase.peek().kind;
+      if (kind === 'error' || kind === 'consent') {
         phase.value = { kind: 'idle' };
       }
     },
@@ -483,7 +506,9 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       if (using === null || status === 'missing' || status === 'unavailable') {
         return fail(reason.peek() ?? MESSAGES.unavailable);
       }
-      const consented = options.consented === true;
+      // Consent is for one download: the model the question named, nothing else.
+      const consented =
+        options.consent !== undefined && sameConsent(options.consent, consentAsk(using));
       const cursor = target.peek();
       if (cursor === null) {
         return fail(MESSAGES.noTarget);
@@ -508,17 +533,24 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
       if (early.markdown.length > Math.min(MAX_PASSAGE, using.maxPassage ?? Infinity)) {
         return fail(MESSAGES.tooLong);
       }
+      const question = (): AiPhase => ({
+        kind: 'consent',
+        model: using.name,
+        size: using.consent?.text ?? '',
+        ask: consentAsk(using),
+      });
       const askFirst = (): false => {
-        phase.value = {
-          kind: 'consent',
-          model: using.name,
-          size: using.consent?.text ?? '',
-        };
+        phase.value = question();
         return false;
       };
       if (using.consent !== null && status !== 'available' && !consented) {
-        // Nothing downloads without a yes: the field asks first.
+        // Nothing downloads without a yes: the field asks first, and asks
+        // again when the yes was for another model.
         return askFirst();
+      }
+      if (options.consent !== undefined && !consented) {
+        // The yes was for a download this model doesn't need: nothing runs on it.
+        return fail(MESSAGES.modelChanged);
       }
 
       const controller = new AbortController();
@@ -556,11 +588,11 @@ export function createAiState(host: AiHost, deps: AiDeps): AiState {
         }
       }
       if (message === 'consent') {
-        // The download jot remembered is gone (evicted): ask before fetching it again.
+        // Some file went missing (evicted): ask before fetching it again, unless
+        // the field closed meanwhile, which also forgets the target.
         if (running === controller) {
-          running = null;
           availability.value = 'downloadable';
-          askFirst();
+          settle(controller, released ? { kind: 'idle' } : question());
         }
         return false;
       }
@@ -636,7 +668,7 @@ export function aiState(session: NoteSession): AiState {
       },
       {
         resolve: () => aiModels().resolve(),
-        onReady: () => aiModels().touched(),
+        onReady: () => void aiModels().refreshCache(),
         personId: once(localPersonId),
         user: localUser,
       },

@@ -13,12 +13,31 @@ export type ModelId = 'chrome' | 'small' | 'large';
 
 export const MODEL_IDS: readonly ModelId[] = ['chrome', 'small', 'large'];
 
+/**
+ * One build of a WebLLM prebuilt model: its id, and where WebLLM fetches it
+ * from (the Hugging Face repo and the WebGPU library), as in WebLLM's
+ * `prebuiltAppConfig` (a unit test keeps them equal). jot reads Cache Storage
+ * for these URLs to tell what is downloaded, without loading WebLLM.
+ */
+export interface WebLLMBuild {
+  id: string;
+  url: string;
+  lib: string;
+}
+
+const LIBS =
+  'https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_86/base';
+
+function build(id: string, lib: string): WebLLMBuild {
+  return { id, url: `https://huggingface.co/mlc-ai/${id}`, lib: `${LIBS}/${lib}` };
+}
+
 /** A WebLLM prebuilt model, in the two builds WebGPU devices need. */
 export interface WebLLMModel {
   /** With 16-bit floats in the shaders: needs the adapter's `shader-f16`. */
-  f16: string;
+  f16: WebLLMBuild;
   /** 32-bit floats: any WebGPU adapter, a little more GPU memory. */
-  f32: string;
+  f32: WebLLMBuild;
   /** Tokens, prompt and reply together (WebLLM's prebuilt setting). */
   contextWindow: number;
 }
@@ -53,8 +72,14 @@ export const MODELS: Readonly<Record<ModelId, ModelInfo>> = {
     // The Hugging Face repo (weights, tokenizer, config) plus the WebGPU library.
     download: { bytes: 295_000_000, text: '300 MB' },
     webllm: {
-      f16: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
-      f32: 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC',
+      f16: build(
+        'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
+        'Qwen2-0.5B-Instruct-q4f16_1_cs1k-webgpu.wasm',
+      ),
+      f32: build(
+        'Qwen2.5-0.5B-Instruct-q4f32_1-MLC',
+        'Qwen2-0.5B-Instruct-q4f32_1_cs1k-webgpu.wasm',
+      ),
       contextWindow: 4096,
     },
   },
@@ -64,7 +89,11 @@ export const MODELS: Readonly<Record<ModelId, ModelInfo>> = {
     name: 'Qwen3 1.7B',
     where: 'In the browser, best on laptops',
     download: { bytes: 991_000_000, text: '990 MB' },
-    webllm: { f16: 'Qwen3-1.7B-q4f16_1-MLC', f32: 'Qwen3-1.7B-q4f32_1-MLC', contextWindow: 4096 },
+    webllm: {
+      f16: build('Qwen3-1.7B-q4f16_1-MLC', 'Qwen3-1.7B-q4f16_1_cs1k-webgpu.wasm'),
+      f32: build('Qwen3-1.7B-q4f32_1-MLC', 'Qwen3-1.7B-q4f32_1_cs1k-webgpu.wasm'),
+      contextWindow: 4096,
+    },
   },
 };
 
@@ -158,7 +187,7 @@ export function activeModel(device: Device, chosen: ModelId | null): ModelId | n
 }
 
 /** The WebLLM build `id` uses on `device`, or null for Chrome's model or no WebGPU. */
-export function webllmId(id: ModelId, device: Device): string | null {
+export function webllmBuild(id: ModelId, device: Device): WebLLMBuild | null {
   const model = MODELS[id].webllm;
   if (model === null || !hasWebGPU(device)) {
     return null;
@@ -208,24 +237,29 @@ export function writeChoice(id: ModelId): void {
 }
 
 /** A model's state on this device, for the AI model setting. */
-export type ModelState = 'ready' | 'needs-download' | 'downloaded' | 'unsupported';
+export type ModelState = 'ready' | 'needs-download' | 'partial' | 'downloaded' | 'unsupported';
 
 export const STATE_TEXT: Readonly<Record<ModelState, string>> = {
   ready: 'Ready',
   'needs-download': 'Needs download',
+  partial: 'Partly downloaded',
   downloaded: 'Downloaded',
   unsupported: 'Not supported on this device',
 };
 
+/** What Cache Storage holds of a WebLLM build: every file it needs, some, or none. */
+export type CacheState = 'complete' | 'partial' | 'none';
+
 /**
  * `ready`: runs at once (Chrome's model is there, or a WebLLM model is loaded
- * in this tab); `downloaded`: a WebLLM model in this browser's cache, to load
- * on the next Ask; `needs-download`: downloads on the first Ask.
+ * in this tab); `downloaded`: every file of a WebLLM build is in this
+ * browser's cache, to load on the next Ask; `partial`: some are (a cancelled
+ * download); `needs-download`: downloads on the first Ask.
  */
 export function modelState(
   id: ModelId,
   device: Device,
-  here: { loaded: string | null; downloaded: ReadonlySet<string> },
+  here: { loaded: string | null; cache: ReadonlyMap<string, CacheState> },
 ): ModelState {
   if (!canRun(id, device)) {
     return 'unsupported';
@@ -233,9 +267,10 @@ export function modelState(
   if (id === 'chrome') {
     return device.prompt === 'available' ? 'ready' : 'needs-download';
   }
-  const build = webllmId(id, device)!;
-  if (here.loaded === build) {
+  const found = webllmBuild(id, device)!;
+  if (here.loaded === found.id) {
     return 'ready';
   }
-  return here.downloaded.has(build) ? 'downloaded' : 'needs-download';
+  const cached = here.cache.get(found.id) ?? 'none';
+  return cached === 'complete' ? 'downloaded' : cached === 'partial' ? 'partial' : 'needs-download';
 }

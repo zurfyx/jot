@@ -17,12 +17,15 @@ import {
   modelState,
   type ModelState,
   readChoice,
+  type CacheState,
   unsupportedReason,
-  webllmId,
+  webllmBuild,
   writeChoice,
+  MODEL_IDS,
 } from './models';
 import { checkAvailability, languageModel } from './prompt-api';
-import { deleteModel, downloadedModels, webllmBackend, webllmEngine } from './webllm/client';
+import { cacheState, clearCache } from './webllm/cache';
+import { webllmBackend, webllmEngine } from './webllm/client';
 
 export type Resolved = { backend: AiBackend } | { backend: null; reason: string };
 
@@ -31,24 +34,24 @@ export interface AiModels {
   device: ReadonlySignal<Device | null>;
   /** The person's choice in this browser, or null for the default. */
   chosen: ReadonlySignal<ModelId | null>;
-  /** Bumps when a model downloads or is deleted, for the setting's statuses. */
-  revision: ReadonlySignal<number>;
+  /** What Cache Storage holds of each WebLLM build this device uses. */
+  cache: ReadonlySignal<ReadonlyMap<string, CacheState>>;
   /** Asks the browser what it can run (local; sends nothing). */
   probe(): Promise<Device>;
   choose(id: ModelId): void;
   /** The model Ask AI uses now, or why none can run. */
   resolve(): Promise<Resolved>;
   state(id: ModelId, device: Device): ModelState;
-  /** Removes a downloaded WebLLM model from this browser. */
+  /** Reads Cache Storage again for the setting's states (local; loads no WebLLM). */
+  refreshCache(): Promise<void>;
+  /** Removes a WebLLM model's files, whole or partial, from this browser. */
   remove(id: ModelId): Promise<void>;
-  /** A model finished loading (its status turns Ready). */
-  touched(): void;
 }
 
 function createAiModels(): AiModels {
   const device = signal<Device | null>(null);
   const chosen = signal<ModelId | null>(readChoice());
-  const revision = signal(0);
+  const cache = signal<ReadonlyMap<string, CacheState>>(new Map());
 
   const probe = async (): Promise<Device> => {
     const [prompt, gpu] = await Promise.all([checkAvailability(languageModel()), probeGpu()]);
@@ -62,15 +65,28 @@ function createAiModels(): AiModels {
       const api = languageModel();
       return api === null ? null : promptApiBackend(api);
     }
-    const build = webllmId(id, found);
+    const build = webllmBuild(id, found);
     return build === null ? null : webllmBackend(MODELS[id], build);
+  };
+
+  const refreshCache = async () => {
+    const found = device.peek() ?? (await probe());
+    const next = new Map<string, CacheState>();
+    for (const id of MODEL_IDS) {
+      const build = webllmBuild(id, found);
+      if (build !== null) {
+        next.set(build.id, await cacheState(build));
+      }
+    }
+    cache.value = next;
   };
 
   return {
     device,
     chosen,
-    revision,
+    cache,
     probe,
+    refreshCache,
     choose(id) {
       chosen.value = id;
       writeChoice(id);
@@ -82,24 +98,21 @@ function createAiModels(): AiModels {
       return backend === null ? { backend: null, reason: unsupportedReason(found) } : { backend };
     },
     state(id, found) {
-      return modelState(id, found, {
-        loaded: webllmEngine().loaded,
-        downloaded: downloadedModels(),
-      });
+      return modelState(id, found, { loaded: webllmEngine().loaded, cache: cache.peek() });
     },
     async remove(id) {
       const found = device.peek() ?? (await probe());
-      const build = webllmId(id, found);
+      const build = webllmBuild(id, found);
       if (build !== null) {
+        if (webllmEngine().loaded === build.id) {
+          webllmEngine().stop();
+        }
         try {
-          await deleteModel(build);
+          await clearCache(build);
         } finally {
-          revision.value += 1;
+          await refreshCache();
         }
       }
-    },
-    touched() {
-      revision.value += 1;
     },
   };
 }

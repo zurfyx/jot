@@ -104,10 +104,12 @@ playground needs: no toolbar is always there.
   - **AI model** (D26) opens in the menu's place like Note info: "AI model", a muted line
     ("Ask AI's model runs on this device, so your text never leaves it."), then a row per
     model: a violet radio, the name ("Small · default here") with its state on the right
-    ("Ready" and "Downloaded" in `--ok`, "Needs download", "Not supported on this device",
-    or "Downloading 42%"), then two muted lines, the model and its download ("Qwen2.5 0.5B ·
-    300 MB") and where it runs ("In the browser, best on phones"). A downloaded WebLLM
-    model has a quiet Delete. Rows that can't run here are muted and disabled.
+    ("Ready" and "Downloaded" in `--ok`, "Needs download", "Partly downloaded", "Not
+    supported on this device", or "Downloading 42%", announced politely), then two muted
+    lines, the model and its download ("Qwen2.5 0.5B · 300 MB") and where it runs ("In the
+    browser, best on phones"). A downloaded or partly downloaded WebLLM model has a quiet
+    Delete, labelled with the model's name. Rows that can't run here are muted and
+    disabled.
   - **Ask AI** (D21) looks like a field: a violet spark and "Ask AI…" in `--muted` on
     `--hover`, about 190px wide (narrower on a phone); while jot AI works it reads "jot AI
     is writing…" in violet. It opens a panel above the dock: an input with a 1px `--ai`
@@ -118,8 +120,8 @@ playground needs: no toolbar is always there.
     or the load with a violet meter, "jot AI is writing… Esc to cancel", or an error in
     `--bad`). Before a WebLLM download the line gives way to the question: "Ask AI needs a
     300 MB model on this device (Qwen2.5 0.5B). Download it?", on a phone a muted
-    mobile-data note, then the dark Download button, a quiet Not now and "Or pick another
-    in ⋯ → AI model". The target blocks carry `--ai-tint` (`::highlight(jot-ai-target)`)
+    mobile-data note, then the dark Download button (which takes the focus), a quiet Not
+    now and "Or pick another in ⋯ → AI model". The target blocks carry `--ai-tint` (`::highlight(jot-ai-target)`)
     while the panel is open or a request runs. Where no model can run, the panel holds
     only why ("Ask AI runs a model on this device, and this browser can't: it has no
     WebGPU and no built-in AI. Try a recent Chrome, Edge or Safari."). jot AI is "jot AI"

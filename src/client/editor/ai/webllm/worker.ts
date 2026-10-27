@@ -5,20 +5,22 @@
  *
  * Models and their WebGPU libraries come from WebLLM's default hosts
  * (Hugging Face and raw.githubusercontent.com), and WebLLM keeps them in the
- * browser's Cache Storage, where `has` and `delete` look.
+ * browser's Cache Storage (cache.ts reads it from the page).
  */
-import {
-  deleteModelAllInfoInCache,
-  hasModelInCache,
-  type InitProgressReport,
-  MLCEngine,
-} from '@mlc-ai/web-llm';
+import { type InitProgressReport, MLCEngine } from '@mlc-ai/web-llm';
 
-import type { ChatResult, FromWorker, ToWorker } from './protocol';
+import {
+  type ChatResult,
+  type FromWorker,
+  NEEDS_DOWNLOAD,
+  stageOf,
+  type ToWorker,
+} from './protocol';
 
 interface WorkerScope {
   postMessage(message: FromWorker): void;
   addEventListener(type: 'message', listener: (event: MessageEvent<ToWorker>) => void): void;
+  fetch: typeof fetch;
 }
 
 const scope = self as unknown as WorkerScope;
@@ -36,9 +38,7 @@ function getEngine(): MLCEngine {
           id: loading,
           type: 'progress',
           progress: report.progress,
-          // "Fetching param cache[3/12]…", then "Loading model from cache[3/12]…".
-          loading: /^Loading/i.test(report.text),
-          text: report.text,
+          stage: stageOf(report.text),
         });
       }
     },
@@ -46,26 +46,54 @@ function getEngine(): MLCEngine {
   return engine;
 }
 
+function needsDownload(): Error {
+  return Object.assign(new Error('The model is not all in the cache'), { name: NEEDS_DOWNLOAD });
+}
+
+/**
+ * Runs `load` with the network shut: WebLLM fills its cache with
+ * `Cache.add()` (and fetches a few files directly), so both refuse while it
+ * runs. The page checked every file first; this is the guarantee that a
+ * load nobody agreed to download never downloads.
+ */
+async function offline<T>(load: () => Promise<T>): Promise<T> {
+  const add = Cache.prototype.add;
+  const addAll = Cache.prototype.addAll;
+  const networkFetch = scope.fetch;
+  Cache.prototype.add = () => Promise.reject(needsDownload());
+  Cache.prototype.addAll = () => Promise.reject(needsDownload());
+  scope.fetch = (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : String(input), self.location.href);
+    const local =
+      url.origin === self.location.origin || url.protocol === 'data:' || url.protocol === 'blob:';
+    return local ? networkFetch.call(self, input, init) : Promise.reject(needsDownload());
+  };
+  try {
+    return await load();
+  } finally {
+    Cache.prototype.add = add;
+    Cache.prototype.addAll = addAll;
+    scope.fetch = networkFetch;
+  }
+}
+
 async function handle(message: Exclude<ToWorker, { type: 'interrupt' }>) {
   switch (message.type) {
-    case 'has':
-      return hasModelInCache(message.model);
-    case 'delete':
-      if (loaded === message.model) {
-        await engine?.unload();
-        loaded = null;
-      }
-      await deleteModelAllInfoInCache(message.model);
-      return null;
     case 'load': {
-      if (loaded !== message.model) {
+      const model = message.build.id;
+      if (loaded !== model) {
         loading = message.id;
         try {
-          await getEngine().reload(message.model);
+          const reload = () => getEngine().reload(model);
+          await (message.offline ? offline(reload) : reload());
+        } catch (error) {
+          loaded = null;
+          await engine?.unload().catch(() => undefined);
+          throw error;
         } finally {
           loading = null;
         }
-        loaded = message.model;
+        loaded = model;
       }
       return null;
     }

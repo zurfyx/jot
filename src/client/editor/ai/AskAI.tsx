@@ -101,6 +101,25 @@ function AskPanel({ ai }: { ai: AiState }) {
     }
   }, [unavailable]);
 
+  const consent = phase.kind === 'consent' ? phase : null;
+  const chosen = useSignal(aiModels().chosen);
+  const downloadRef = useRef<HTMLButtonElement>(null);
+  // The question is for one model: a change in the setting withdraws it.
+  const asked = useRef(chosen);
+  useEffect(() => {
+    if (asked.current !== chosen) {
+      asked.current = chosen;
+      ai.dismiss();
+    }
+  }, [chosen, ai]);
+  // The question takes the focus, so a screen reader reads it (and Enter downloads).
+  const questionShown = consent !== null;
+  useEffect(() => {
+    if (questionShown) {
+      downloadRef.current?.focus();
+    }
+  }, [questionShown]);
+
   if (unavailable) {
     return (
       <div className="popover ask-panel" role="dialog" aria-label="Ask AI" data-testid="ask-panel">
@@ -111,7 +130,6 @@ function AskPanel({ ai }: { ai: AiState }) {
     );
   }
 
-  const consent = phase.kind === 'consent' ? phase : null;
   const canAsk =
     availability !== 'checking' &&
     consent === null &&
@@ -163,8 +181,15 @@ function AskPanel({ ai }: { ai: AiState }) {
         )}
       </form>
       {consent !== null && (
-        <div className="ask-consent" role="group" aria-label="Download" data-testid="ask-consent">
-          <p className="ask-consent-text">{consentLine(consent.model, consent.size)}</p>
+        <div
+          className="ask-consent"
+          role="group"
+          aria-labelledby="ask-consent-text"
+          data-testid="ask-consent"
+        >
+          <p id="ask-consent-text" className="ask-consent-text" aria-live="assertive">
+            {consentLine(consent.model, consent.size)}
+          </p>
           {device?.small === true && (
             <p className="ask-consent-note" data-testid="ask-mobile-data">
               {MOBILE_DATA_WARNING}
@@ -172,10 +197,12 @@ function AskPanel({ ai }: { ai: AiState }) {
           )}
           <div className="ask-consent-actions">
             <button
+              ref={downloadRef}
               type="button"
               className="ask-go"
+              aria-describedby="ask-consent-text"
               data-testid="ask-download"
-              onClick={() => void ai.ask(text, { consented: true })}
+              onClick={() => void ai.ask(text, { consent: consent.ask })}
             >
               Download
             </button>

@@ -245,16 +245,23 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
     `prompt()`, or rejects with a `ModelError` (`consent`, `too-long`, `cut-off`, `load`).
     `promptApiBackend()` wraps Chrome's model.
   - `webllm/`: `worker.ts`, a module worker and the only importer of `@mlc-ai/web-llm`,
-    runs one `MLCEngine` and answers `protocol.ts` messages (`has` and `delete` on WebLLM's
-    Cache Storage, `load` with progress, `chat` with Qwen3's thinking off, `interrupt`).
-    `client.ts` starts it on first use (`new Worker(new URL('./worker.ts', import.meta.url))`,
-    or, in dev builds, `window.__jotWebLLMWorker` for tests), keeps one per page, stops it
-    when a download is cancelled and after 5 idle minutes, remembers downloaded models in
-    `localStorage` (`jot:ai-downloaded`) and checks the cache before loading one, and makes
-    `webllmBackend()`: a 5,544-character passage limit from the 4,096-token window, a reply
-    budget of about twice the passage, a cut-off reply refused.
-  - `choice.ts`: `aiModels()`, one per page: the probed device, the choice, and
-    `resolve()`, the backend Ask AI uses now or why none can run.
+    runs one `MLCEngine` and answers `protocol.ts` messages (`load` with progress and its
+    stage read from WebLLM's report text, `chat` with Qwen3's thinking off, `interrupt`);
+    an `offline` load makes `Cache.add()` and cross-origin `fetch()` refuse with
+    `NeedsDownload`. `cache.ts` reads and clears WebLLM's Cache Storage from the page
+    (`webllm/model`, `webllm/config`, `webllm/wasm`): `cacheState()` says `complete` only
+    with the tensor manifest, every shard, the tokenizer, the config and the WebGPU
+    library. `client.ts` starts the worker to load a model (`new Worker(new
+URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWorker`
+    for tests), keeps one per page, stops it when it has no model and nothing to do, when
+    a download is cancelled (and clears that download's files) and after 5 idle minutes,
+    and makes `webllmBackend()`: consent unless the build is complete, an offline load
+    when it is, "Loading" for cached loads, a 5,544-character passage limit from the
+    4,096-token window, a reply budget of about twice the passage, a cut-off reply
+    refused.
+  - `choice.ts`: `aiModels()`, one per page: the probed device, the choice, what the
+    cache holds of each build (`refreshCache()`), `remove()`, and `resolve()`, the backend
+    Ask AI uses now or why none can run.
   - `markdown.ts`: the target (the top-level blocks between two points, tables refused),
     its Markdown (`$convertSelectionToMarkdownString` over whole blocks, text points only
     on text nodes, so blocks that start or end with a line break export too), its lossless
@@ -265,7 +272,8 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   - `controller.ts`: `aiState(session)`. Opening the field captures the page binding's
     `getCursor()` as the target and resolves the model. Ask resolves it again, checks the
     target in the page's editor, stops at the `consent` phase for a WebLLM model that isn't
-    here (until Download), opens the model under one `AbortController` (the `downloading`
+    all here (until Download, whose consent names the model, build and size and must
+    still match), opens the model under one `AbortController` (the `downloading`
     phase, with `loading` once WebLLM loads from its cache), then has jot AI join as an
     in-tab peer (kind `ai`, `askedBy`, one per asker) with its caret at the target; jot AI
     reads the target's Markdown and snapshot from its own editor, the prompt is checked

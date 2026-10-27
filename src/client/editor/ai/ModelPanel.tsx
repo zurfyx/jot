@@ -50,13 +50,20 @@ export function ModelPanel({
   const models = aiModels();
   const device = useSignal(models.device);
   const chosen = useSignal(models.chosen);
-  useSignal(models.revision);
+  useSignal(models.cache);
   const phase = useSignal(aiState(session).phase);
   const [deleting, setDeleting] = useState<ModelId | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    void models.probe();
+    void models.probe().then(() => models.refreshCache());
   }, [models]);
+  // A download that ends while the panel is open changes what is cached.
+  const downloading = phase.kind === 'downloading';
+  useEffect(() => {
+    if (!downloading) {
+      void models.refreshCache();
+    }
+  }, [models, downloading]);
   useEffect(() => {
     if (viaKeyboard) {
       ref.current?.focus();
@@ -148,7 +155,11 @@ function ModelList({
                     {info.label}
                     {fallback === id && <span className="model-default"> · default here</span>}
                   </span>
-                  <span className={`model-state is-${state}`} data-testid={`model-${id}-state`}>
+                  <span
+                    className={`model-state is-${state}`}
+                    data-testid={`model-${id}-state`}
+                    aria-live={inFlight ? 'polite' : undefined}
+                  >
                     {status}
                   </span>
                 </span>
@@ -158,17 +169,19 @@ function ModelList({
                 <span className="model-sub">{info.where}</span>
               </span>
             </label>
-            {(state === 'downloaded' || state === 'ready') && info.webllm !== null && (
-              <button
-                type="button"
-                className="ask-quiet model-delete"
-                disabled={busy || deleting !== null}
-                data-testid={`model-${id}-delete`}
-                onClick={() => onDelete(id)}
-              >
-                {deleting === id ? 'Deleting…' : 'Delete'}
-              </button>
-            )}
+            {(state === 'downloaded' || state === 'ready' || state === 'partial') &&
+              info.webllm !== null && (
+                <button
+                  type="button"
+                  className="ask-quiet model-delete"
+                  disabled={busy || deleting !== null}
+                  aria-label={`Delete ${info.label} (${info.name}) from this browser`}
+                  data-testid={`model-${id}-delete`}
+                  onClick={() => onDelete(id)}
+                >
+                  {deleting === id ? 'Deleting…' : 'Delete'}
+                </button>
+              )}
           </div>
         );
       })}

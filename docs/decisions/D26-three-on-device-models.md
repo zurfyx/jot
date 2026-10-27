@@ -35,21 +35,34 @@ them from Hugging Face into the browser's cache.
   elsewhere; otherwise Chrome's model if Chrome can still download it; otherwise none, and
   Ask AI says why ("no WebGPU and no built-in AI", or "no usable graphics adapter"). A
   chosen model that can't run here falls back to the default.
-- **Nothing downloads without a yes.** A WebLLM model that isn't here stops Ask at a
+- **Nothing downloads without a yes.** A WebLLM model that isn't all here stops Ask at a
   question in the panel: "Ask AI needs a 300 MB model on this device (Qwen2.5 0.5B).
-  Download it?", with a mobile-data note on phones, Download and Not now. The download
-  shows its progress in the panel and Esc or Stop cancels it (the worker stops; shards
-  already fetched stay cached). jot remembers what it downloaded (`jot:ai-downloaded`) so
-  the setting needs no WebLLM to show it, and checks WebLLM's cache before loading: a
-  model the browser evicted asks again. Delete in the setting removes a model from the
-  cache. Chrome's model keeps Chrome's own flow: its download starts on the first Ask.
+  Download it?", with a mobile-data note on phones, Download and Not now. The question
+  takes the focus, so a screen reader reads it. The yes is for that download only: it
+  carries the model, its build and its size, and Ask goes on only if the model it would
+  use now is still that one (a change in the setting withdraws the question, and a
+  stale yes asks again for the new model). The download shows its progress in the panel
+  ("Downloading", then "Loading" once WebLLM loads the files onto the GPU; a cached model
+  says "Loading" throughout); Esc or Stop cancels it, the worker stops, and the files it
+  had fetched are removed. Chrome's model keeps Chrome's own flow: its download starts on
+  the first Ask.
+- **Downloaded means every file.** The page reads WebLLM's Cache Storage itself
+  (`webllm/cache.ts`), without WebLLM: a build is downloaded only with its weights (the
+  tensor manifest and every shard it lists), its tokenizer, its config and its WebGPU
+  library, at the URLs WebLLM uses (kept in `models.ts`; a unit test checks them against
+  WebLLM's prebuilt list). Anything less is "Partly downloaded" and asks before loading,
+  so a browser that evicted any file (Safari does) asks again. A load nobody agreed to
+  runs offline: the worker makes `Cache.add()` and cross-origin `fetch()` refuse while it
+  loads, so even a file the check missed can't download; the load then asks instead.
+  Delete in the setting removes every file of a build, whole or partial.
 - **WebLLM runs in a worker, loaded only when used.** `editor/ai/webllm/worker.ts` runs
   WebLLM's `MLCEngine` and is the only file that imports WebLLM; the page speaks a small
-  protocol to it (`has`, `delete`, `load` with progress, `chat`, `interrupt`). WebLLM's own
-  worker client would load its whole bundle on the page too: about 2.1 MB compressed, which
-  doesn't tree-shake. The worker starts on an Ask or a Delete, never on page load; a test
-  checks that only the worker imports WebLLM. The loaded model stays in GPU memory for 5
-  minutes after its last use, then the worker stops. Models and their WebGPU libraries come
+  protocol to it (`load` with progress, `chat`, `interrupt`). WebLLM's own worker client
+  would load its whole bundle on the page too: about 2.1 MB compressed, which doesn't
+  tree-shake. The worker starts on an Ask, never on page load; a test checks that only the
+  worker imports WebLLM. A worker with no model loaded stops as soon as it is idle; a
+  loaded model stays in GPU memory for 5 minutes after its last use, then the worker
+  stops. Models and their WebGPU libraries come
   from WebLLM's default hosts (huggingface.co and its CDN, raw.githubusercontent.com),
   never from R2 or the Worker; jot sends no Content-Security-Policy that would block them.
   The worker script is served with `Referrer-Policy: no-referrer` (`public/_headers`, for
@@ -98,7 +111,10 @@ list", plus "Make it more formal" and "Add a title" for the finalists):
   phone runs warm while it writes. The model leaves memory after 5 idle minutes.
 - Safari (iOS) may evict the cache under storage pressure or after weeks without visits;
   jot asks the browser to persist storage after a download and asks again before
-  downloading if the model is gone.
+  downloading if any file is gone.
+- jot reads WebLLM's cache layout (scope names, the manifest name, the URLs) from the
+  page. A WebLLM bump that changes it shows models as not downloaded and asks again: a
+  wasted question, never a download without one.
 - After a deploy, a tab opened before it may fail to start the worker (the old hashed file
   is gone); the field says the model couldn't start, and a reload fixes it.
 - WebLLM's prebuilt model list moves with its version: a WebLLM bump must check that both

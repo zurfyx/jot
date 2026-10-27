@@ -54,7 +54,12 @@ describe('Ask AI copy', () => {
   it('asks before a download, in a sentence', () => {
     expect(
       metaLine(
-        { kind: 'consent', model: 'Qwen2.5 0.5B', size: '300 MB' },
+        {
+          kind: 'consent',
+          model: 'Qwen2.5 0.5B',
+          size: '300 MB',
+          ask: { id: 'small', build: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', bytes: 295_000_000 },
+        },
         'downloadable',
         block,
         null,

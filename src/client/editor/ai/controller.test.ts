@@ -613,24 +613,32 @@ describe('Ask AI', () => {
  */
 function fakeDownloadable(options: {
   here?: boolean;
-  /** jot remembers the download, but the cache lost it. */
+  /** The files went missing (evicted) after the field said the model was here. */
   evicted?: boolean;
   reply?: (input: string, signal?: AbortSignal) => Promise<string>;
   maxPassage?: number;
   fail?: ModelError;
   /** The download waits until it is aborted. */
   hang?: boolean;
+  /** The cache check waits for this before answering. */
+  gate?: Promise<void>;
+  id?: 'small' | 'large';
 }) {
   let here = options.here ?? false;
+  const large = options.id === 'large';
   const calls = { open: [] as boolean[], prompts: [] as string[] };
   const backend: AiBackend = {
-    id: 'small',
-    name: 'Qwen2.5 0.5B',
-    consent: { bytes: 295_000_000, text: '300 MB' },
+    id: large ? 'large' : 'small',
+    build: large ? 'Qwen3-1.7B-q4f16_1-MLC' : 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
+    name: large ? 'Qwen3 1.7B' : 'Qwen2.5 0.5B',
+    consent: large
+      ? { bytes: 991_000_000, text: '990 MB' }
+      : { bytes: 295_000_000, text: '300 MB' },
     maxPassage: options.maxPassage,
     availability: () => Promise.resolve(here || options.evicted ? 'available' : 'downloadable'),
     async open({ consented, onProgress, signal }) {
       calls.open.push(consented);
+      await options.gate;
       if (options.evicted && !consented) {
         throw new ModelError('consent');
       }
@@ -665,6 +673,46 @@ function fakeDownloadable(options: {
   return { backend, calls };
 }
 
+const SMALL_QUESTION = {
+  kind: 'consent',
+  model: 'Qwen2.5 0.5B',
+  size: '300 MB',
+  ask: { id: 'small', build: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', bytes: 295_000_000 },
+} as const;
+
+/** The consent the question asked for, as Download hands it back. */
+function consentOf(state: AiState) {
+  const phase = state.phase.peek();
+  if (phase.kind !== 'consent') {
+    throw new Error(`no question: ${phase.kind}`);
+  }
+  return { consent: phase.ask };
+}
+
+/** A setup whose model can be switched, as the AI model setting does. */
+function switchable(first: AiBackend) {
+  let current = first;
+  const host = createHost();
+  const state = createAiState(host, {
+    resolve: () => Promise.resolve({ backend: current }),
+    personId: () => 'gerard-123',
+    user: () => ({ name: 'Gerard', color: 0 }),
+  });
+  cleanups.push(() => {
+    state.stop();
+    host.awareness.destroy();
+    host.editor.dispose();
+    host.doc.destroy();
+  });
+  return {
+    host,
+    state,
+    switchTo(next: AiBackend) {
+      current = next;
+    },
+  };
+}
+
 describe('Ask AI with a model to download', () => {
   it('asks before downloading, and downloads nothing on Not now', async () => {
     const model = fakeDownloadable({});
@@ -677,7 +725,7 @@ describe('Ask AI with a model to download', () => {
     expect(state.availability.value).toBe('downloadable');
     caretInSecond(host, state);
     expect(await state.ask('Shorter')).toBe(false);
-    expect(state.phase.value).toEqual({ kind: 'consent', model: 'Qwen2.5 0.5B', size: '300 MB' });
+    expect(state.phase.value).toEqual(SMALL_QUESTION);
     expect(model.calls.open).toEqual([]);
     state.cancel();
     expect(state.phase.value).toEqual({ kind: 'idle' });
@@ -691,6 +739,7 @@ describe('Ask AI with a model to download', () => {
     await state.refresh();
     caretInSecond(host, state);
     await state.ask('Shorter');
+    const yes = consentOf(state);
     const phases: string[] = [];
     state.phase.subscribe((phase) =>
       phases.push(
@@ -699,7 +748,7 @@ describe('Ask AI with a model to download', () => {
           : phase.kind,
       ),
     );
-    expect(await state.ask('Shorter', { consented: true })).toBe(true);
+    expect(await state.ask('Shorter', yes)).toBe(true);
     expect(model.calls.open).toEqual([true]);
     expect(phases).toEqual([
       'consent',
@@ -718,6 +767,44 @@ describe('Ask AI with a model to download', () => {
     expect(model.calls.open).toEqual([true, false]);
   });
 
+  it('asks again, and downloads nothing, when the model changed after the question', async () => {
+    const small = fakeDownloadable({});
+    const large = fakeDownloadable({ id: 'large' });
+    const { host, state, switchTo } = switchable(small.backend);
+    await state.refresh();
+    caretInSecond(host, state);
+    await state.ask('Shorter');
+    const yesToSmall = consentOf(state);
+    // The person picks Larger in the setting, then presses Download.
+    switchTo(large.backend);
+    expect(await state.ask('Shorter', yesToSmall)).toBe(false);
+    expect(small.calls.open).toEqual([]);
+    expect(large.calls.open).toEqual([]);
+    expect(state.phase.value).toEqual({
+      kind: 'consent',
+      model: 'Qwen3 1.7B',
+      size: '990 MB',
+      ask: { id: 'large', build: 'Qwen3-1.7B-q4f16_1-MLC', bytes: 991_000_000 },
+    });
+    // A yes to that question downloads Larger.
+    expect(await state.ask('Shorter', consentOf(state))).toBe(true);
+    expect(large.calls.open).toEqual([true]);
+  });
+
+  it('runs nothing on a yes for a download the model no longer needs', async () => {
+    const small = fakeDownloadable({});
+    const { host, state, switchTo } = switchable(small.backend);
+    await state.refresh();
+    caretInSecond(host, state);
+    await state.ask('Shorter');
+    const yes = consentOf(state);
+    const model = fakeModel(() => Promise.resolve('Nano'));
+    switchTo(promptApiBackend(model.api));
+    expect(await state.ask('Shorter', yes)).toBe(false);
+    expect(state.phase.value).toEqual({ kind: 'error', message: MESSAGES.modelChanged });
+    expect(model.calls.create).toHaveLength(0);
+  });
+
   it('asks again when the browser evicted a download it had', async () => {
     const model = fakeDownloadable({ evicted: true });
     const { host, state } = setup(model.backend);
@@ -726,10 +813,41 @@ describe('Ask AI with a model to download', () => {
     caretInSecond(host, state);
     expect(await state.ask('Shorter')).toBe(false);
     expect(model.calls.open).toEqual([false]);
-    expect(state.phase.value).toEqual({ kind: 'consent', model: 'Qwen2.5 0.5B', size: '300 MB' });
+    expect(state.phase.value).toEqual(SMALL_QUESTION);
     expect(state.availability.value).toBe('downloadable');
     // jot AI never joined.
     expect(host.awareness.getStates().size).toBe(1);
+  });
+
+  it('forgets the target, and asks nothing, when the field closed during the cache check', async () => {
+    let check: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      check = resolve;
+    });
+    const model = fakeDownloadable({ evicted: true, gate });
+    const { host, state } = setup(model.backend);
+    await state.refresh();
+    caretInSecond(host, state);
+    const asked = state.ask('Shorter');
+    await vi.waitFor(() => expect(model.calls.open).toEqual([false]));
+    state.release();
+    expect(state.target.value).not.toBeNull();
+    check();
+    expect(await asked).toBe(false);
+    expect(state.phase.value).toEqual({ kind: 'idle' });
+    expect(state.target.value).toBeNull();
+    expect(state.targetInfo.value).toBeNull();
+  });
+
+  it('drops a question left from before when the field opens again', async () => {
+    const model = fakeDownloadable({});
+    const { host, state } = setup(model.backend);
+    await state.refresh();
+    caretInSecond(host, state);
+    await state.ask('Shorter');
+    expect(state.phase.value.kind).toBe('consent');
+    state.capture();
+    expect(state.phase.value).toEqual({ kind: 'idle' });
   });
 
   it("refuses a passage over the model's own limit, before anything is sent", async () => {
@@ -764,7 +882,8 @@ describe('Ask AI with a model to download', () => {
     const { host, state } = setup(model.backend);
     await state.refresh();
     caretInSecond(host, state);
-    const asked = state.ask('Shorter', { consented: true });
+    await state.ask('Shorter');
+    const asked = state.ask('Shorter', consentOf(state));
     await vi.waitFor(() =>
       expect(state.phase.value).toMatchObject({ kind: 'downloading', progress: 0.25 }),
     );

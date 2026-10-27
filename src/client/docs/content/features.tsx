@@ -184,8 +184,9 @@ export function Ai() {
         </li>
         <li>
           <b>The page stays light.</b> Only the worker imports WebLLM, and it starts on the first
-          Ask, never on page load. The model stays loaded for five idle minutes, then the worker
-          stops and the GPU memory is free.
+          Ask, never on page load. What is downloaded the page reads from Cache Storage itself. The
+          model stays loaded for five idle minutes, then the worker stops and the GPU memory is
+          free.
         </li>
         <li>
           <b>It must fit.</b> The models have a 4,096-token window, shared by the passage and its

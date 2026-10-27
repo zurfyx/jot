@@ -1,29 +1,45 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ModelError } from '../backend';
-import { MODELS } from '../models';
+import { type CacheState, MODELS, type WebLLMBuild } from '../models';
 import {
-  downloadedModels,
-  markDownloaded,
+  type CacheAccess,
+  IDLE_UNLOAD_MS,
   replyBudget,
   stripThinking,
   WebLLMEngine,
   webllmBackend,
   type WorkerLike,
 } from './client';
-import type { ChatResult, FromWorker, ToWorker } from './protocol';
+import type { ChatResult, FromWorker, LoadStage, ToWorker } from './protocol';
 
-const SMALL = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
+const SMALL = MODELS.small.webllm!.f16;
 
-/** A stand-in for jot's WebLLM worker, speaking its protocol. */
-function fakeWorker(options: { cached?: string[]; reply?: ChatResult; hangLoad?: boolean } = {}) {
-  const cached = new Set(options.cached ?? []);
+/**
+ * A stand-in for jot's WebLLM worker, speaking its protocol with WebLLM's
+ * real progress texts (the stage is parsed from them in the worker).
+ */
+function fakeWorker(
+  options: {
+    reply?: ChatResult;
+    hangLoad?: boolean;
+    /** The load fails with this error name (the worker's offline guard says NeedsDownload). */
+    failLoad?: string;
+    /** Stages the load reports, in order. */
+    stages?: LoadStage[];
+  } = {},
+) {
   const log = { sent: [] as ToWorker[], terminated: 0, spawned: 0 };
   const spawn = (): WorkerLike => {
     log.spawned += 1;
     const listeners: ((event: MessageEvent<FromWorker>) => void)[] = [];
+    let stopped = false;
     const emit = (data: FromWorker) =>
-      queueMicrotask(() => listeners.forEach((listener) => listener({ data } as MessageEvent)));
+      queueMicrotask(() => {
+        if (!stopped) {
+          listeners.forEach((listener) => listener({ data } as MessageEvent));
+        }
+      });
     return {
       addEventListener(type: string, listener: unknown) {
         if (type === 'message') {
@@ -33,23 +49,13 @@ function fakeWorker(options: { cached?: string[]; reply?: ChatResult; hangLoad?:
       postMessage(message) {
         log.sent.push(message);
         switch (message.type) {
-          case 'has':
-            emit({ id: message.id, type: 'done', value: cached.has(message.model) });
-            break;
-          case 'delete':
-            cached.delete(message.model);
-            emit({ id: message.id, type: 'done', value: null });
-            break;
           case 'load':
-            emit({
-              id: message.id,
-              type: 'progress',
-              progress: 0.5,
-              loading: false,
-              text: 'Fetching',
-            });
-            if (!options.hangLoad) {
-              cached.add(message.model);
+            for (const [index, stage] of (options.stages ?? ['start', 'fetch', 'load']).entries()) {
+              emit({ id: message.id, type: 'progress', progress: index / 2, stage });
+            }
+            if (options.failLoad !== undefined) {
+              emit({ id: message.id, type: 'error', name: options.failLoad, message: 'no' });
+            } else if (!options.hangLoad) {
               emit({ id: message.id, type: 'done', value: null });
             }
             break;
@@ -65,134 +71,202 @@ function fakeWorker(options: { cached?: string[]; reply?: ChatResult; hangLoad?:
         }
       },
       terminate() {
+        stopped = true;
         log.terminated += 1;
       },
     };
   };
-  return { spawn, log, cached };
+  return { spawn, log };
 }
 
-let store: Map<string, string>;
-beforeEach(() => {
-  store = new Map();
-  vi.stubGlobal('localStorage', {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => store.set(key, value),
-  });
-});
-afterEach(() => vi.unstubAllGlobals());
+/** Cache Storage as the backend sees it: a state per build, and clears. */
+function fakeCache(initial: CacheState) {
+  let state = initial;
+  const cleared: string[] = [];
+  const access: CacheAccess = {
+    state: () => Promise.resolve(state),
+    clear: (build: WebLLMBuild) => {
+      cleared.push(build.id);
+      state = 'none';
+      return Promise.resolve();
+    },
+  };
+  return {
+    access,
+    cleared,
+    set(next: CacheState) {
+      state = next;
+    },
+  };
+}
 
-function setup(worker: ReturnType<typeof fakeWorker>) {
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+function setup(worker: ReturnType<typeof fakeWorker>, cached: CacheState) {
   vi.stubGlobal('window', { __jotWebLLMWorker: worker.spawn });
   const engine = new WebLLMEngine();
-  const backend = webllmBackend(MODELS.small, SMALL, engine);
-  return { engine, backend };
+  const cache = fakeCache(cached);
+  const backend = webllmBackend(MODELS.small, SMALL, engine, cache.access);
+  return { engine, backend, cache };
 }
 
 const open = (backend: ReturnType<typeof webllmBackend>, consented: boolean) => {
-  const progress: (number | null)[] = [];
+  const progress: [number | null, boolean | undefined][] = [];
   const controller = new AbortController();
   const opened = backend.open({
     system: 'You are jot AI.',
     signal: controller.signal,
     consented,
-    onProgress: (value) => progress.push(value),
+    onProgress: (value, loading) => progress.push([value, loading]),
   });
   return { opened, progress, controller };
 };
 
 describe('the WebLLM backend', () => {
-  it('starts no worker to say a model needs downloading', async () => {
-    const worker = fakeWorker();
-    const { backend } = setup(worker);
-    expect(backend.consent).toEqual({ bytes: 295_000_000, text: '300 MB' });
-    expect(await backend.availability()).toBe('downloadable');
-    await expect(open(backend, false).opened).rejects.toEqual(new ModelError('consent'));
-    expect(worker.log.spawned).toBe(0);
+  it('starts no worker to say a model needs downloading, or is partly there', async () => {
+    for (const cached of ['none', 'partial'] as const) {
+      const worker = fakeWorker();
+      const { backend } = setup(worker, cached);
+      expect(backend.build).toBe(SMALL.id);
+      expect(backend.consent).toEqual({ bytes: 295_000_000, text: '300 MB' });
+      expect(await backend.availability()).toBe('downloadable');
+      await expect(open(backend, false).opened).rejects.toEqual(new ModelError('consent'));
+      expect(worker.log.spawned).toBe(0);
+    }
   });
 
-  it('downloads after a yes, with progress, and remembers it', async () => {
+  it('downloads after a yes: Downloading while it fetches, Loading once it loads', async () => {
     const worker = fakeWorker();
-    const { backend, engine } = setup(worker);
+    const { backend, engine, cache } = setup(worker, 'partial');
     const { opened, progress } = open(backend, true);
     const session = await opened;
-    expect(progress).toEqual([0.5]);
-    expect(engine.loaded).toBe(SMALL);
-    expect(downloadedModels()).toEqual(new Set([SMALL]));
+    expect(progress).toEqual([
+      [0, false],
+      [0.5, false],
+      [1, true],
+    ]);
+    expect(worker.log.sent[0]).toMatchObject({ type: 'load', build: SMALL, offline: false });
+    expect(engine.loaded).toBe(SMALL.id);
+    cache.set('complete');
     expect(await backend.availability()).toBe('available');
     expect(await session.prompt('Shorter')).toBe('Demos.');
-    const chat = worker.log.sent.find((message) => message.type === 'chat');
-    expect(chat).toMatchObject({ system: 'You are jot AI.', prompt: 'Shorter' });
+    expect(worker.log.sent.find((message) => message.type === 'chat')).toMatchObject({
+      system: 'You are jot AI.',
+      prompt: 'Shorter',
+    });
     engine.stop();
   });
 
-  it('checks the cache before loading a model it remembers, and asks again when it is gone', async () => {
-    markDownloaded(SMALL, true);
-    const evicted = fakeWorker({ cached: [] });
-    const first = setup(evicted);
-    expect(await first.backend.availability()).toBe('available');
-    await expect(open(first.backend, false).opened).rejects.toEqual(new ModelError('consent'));
-    expect(evicted.log.sent.map((message) => message.type)).toEqual(['has']);
-    expect(downloadedModels().has(SMALL)).toBe(false);
-    first.engine.stop();
-
-    markDownloaded(SMALL, true);
-    const kept = fakeWorker({ cached: [SMALL] });
-    const second = setup(kept);
-    await open(second.backend, false).opened;
-    expect(kept.log.sent.map((message) => message.type)).toEqual(['has', 'load']);
-    second.engine.stop();
+  it('loads a cached model offline and labels all of it Loading, from the first report', async () => {
+    const worker = fakeWorker({ stages: ['start', 'fetch', 'load', 'finish'] });
+    const { backend, engine } = setup(worker, 'complete');
+    expect(await backend.availability()).toBe('available');
+    const { opened, progress } = open(backend, false);
+    await opened;
+    expect(worker.log.sent[0]).toMatchObject({ type: 'load', offline: true });
+    expect(progress.map(([, loading]) => loading)).toEqual([true, true, true, true]);
+    engine.stop();
   });
 
-  it('stops the worker when the download is cancelled', async () => {
+  it('asks for consent when a cached load would have needed the network', async () => {
+    const worker = fakeWorker({ failLoad: 'NeedsDownload' });
+    const { backend, engine } = setup(worker, 'complete');
+    await expect(open(backend, false).opened).rejects.toEqual(new ModelError('consent'));
+    // A worker with no model stops at once.
+    expect(engine.running).toBe(false);
+    expect(worker.log.terminated).toBe(1);
+  });
+
+  it('stops the worker and clears the partial files when a download is cancelled', async () => {
     const worker = fakeWorker({ hangLoad: true });
-    const { backend, engine } = setup(worker);
+    const { backend, engine, cache } = setup(worker, 'none');
     const { opened, controller } = open(backend, true);
     await vi.waitFor(() => expect(worker.log.sent.some((m) => m.type === 'load')).toBe(true));
     controller.abort();
     await expect(opened).rejects.toMatchObject({ name: 'AbortError' });
     expect(worker.log.terminated).toBe(1);
     expect(engine.loaded).toBeNull();
-    expect(downloadedModels().has(SMALL)).toBe(false);
+    expect(cache.cleared).toEqual([SMALL.id]);
+  });
+
+  it('keeps the files when a cached load is cancelled', async () => {
+    const worker = fakeWorker({ hangLoad: true });
+    const { backend, cache } = setup(worker, 'complete');
+    const { opened, controller } = open(backend, false);
+    await vi.waitFor(() => expect(worker.log.sent.some((m) => m.type === 'load')).toBe(true));
+    controller.abort();
+    await expect(opened).rejects.toMatchObject({ name: 'AbortError' });
+    expect(cache.cleared).toEqual([]);
   });
 
   it('interrupts a reply on abort, keeping the model loaded', async () => {
     const worker = fakeWorker();
-    const { backend, engine } = setup(worker);
-    const session = await open(backend, true).opened;
+    const { backend, engine } = setup(worker, 'complete');
+    const session = await open(backend, false).opened;
     const controller = new AbortController();
     const asked = session.prompt('Shorter', { signal: controller.signal });
     controller.abort();
     await expect(asked).rejects.toMatchObject({ name: 'AbortError' });
     expect(worker.log.sent.at(-1)).toEqual({ type: 'interrupt' });
     expect(worker.log.terminated).toBe(0);
-    expect(engine.loaded).toBe(SMALL);
+    expect(engine.loaded).toBe(SMALL.id);
     engine.stop();
   });
 
   it('refuses a reply cut off by the context window', async () => {
     const worker = fakeWorker({ reply: { text: '- Demos\n- Lun', finish: 'length' } });
-    const { backend, engine } = setup(worker);
-    const session = await open(backend, true).opened;
+    const { backend, engine } = setup(worker, 'complete');
+    const session = await open(backend, false).opened;
     await expect(session.prompt('Shorter')).rejects.toEqual(new ModelError('cut-off'));
     engine.stop();
   });
 
   it('passes the context window as a passage limit', () => {
-    const { backend } = setup(fakeWorker());
+    const { backend } = setup(fakeWorker(), 'none');
     expect(backend.maxPassage).toBe(5544);
   });
 });
 
+describe('the worker', () => {
+  it('stops five idle minutes after its last use, and a reply resets the clock', async () => {
+    vi.useFakeTimers();
+    const worker = fakeWorker();
+    const { backend, engine } = setup(worker, 'complete');
+    const session = await open(backend, false).opened;
+    await vi.advanceTimersByTimeAsync(IDLE_UNLOAD_MS - 1000);
+    expect(engine.running).toBe(true);
+    await session.prompt('Shorter');
+    await vi.advanceTimersByTimeAsync(IDLE_UNLOAD_MS - 1000);
+    expect(engine.running).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(engine.running).toBe(false);
+    expect(engine.loaded).toBeNull();
+    expect(worker.log.terminated).toBe(1);
+  });
+
+  it('stops at once when a load fails and no model is loaded', async () => {
+    const worker = fakeWorker({ failLoad: 'Error' });
+    const { backend, engine } = setup(worker, 'complete');
+    await expect(open(backend, false).opened).rejects.toEqual(new ModelError('load', 'no'));
+    expect(engine.running).toBe(false);
+    expect(worker.log.terminated).toBe(1);
+  });
+});
+
 describe("WebLLM's prebuilt models", () => {
-  it('still include both builds of Small and Larger, with the context window jot plans for', async () => {
+  it('still include both builds of Small and Larger, at the URLs and context window jot plans for', async () => {
     const { prebuiltAppConfig } = await import('@mlc-ai/web-llm');
     for (const id of ['small', 'large'] as const) {
       const model = MODELS[id].webllm!;
       for (const build of [model.f16, model.f32]) {
-        const record = prebuiltAppConfig.model_list.find((entry) => entry.model_id === build);
-        expect(record, build).toBeDefined();
-        expect(record!.model).toMatch(/^https:\/\/huggingface\.co\/mlc-ai\//);
+        const record = prebuiltAppConfig.model_list.find((entry) => entry.model_id === build.id);
+        expect(record, build.id).toBeDefined();
+        // jot reads Cache Storage for these URLs without loading WebLLM.
+        expect(record!.model).toBe(build.url);
+        expect(record!.model_lib).toBe(build.lib);
         expect(record!.overrides?.context_window_size).toBe(model.contextWindow);
       }
     }

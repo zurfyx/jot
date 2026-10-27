@@ -37,6 +37,8 @@ export interface OpenOptions {
 
 export interface AiBackend {
   id: ModelId;
+  /** The exact build (a WebLLM model id), where there is a choice of builds. */
+  build?: string;
   /** The model's name, for the field ("Qwen2.5 0.5B"). */
   name: string;
   /**

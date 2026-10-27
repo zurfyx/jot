@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   activeModel,
+  type CacheState,
   canRun,
   defaultModel,
   type Device,
@@ -11,7 +12,7 @@ import {
   modelState,
   readChoice,
   unsupportedReason,
-  webllmId,
+  webllmBuild,
   webllmMaxPassage,
   writeChoice,
 } from './models';
@@ -115,11 +116,15 @@ describe('the default model', () => {
 
 describe('the models', () => {
   it('picks the WebLLM build the adapter can run', () => {
-    expect(webllmId('small', device({ gpu: 'f16' }))).toBe('Qwen2.5-0.5B-Instruct-q4f16_1-MLC');
-    expect(webllmId('small', device({ gpu: 'f32' }))).toBe('Qwen2.5-0.5B-Instruct-q4f32_1-MLC');
-    expect(webllmId('large', device({ gpu: 'f16' }))).toBe('Qwen3-1.7B-q4f16_1-MLC');
-    expect(webllmId('large', device({ gpu: 'none' }))).toBeNull();
-    expect(webllmId('chrome', device())).toBeNull();
+    expect(webllmBuild('small', device({ gpu: 'f16' }))?.id).toBe(
+      'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
+    );
+    expect(webllmBuild('small', device({ gpu: 'f32' }))?.id).toBe(
+      'Qwen2.5-0.5B-Instruct-q4f32_1-MLC',
+    );
+    expect(webllmBuild('large', device({ gpu: 'f16' }))?.id).toBe('Qwen3-1.7B-q4f16_1-MLC');
+    expect(webllmBuild('large', device({ gpu: 'none' }))).toBeNull();
+    expect(webllmBuild('chrome', device())).toBeNull();
   });
 
   it('can run only where its runtime is', () => {
@@ -128,31 +133,20 @@ describe('the models', () => {
     expect(canRun('small', device({ gpu: 'no-adapter' }))).toBe(false);
   });
 
-  it('says each one is ready, downloaded, to download, or not for this device', () => {
-    const none = { loaded: null, downloaded: new Set<string>() };
+  it('says each one is ready, downloaded, partly downloaded, to download, or not for this device', () => {
+    const none = { loaded: null, cache: new Map<string, CacheState>() };
+    const small16 = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
     expect(modelState('chrome', device({ prompt: 'available' }), none)).toBe('ready');
     expect(modelState('chrome', device({ prompt: 'downloadable' }), none)).toBe('needs-download');
     expect(modelState('chrome', device({ prompt: 'missing' }), none)).toBe('unsupported');
     expect(modelState('small', device(), none)).toBe('needs-download');
-    expect(
-      modelState('small', device(), {
-        loaded: null,
-        downloaded: new Set(['Qwen2.5-0.5B-Instruct-q4f16_1-MLC']),
-      }),
-    ).toBe('downloaded');
-    expect(
-      modelState('small', device(), {
-        loaded: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
-        downloaded: new Set(),
-      }),
-    ).toBe('ready');
+    const cached = (state: CacheState) => ({ loaded: null, cache: new Map([[small16, state]]) });
+    expect(modelState('small', device(), cached('complete'))).toBe('downloaded');
+    expect(modelState('small', device(), cached('partial'))).toBe('partial');
+    expect(modelState('small', device(), cached('none'))).toBe('needs-download');
+    expect(modelState('small', device(), { loaded: small16, cache: new Map() })).toBe('ready');
     // The f16 build downloaded doesn't count for an adapter without f16.
-    expect(
-      modelState('small', device({ gpu: 'f32' }), {
-        loaded: null,
-        downloaded: new Set(['Qwen2.5-0.5B-Instruct-q4f16_1-MLC']),
-      }),
-    ).toBe('needs-download');
+    expect(modelState('small', device({ gpu: 'f32' }), cached('complete'))).toBe('needs-download');
     expect(modelState('large', device({ gpu: 'none' }), none)).toBe('unsupported');
   });
 
