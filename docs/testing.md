@@ -198,7 +198,7 @@ Durable Objects, over real WebSockets.
   margin names both ("You" for oneself), the legend shows character shares, a name
   focuses that person, Hide blame clears it all; hovering text shows who wrote it; the
   registry on the server holds the writer's entry and none for a reader; reconnecting
-  from Work offline shows blame for a few seconds;
+  from Work offline shows blame for a few seconds; a table row written by Gerard, Ana and Gerard gets three margin bars, with no duplicate React keys;
 - the example (D20): `/new?example` lands on `/n/<id>` with the offsite plan and its
   banner; both demo carets show in that tab and, through the relay, in a second browser
   where the banner does not show; the script plays to the same content in both; blame is

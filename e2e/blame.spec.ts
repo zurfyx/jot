@@ -187,3 +187,40 @@ test('the registry holds one entry per writing client, and none for readers', as
     { p: expect.any(String), n: 'Gerard', c: 0, k: 'person', s: expect.any(Number) },
   ]);
 });
+
+test('cells side by side from different people keep their margin bars apart', async ({
+  context,
+  otherContext,
+}) => {
+  const id = freshNoteId();
+  const gerard = await as(context, 'Gerard', 0);
+  const ana = await as(otherContext, 'Ana', 1);
+  const errors: string[] = [];
+  gerard.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  await openNote(gerard, id);
+  await openNote(ana, id);
+
+  await editor(gerard).click();
+  await gerard.keyboard.press('ControlOrMeta+k');
+  await gerard.getByRole('option', { name: 'Insert table' }).click();
+  const cell = (page: Page, n: number) => editor(page).locator('th, td').nth(n);
+  await expect(cell(ana, 2)).toBeVisible();
+  // One row: Gerard, Ana, Gerard.
+  await cell(gerard, 0).click();
+  await gerard.keyboard.type('g one');
+  await cell(ana, 1).click();
+  await ana.keyboard.type('a two');
+  await expect(cell(gerard, 1)).toHaveText('a two');
+  await cell(gerard, 2).click();
+  await gerard.keyboard.type('g three');
+  await expect(cell(ana, 2)).toHaveText('g three');
+
+  await toggleBlame(gerard);
+  await expect
+    .poll(async () => Object.values(await highlightedText(gerard)).sort())
+    .toEqual(['a two', 'g one|g three']);
+  await expect(gerard.locator('.blame-run')).toHaveCount(3);
+  expect(errors.filter((text) => text.includes('same key'))).toEqual([]);
+});
