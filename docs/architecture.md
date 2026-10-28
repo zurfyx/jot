@@ -269,9 +269,16 @@ URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWor
     `markdown` fence, and `$replaceBlocks` (`$generateNodesFromMarkdownString`, links
     other than http, https and mailto unwrapped; when the reply has as many blocks as the
     target, each of the same kind and holding plain text alone, each old block takes its
-    new text in place, its text nodes' text set, so the binding keeps the identity, and
-    the blame, of the characters a set keeps; otherwise the new blocks are inserted before
-    the first target, then the targets removed).
+    new text in place, its text nodes' text changed by `$applyTextDiff` from
+    `textDiff.ts`; otherwise the new blocks are inserted before the first target, then
+    the targets removed).
+  - `textDiff.ts`: `diffWords` (a word-level diff into ordered hunks: the common start
+    and end, then a longest common subsequence of words, whitespace runs and punctuation)
+    and `$applyTextDiff`, which turns a text node into new text with one `spliceText` per
+    hunk, right to left. The binding records a splice exactly, so the words a rewrite
+    keeps keep their identity, their blame, and a peer's concurrent edits inside them, in
+    place; a text set whole is recorded as before and after only, and the binding would
+    diff it as one stretch from the first change to the last.
   - `controller.ts`: `aiState(session)`. Opening the field captures the page binding's
     `getCursor()` as the target and resolves the model. Ask resolves it again, checks the
     target in the page's editor, stops at the `consent` phase for a WebLLM model that isn't

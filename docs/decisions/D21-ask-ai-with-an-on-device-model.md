@@ -41,9 +41,10 @@ and WebLLM on WebGPU. The example's demo collaborators already write through in-
   (`ai-<person id>`) so blame names the right one. It joins once the model is ready (not
   during a download), its caret moves to the target while it thinks and stays where it
   wrote; it leaves the note a minute after its last request, and joins again, with a new
-  client id, for the next one. Its edit goes through its own binding, which keeps
-  characters a rewrite leaves unchanged, so blame credits jot AI with exactly what it
-  changed. When jot AI writes, the asker gets a registry entry if they have none yet,
+  client id, for the next one. Its edit goes through its own binding, as exact splices
+  of the words it changes, so the characters a rewrite leaves unchanged keep their
+  identity: blame credits jot AI with exactly what it changed, and a peer's concurrent
+  typing inside them stays where it was made. When jot AI writes, the asker gets a registry entry if they have none yet,
   recorded as this browser's own session, so "asked by" names them, as "You" in their own
   tab.
 - **One request at a time; Esc or Stop cancels** it (the `AbortSignal` reaches the

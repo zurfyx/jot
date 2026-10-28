@@ -245,9 +245,9 @@ describe('Ask AI', () => {
     const byName = Object.fromEntries(shares.map(({ person, chars }) => [person.name, chars]));
     // The page typed nothing itself in this test: its lines came from the setup,
     // under its own client id, now registered as Gerard (the asker). A rewrite
-    // replaces whole words, so jot AI is credited with "lunch and a" alone.
-    expect(byName[JOT_AI_NAME]).toBeGreaterThan(0);
-    expect(byName[JOT_AI_NAME]).toBeLessThanOrEqual('lunch and a'.length);
+    // splices the words it changes, so jot AI is credited with " and a" alone,
+    // in place of the comma after "lunch".
+    expect(byName[JOT_AI_NAME]).toBe(' and a'.length);
     expect(byName.Gerard).toBeGreaterThan(20);
   });
 
