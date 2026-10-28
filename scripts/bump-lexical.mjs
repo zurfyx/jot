@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Points every lexical and @lexical/* dependency at one facebook/lexical
+// Points every lexical and @lexical/* dependency at one meta/lexical
 // commit published on pkg.pr.new (D04).
 //
 //   node scripts/bump-lexical.mjs <pr-number | commit-sha>
@@ -13,11 +13,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const REPO = 'facebook/lexical';
+const REPO = 'meta/lexical';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FILES = ['package.json', 'pnpm-workspace.yaml'];
 const URL_PATTERN =
-  /https:\/\/pkg\.pr\.new\/facebook\/lexical\/((?:@lexical\/)?[a-z0-9-]+)@[0-9a-f]{7,40}/g;
+  /https:\/\/pkg\.pr\.new\/(?:facebook|meta)\/lexical\/((?:@lexical\/)?[a-z0-9-]+)@[0-9a-f]{7,40}/g;
 
 function fail(message) {
   console.error(`bump-lexical: ${message}`);

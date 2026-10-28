@@ -174,7 +174,7 @@ function setup(api: LanguageModelApi | AiBackend | null, lingerMs?: number, from
 function caretInSecond(host: Host, state: AiState) {
   host.editor.update(
     () => {
-      $getRoot().getChildAtIndex<ElementNode>(1)!.getFirstDescendant()!.selectStart();
+      ($getRoot().getChildAtIndex(1) as ElementNode).getFirstDescendant()!.selectStart();
     },
     { discrete: true },
   );
@@ -322,7 +322,7 @@ describe('Ask AI', () => {
     // Underline, which the Markdown sent to the model doesn't carry.
     host.editor.update(
       () => {
-        const text = $getRoot().getChildAtIndex<ElementNode>(1)!.getFirstDescendant()!;
+        const text = ($getRoot().getChildAtIndex(1) as ElementNode).getFirstDescendant()!;
         (text as TextNode).toggleFormat('underline');
       },
       { discrete: true },
@@ -517,7 +517,7 @@ describe('Ask AI', () => {
     await vi.waitFor(() => expect(model.calls.prompts).toHaveLength(1));
     host.editor.update(
       () => {
-        $getRoot().getChildAtIndex<ElementNode>(1)!.selectEnd().insertText(', snacks');
+        ($getRoot().getChildAtIndex(1) as ElementNode).selectEnd().insertText(', snacks');
       },
       { discrete: true },
     );

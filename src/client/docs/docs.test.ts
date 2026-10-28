@@ -95,15 +95,13 @@ describe('the code blocks', () => {
   it('link the binding at the Lexical commit jot pins', () => {
     expect(LEXICAL_SHA).toMatch(/^[0-9a-f]{40}$/);
     expect(LEXICAL_Y_README).toBe(
-      `https://github.com/facebook/lexical/blob/${LEXICAL_SHA}/packages/lexical-y/README.md`,
+      `https://github.com/meta/lexical/blob/${LEXICAL_SHA}/packages/lexical-y/README.md`,
     );
     expect(SNIPPETS.quickStart.code).toContain('provider.messageHandlers[MESSAGE_NOTE_STATUS]');
   });
 
   it('install the same packages jot does', () => {
     expect(SNIPPETS.install.code).toContain('@y/y@14.0.0-rc.29');
-    expect(SNIPPETS.install.code).toMatch(
-      /pkg\.pr\.new\/facebook\/lexical\/@lexical\/y@[0-9a-f]{40}/,
-    );
+    expect(SNIPPETS.install.code).toMatch(/pkg\.pr\.new\/meta\/lexical\/@lexical\/y@[0-9a-f]{40}/);
   });
 });
