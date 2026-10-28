@@ -1,3 +1,4 @@
+import { createYDoc } from '@lexical/y/headless';
 import * as syncProtocol from '@y/protocols/sync';
 import * as Y from '@y/y';
 import { DurableObject } from 'cloudflare:workers';
@@ -89,11 +90,10 @@ export class NoteRoom extends DurableObject<Env> {
 
   private resetDoc(): void {
     this.doc?.destroy();
-    this.doc = new Y.Doc({ gc: true });
-    // Yjs's format cleanup would delete format items the clients keep (around
-    // deleted text, say) and send those deletions out as the room's own edit:
-    // @lexical/y requires a relay to turn it off before it applies updates.
-    this.doc.cleanupFormatting = false;
+    // @lexical/y's relay document: garbage collected, with Yjs's format cleanup
+    // off, which would otherwise delete format items the clients keep (around
+    // deleted text, say) and send those deletions out as the room's own edit.
+    this.doc = createYDoc();
     this.size = 0;
     this.pending = 0;
     this.doc.on('update', (update: Uint8Array) => {

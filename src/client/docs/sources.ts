@@ -26,8 +26,8 @@ import { excerpt } from './excerpt';
 export const REPO_URL = 'https://github.com/zurfyx/jot';
 /** The Lexical commit jot pins (D04), from package.json. */
 export const LEXICAL_SHA = /@([0-9a-f]{40})$/.exec(pkg.dependencies['@lexical/y'])?.[1] ?? 'main';
-const LEXICAL_Y_TREE = `https://github.com/facebook/lexical/tree/${LEXICAL_SHA}/packages/lexical-y`;
-const LEXICAL_Y_BLOB = `https://github.com/facebook/lexical/blob/${LEXICAL_SHA}/packages/lexical-y`;
+const LEXICAL_Y_TREE = `https://github.com/meta/lexical/tree/${LEXICAL_SHA}/packages/lexical-y`;
+const LEXICAL_Y_BLOB = `https://github.com/meta/lexical/blob/${LEXICAL_SHA}/packages/lexical-y`;
 /** `@lexical/y`'s README at that commit: setup, storage and the wire format. */
 export const LEXICAL_Y_README = `${LEXICAL_Y_BLOB}/README.md`;
 export const LEXICAL_Y_WIRE_FORMAT = `${LEXICAL_Y_README}#wire-format-layout-1`;

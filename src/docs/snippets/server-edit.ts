@@ -1,7 +1,13 @@
 import { ListExtension } from '@lexical/list';
 import { $convertToMarkdownString, TRANSFORMERS } from '@lexical/markdown';
 import { $createHeadingNode, RichTextExtension } from '@lexical/rich-text';
-import { editYState, type HeadlessYConfig, readYState, seedYState } from '@lexical/y/headless';
+import {
+  createYWriter,
+  editYState,
+  type HeadlessYConfig,
+  readYState,
+  seedYState,
+} from '@lexical/y/headless';
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 
 // Use your clients' extensions, all of them. With fewer (these two alone), editYState
@@ -16,12 +22,21 @@ export function seedNote(title: string): Uint8Array {
   });
 }
 
-/** Append a line to a stored note. `update` is what to apply and broadcast. */
+// Who the server writes as: one writer per agent or integration, created once per
+// process. It keeps one client id per note, so a note edited a thousand times carries
+// one client id for it, not a thousand. Pass `writer: null` for a one-off anonymous id.
+const writer = createYWriter('jot AI');
+
+/**
+ * Append a line to a stored note. `update` is what to apply and broadcast;
+ * `clientID` is who wrote it, to credit to the writer in your attribution.
+ */
 export function appendLine(state: Uint8Array, text: string) {
-  const { update, state: next } = editYState(state, config, () => {
+  const append = () => {
     $getRoot().append($createParagraphNode().append($createTextNode(text)));
-  });
-  return { update, state: next };
+  };
+  const { update, state: next, clientID } = editYState(state, config, append, { writer });
+  return { update, state: next, clientID };
 }
 
 /** Read a note as Markdown. Nothing is written. */

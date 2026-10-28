@@ -37,9 +37,9 @@ A SQLite-backed Durable Object per note (`new_sqlite_classes`), addressed by
 `idFromName(noteId)`. It is a Yjs 14 relay written with `@y/y`, the same library as the
 clients (D03).
 
-- **Memory.** The constructor loads the stored state into a fresh gc-on `Y.Doc` with Yjs's
-  format cleanup off (`cleanupFormatting = false`), as `@lexical/y` requires of a server that
-  stores state: otherwise the room would delete format items the clients keep and send the
+- **Memory.** The constructor loads the stored state into a fresh `Y.Doc` from
+  `createYDoc()` (`@lexical/y/headless`): gc on, with Yjs's format cleanup off, as
+  `@lexical/y` requires of a server that stores state: otherwise the room would delete format items the clients keep and send the
   deletions out as its own edit. Sockets are
   accepted with the Hibernation API, so an idle note is evicted from memory while its
   sockets stay open; the next message runs the constructor again, which reloads the
@@ -139,7 +139,7 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   spell was Work offline.
 - **Size and cap:** the size is the larger of the server's note-status figure and a local
   estimate (measured a second after changes, and on each sync): the page's state
-  re-encoded from a gc-on document (`size.ts`), the way the room compacts it. The page's
+  re-encoded from a relay document (`createYDoc`, `size.ts`), the way the room compacts it. The page's
   own encoding would count content the binding's undo stack keeps alive, so replacing a
   large passage a few times would look full long before the stored note is. It
   drives the pill, Note info and the cap state; a rejection makes the note read only at

@@ -91,10 +91,10 @@ export function Relay() {
         Each note is one Durable Object: a single-threaded room that holds the Yjs document in
         memory, relays updates between sockets, and saves the state as one SQLite row. The relay is
         Yjs 14 too (<C>@y/y</C>, not yrs), so the server reads exactly what the clients write. Its
-        document has Yjs's format cleanup turned off (<C>doc.cleanupFormatting = false</C>
-        ), as <C>@lexical/y</C> requires of any server that stores state: with it on, the room would
-        delete format items the clients keep, such as those around text someone deleted, and send
-        the deletions out as an edit of its own.
+        document comes from <C>createYDoc()</C> in <C>@lexical/y/headless</C>: garbage collected,
+        with Yjs's format cleanup turned off, as <C>@lexical/y</C> requires of any server that
+        stores state. With cleanup on, the room would delete format items the clients keep, such as
+        those around text someone deleted, and send the deletions out as an edit of its own.
       </P>
       <RelayDiagram />
       <H2>Routing</H2>
@@ -177,8 +177,13 @@ export function ServerSideEditing() {
           gives the same bytes, and the two seeds merge into one copy.
         </Li>
         <Li>
-          <C>editYState(state, config, $edit)</C>: runs one editor update and returns the update it
-          wrote (<C>null</C> when nothing changed), the new state, and any warnings.
+          <C>
+            editYState(state, config, $edit, {'{'} writer {'}'})
+          </C>
+          : runs one editor update and returns the update it wrote (<C>null</C> when nothing
+          changed), the new state, the client id it wrote under, and any warnings. <C>writer</C> is
+          required: a <C>createYWriter('jot AI')</C> made once per process continues one client id
+          per note, and <C>null</C> writes under a new anonymous id.
         </Li>
         <Li>
           <C>readYState(state, config, $read)</C>: returns whatever <C>$read</C> returns. Nothing is
@@ -197,8 +202,8 @@ export function ServerSideEditing() {
       <P>
         jot's relay doesn't run Lexical: it relays and stores Yjs updates and nothing else. To edit
         from the server, a room would pass <C>Y.encodeStateAsUpdate(this.doc)</C> to{' '}
-        <C>editYState</C> and apply the update it returns to its document. The room's update handler
-        then broadcasts it to every socket, like a client's. See{' '}
+        <C>editYState</C> with its writer and apply the update it returns to its document. The
+        room's update handler then broadcasts it to every socket, like a client's. See{' '}
         <a href={LEXICAL_Y_HEADLESS}>
           <C>headless.ts</C>
         </a>{' '}

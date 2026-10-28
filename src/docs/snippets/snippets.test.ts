@@ -23,9 +23,13 @@ describe('the server-side editing snippet', () => {
   it('seeds identically twice, appends a line and reads Markdown', () => {
     const seed = seedNote('Offsite');
     expect(seedNote('Offsite')).toEqual(seed);
-    const { update, state } = appendLine(seed, 'Bring snacks.');
+    const { update, state, clientID } = appendLine(seed, 'Bring snacks.');
     expect(update).not.toBeNull();
     expect(toMarkdown(state)).toBe('# Offsite\n\nBring snacks.');
+    // The writer continues its client id on the note: a second edit adds no other.
+    const second = appendLine(state, 'And plates.');
+    expect(second.clientID).toBe(clientID);
+    expect(toMarkdown(second.state)).toBe('# Offsite\n\nBring snacks.\n\nAnd plates.');
 
     // The update is what a relay would apply and broadcast.
     const live = new Y.Doc();

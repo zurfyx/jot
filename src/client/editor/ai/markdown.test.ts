@@ -97,7 +97,7 @@ describe('Ask AI Markdown', () => {
     const result = update(editor, () => {
       const [heading, paragraph, list] = children();
       // A caret inside a list item targets the whole list.
-      const item = (list as ListNode).getLastChildOrThrow<ElementNode>();
+      const item = (list as ListNode).getLastChildOrThrow() as ElementNode;
       const caret = item.getFirstDescendant()!.selectStart();
       const inList = $targetBetween(caret.anchor, caret.focus);
 

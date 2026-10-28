@@ -41,7 +41,7 @@ How expensive is this to get wrong?
 
 | ID                                                      | Decision                                                                      | Radius | Status    |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------- | ------ | --------- |
-| [D04](D04-lexical-from-pkg-pr-new.md)                   | Lexical from pkg.pr.new at a pinned PR commit; single copy; bump script       | MED    | `DECIDED` |
+| [D04](D04-lexical-from-pkg-pr-new.md)                   | Lexical from pkg.pr.new at a pinned commit; single copy; bump script          | MED    | `DECIDED` |
 | [D06](D06-ninety-day-expiry.md)                         | 90-day expiry without visits                                                  | MED    | `DECIDED` |
 | [D08](D08-pr-workflow.md)                               | PR workflow: protected main, required checks, squash merge                    | MED    | `DECIDED` |
 | [D10](D10-ci-gates-workers-builds-deploys.md)           | GitHub CI gates merges; Cloudflare Workers Builds deploys                     | MED    | `DECIDED` |

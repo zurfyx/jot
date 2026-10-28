@@ -1,3 +1,4 @@
+import { createYDoc } from '@lexical/y/headless';
 import * as Y from '@y/y';
 
 /**
@@ -8,9 +9,7 @@ import * as Y from '@y/y';
  * time and make a note look full long before the stored note is.
  */
 export function compactedSize(doc: Y.Doc): number {
-  const scratch = new Y.Doc({ gc: true });
-  scratch.cleanupFormatting = false;
-  Y.applyUpdate(scratch, Y.encodeStateAsUpdate(doc));
+  const scratch = createYDoc(Y.encodeStateAsUpdate(doc));
   const size = Y.encodeStateAsUpdate(scratch).byteLength;
   scratch.destroy();
   return size;

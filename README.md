@@ -3,7 +3,7 @@
 Live collaborative notes at **[jot.rovira.sh](https://jot.rovira.sh)**. Open a note, share its
 link, and everyone with the link edits the same page at the same time.
 
-jot is a public playground for [`@lexical/y`](https://github.com/facebook/lexical/tree/main/packages/lexical-y),
+jot is a public playground for [`@lexical/y`](https://github.com/meta/lexical/tree/main/packages/lexical-y),
 Lexical's collaboration binding for Yjs 14, before its npm release. The editor is
 [Lexical](https://lexical.dev); the server is a Cloudflare Worker with one Durable Object per
 note, relaying Yjs 14 (`@y/y`) updates and storing each note as a single SQLite row.
