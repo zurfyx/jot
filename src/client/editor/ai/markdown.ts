@@ -26,6 +26,7 @@ import {
 
 import { normalizeLinkUrl } from '../../../shared/links';
 import { MARKDOWN_TRANSFORMERS } from '../extensions';
+import { $applyTextDiff } from './textDiff';
 
 /**
  * A hard ceiling on the passage, in characters. The real limit is the model's
@@ -262,11 +263,14 @@ function $canRewrite(old: ElementNode, fresh: ElementNode): boolean {
 /**
  * Writes parsed block `fresh` into old block `old`, which it then equals: the
  * old text nodes take the new text, formats and styles (extra new ones are
- * appended, extra old ones removed). Why: @lexical/y keeps the identity of
- * characters a text node's text is set over and still holds (from the edits
- * Lexical records), so blame keeps crediting their writer and a peer's
- * concurrent edit of them stays; a block made again holds only new text, so
- * jot AI would be credited with the whole passage.
+ * appended, extra old ones removed). The new text goes in as exact splices,
+ * one per changed run of words ($applyTextDiff). Why: @lexical/y keeps the
+ * identity of the characters a splice leaves, so blame keeps crediting their
+ * writer and a peer's concurrent edit inside them stays where it was made; a
+ * text set whole is recorded as before and after only, so the binding guesses
+ * one changed stretch from the first change to the last, and a block made
+ * again holds only new text, so jot AI would be credited with the whole
+ * passage.
  */
 function $rewrite(old: ElementNode, fresh: ElementNode): void {
   const olds = plainTextChildren(old)!;
@@ -279,9 +283,7 @@ function $rewrite(old: ElementNode, fresh: ElementNode): void {
       old.append(text);
       return;
     }
-    if (target.getTextContent() !== text.getTextContent()) {
-      target.setTextContent(text.getTextContent());
-    }
+    $applyTextDiff(target, text.getTextContent());
     target.setFormat(text.getFormat());
     target.setStyle(text.getStyle());
     target.setDetail(text.getDetail());

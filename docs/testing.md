@@ -74,7 +74,7 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   theirs); the snapshot sees underline and alignment that Markdown drops. With a fake
   model on a real binding: nothing is sent before Ask; jot AI joins only once the model
   is ready, writes the reply under its own client id with its registry entry (kind `ai`,
-  `askedBy`) and its caret, and is credited only with the words it changed (the old block keeps its text nodes, and the binding replaces whole words); on
+  `askedBy`) and its caret, and is credited only with the words it changed (the old block keeps its text nodes, and takes the reply as one splice per changed run of words); on
   someone else's note, an asker who has typed nothing is recorded as this browser's own
   and named by `askedBy`; it writes into an empty block, shows the download, runs one
   request at a time, and a cancelled request never resets a newer one; it writes nothing
@@ -84,6 +84,11 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   refuses without a target, on a read-only note and with an empty reply, and leaves the
   note a while after writing or when the page closes, coming back under a new client id
   as the same person in blame;
+- jot AI's splices: the word diff turns random pairs of texts into each other with
+  ordered hunks apart, changes whole words and never splits a character; applied to a text
+  node it reaches the target and keeps the node; under `@lexical/y` jot AI's client holds
+  only the words it changed; and a rewrite racing a peer who types inside a word the
+  rewrite keeps leaves the peer's text in that word, on both clients;
 - Ask AI's models (D26): phones (UA-CH, the user agent, an iPad's touch), little memory
   and small screens count as small; the default is Chrome's model when available, else
   Small or Larger with WebGPU, else Chrome's download, else none, and a chosen model that
