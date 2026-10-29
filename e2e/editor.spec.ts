@@ -206,10 +206,13 @@ test("an open note turns read only when a newer jot's first edit arrives", async
   await openNote(page, id);
   await editor(page).click();
   await page.keyboard.type('Typed here first');
-  await expect(page.getByTestId('status-pill')).toHaveText(/^Synced/);
+  const newer = { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 };
+  const stored = async () =>
+    readYState(await readRawNote(baseURL!, id), newer, () => $getRoot().getTextContent());
+  // The pill can say Synced before the last keys reach the relay: wait for them there.
+  await expect.poll(stored).toBe('Typed here first');
 
   // A tab of a jot one schema version ahead appends a line to the same note.
-  const newer = { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 };
   await writeRawNote(baseURL!, id, (doc) => {
     const { update } = editYState(
       Y.encodeStateAsUpdate(doc),
@@ -231,10 +234,7 @@ test("an open note turns read only when a newer jot's first edit arrives", async
   await page.keyboard.type(' and more');
   await expect(editor(page)).not.toContainText('and more');
   await expect(page.getByTestId('dock').getByRole('button', { name: /^Format/ })).toBeDisabled();
-  const text = readYState(await readRawNote(baseURL!, id), newer, () =>
-    $getRoot().getTextContent(),
-  );
-  expect(text).toBe('Typed here first\n\nFrom a newer jot');
+  await expect.poll(stored).toBe('Typed here first\n\nFrom a newer jot');
 });
 
 test('a note from before the layout froze opens read only (D25)', async ({ page, baseURL }) => {
