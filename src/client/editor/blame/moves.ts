@@ -1,8 +1,9 @@
 /**
- * Layout 2 move records (`↷`) and joins.
+ * Move records (`↷`) and joins, which notes written before `@lexical/y`
+ * froze its layout can hold (D25; their root records `lexical-y` = 2).
  *
- * A peer that moves a block leaves its items where they are and writes a
- * move record where they now show; a join shows a range inline, inside
+ * In such a note, a moved block's items stay where they were, and a move
+ * record sits where the block now shows; a join shows a range inline, inside
  * another line. `toDelta` renders storage order, so lines a record covers
  * are not where Lexical shows them, and a joined line is made of pieces
  * from elsewhere. Blame does not guess: this walk of the stored items finds

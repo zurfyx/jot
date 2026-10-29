@@ -2,8 +2,8 @@
 
 jot is a full-page note that anyone with the link can edit at the same time. It lives at
 **jot.rovira.sh** and exists to put Lexical's Yjs 14 collaboration binding, `@lexical/y`, in
-front of people before its npm release: a public playground for the near-production
-version of the engine.
+front of people before its first stable npm release: a public playground for the engine as
+it is on Lexical's `main` branch.
 
 ## What a person can do
 
@@ -76,8 +76,12 @@ nofollow` and disallowed in `robots.txt`; only the landing page is indexable (D1
 - **Notes are small.** A note holds up to 2 MB of Yjs state. At 1.6 MB the page says
   "This note is almost full"; when an edit no longer fits, the page goes read only and says
   "This note is full. Start a new note to keep writing." (D05).
-- **Newer notes open read only.** A note written in a document layout this version of the
-  binding can't write opens read only rather than being misread.
+- **A note jot can't keep opens read only.** A tab still running an older jot opens a note a
+  newer jot wrote to read only, also when the newer jot's first edit arrives while the note
+  is open, and says "Read only. This note was written by a newer version of jot; reload to
+  edit." The same goes for a note in a document layout the binding can't write, newer or
+  from before the layout froze (D25, D29). It keeps showing the note and what others write;
+  nothing it can't read is edited over.
 
 ## Not in scope
 

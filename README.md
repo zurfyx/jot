@@ -4,7 +4,8 @@ Live collaborative notes at **[jot.rovira.sh](https://jot.rovira.sh)**. Open a n
 link, and everyone with the link edits the same page at the same time.
 
 jot is a public playground for [`@lexical/y`](https://github.com/meta/lexical/tree/main/packages/lexical-y),
-Lexical's collaboration binding for Yjs 14, before its npm release. The editor is
+Lexical's collaboration binding for Yjs 14, which is on Lexical's `main` branch but in no
+stable npm release yet. The editor is
 [Lexical](https://lexical.dev); the server is a Cloudflare Worker with one Durable Object per
 note, relaying Yjs 14 (`@y/y`) updates and storing each note as a single SQLite row.
 
@@ -29,6 +30,7 @@ pnpm dev          # http://localhost:5173: the client, the Worker and its Durabl
 | `pnpm format:check` | Prettier                                                       |
 | `pnpm test`         | Vitest: unit tests, and the Durable Object inside workerd      |
 | `pnpm e2e`          | Playwright against the dev server                              |
+| `pnpm e2e:docker`   | Playwright in CI's image, with the visual suite (screenshots)  |
 | `pnpm build`        | Production build of the client and the Worker                  |
 | `pnpm bump-lexical` | `pnpm bump-lexical <pr-or-sha>`: move Lexical to another build |
 
@@ -46,11 +48,12 @@ Cloudflare dashboard under Workers & Pages > `jot`. See
 ## Layout
 
 ```
-src/client/    landing page and note editor (React, Lexical, @lexical/y, @y/websocket)
+src/client/    landing page, note editor and /docs (React, Lexical, @lexical/y, @y/websocket)
 src/worker/    Worker routes and the NoteRoom Durable Object (the Yjs 14 relay)
-src/shared/    note ids, link parsing, size limits, protocol constants
-e2e/           Playwright specs
-scripts/       bump-lexical.mjs
+src/shared/    note ids, link parsing, size limits, protocol constants, the schema version
+src/docs/      the code snippets /docs shows, type-checked and tested with the app
+e2e/           Playwright specs, the visual suite and its baselines
+scripts/       bump-lexical.mjs, e2e-docker.sh, the StyleX build plugin
 docs/          product, architecture, design, testing, and the decision register
 ```
 

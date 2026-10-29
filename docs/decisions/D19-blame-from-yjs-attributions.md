@@ -37,8 +37,9 @@ every tab a new client id, so a client id alone is not a person.
   Clients missing from the registry stay unattributed.
 - **Deleted text is not shown.** jot garbage-collects deleted content to stay under 2 MB
   (D05); showing it would need gc off and history that grows fast.
-- **Moves and joins: never guess.** `toDelta` renders storage order, but a layout 2 move
-  record (`↷`) shows its range elsewhere, and a join shows pieces of other lines inside
+- **Moves and joins: never guess.** `toDelta` renders storage order, but a move record
+  (`↷`), which notes from before `@lexical/y` froze its layout can hold (D25), shows its
+  range elsewhere, and a join shows pieces of other lines inside
   one. When the delta holds a record, a walk of the stored items finds every line a
   record's range covers (and the line a join shows in) and marks it unreadable; if that
   walk disagrees with the delta at all, every line is. Those lines are left unpainted.
