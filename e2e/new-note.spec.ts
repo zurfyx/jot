@@ -272,11 +272,19 @@ test('pushing a copy keeps the format items the note holds', async ({ page, base
     state: Buffer.from(Y.encodeStateAsUpdate(ana)).toString('base64'),
   });
   await storeCopy(page, id, copy);
+  // The push's socket to the note: whatever it sent has reached the relay once it closes.
+  const pushClosed = new Promise<void>((resolve) => {
+    page.on('websocket', (socket) => {
+      if (socket.url().includes(id)) {
+        socket.on('close', () => resolve());
+      }
+    });
+  });
   await page.goto('/new');
   await expectFreshNote(page);
   await expect.poll(() => storedKeys(page)).toEqual([]);
-  // The push has hung up; the relay holds what it did before, format items included.
-  await page.waitForTimeout(500);
+  await pushClosed;
+  // The relay holds what it did before, format items included.
   expect(await held()).toEqual(['bold=true', 'bold=null']);
 });
 
