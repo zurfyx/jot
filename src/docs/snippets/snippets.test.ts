@@ -1,3 +1,4 @@
+import { createYDoc } from '@lexical/y/headless';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 
@@ -31,9 +32,9 @@ describe('the server-side editing snippet', () => {
     expect(second.clientID).toBe(clientID);
     expect(toMarkdown(second.state)).toBe('# Offsite\n\nBring snacks.\n\nAnd plates.');
 
-    // The update is what a relay would apply and broadcast.
-    const live = new Y.Doc();
-    Y.applyUpdate(live, seed);
+    // The update is what a relay would apply and broadcast, to a document from
+    // createYDoc, as jot's relay holds the note.
+    const live = createYDoc(seed);
     Y.applyUpdate(live, update!);
     expect(toMarkdown(Y.encodeStateAsUpdate(live))).toBe('# Offsite\n\nBring snacks.');
   });
@@ -69,9 +70,7 @@ describe('the registry snippet', () => {
 
 describe('the in-tab peer snippet', () => {
   it("writes into the note as its own client, and follows the note's changes", () => {
-    const note = new Y.Doc();
-    const seed = seedNote('Plan');
-    Y.applyUpdate(note, seed);
+    const note = createYDoc(seedNote('Plan'));
     const peer = createPeer(note);
     expect(peer.doc.clientID).not.toBe(note.clientID);
 
