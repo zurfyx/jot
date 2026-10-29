@@ -718,13 +718,13 @@ function FooterLink(props: ComponentProps<'a'>) {
   return <a {...props} {...stylex.props(styles.link, styles.footItem, styles.footLink)} />;
 }
 
-const QUICK_START = `const doc = new Y.Doc();
+const QUICK_START = `const doc = createYDoc();
 const editor = buildEditorFromExtensions(
   defineExtension({
     name: 'jot/note',
     dependencies: [
       RichTextExtension,
-      configExtension(YCollabExtension, {doc}),
+      configExtension(YCollabExtension, {doc, schemaVersion: 1}),
     ],
   }),
 );

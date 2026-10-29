@@ -1,6 +1,6 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
 import { RichTextExtension } from '@lexical/rich-text';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import * as Y from '@y/y';
 import { configExtension, defineExtension } from 'lexical';
 
@@ -9,7 +9,7 @@ import { configExtension, defineExtension } from 'lexical';
  * can name it) and a headless editor, synced with the note both ways.
  */
 export function createPeer(note: Y.Doc) {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   const fromNote = Symbol('from-note');
   const fromPeer = Symbol('from-peer');
   Y.applyUpdate(doc, Y.encodeStateAsUpdate(note), fromNote); // start from the note as it is
@@ -28,7 +28,12 @@ export function createPeer(note: Y.Doc) {
       // Already synced (a copy of the note), and no undo: a peer never undoes.
       dependencies: [
         RichTextExtension,
-        configExtension(YCollabExtension, { doc, synced: true, captureTimeout: null }),
+        configExtension(YCollabExtension, {
+          doc,
+          schemaVersion: 1, // the same as the note's other clients
+          synced: true,
+          captureTimeout: null,
+        }),
       ],
     }),
   );

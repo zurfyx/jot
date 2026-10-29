@@ -43,7 +43,7 @@ test('Copy puts the snippet on the clipboard', async ({ context, page }) => {
   await page.getByRole('button', { name: 'Copy quick-start.ts' }).click();
   await expect(page.getByRole('button', { name: 'Copy quick-start.ts' })).toHaveText('Copied');
   const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toContain("import { YCollabExtension } from '@lexical/y';");
+  expect(copied).toContain("import { createYDoc, YCollabExtension } from '@lexical/y';");
 });
 
 test('the nav, Previous and Next move between pages without a reload', async ({ page }) => {

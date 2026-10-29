@@ -3,7 +3,7 @@ import './docs.css';
 import { buildEditorFromExtensions, TabIndentationExtension } from '@lexical/extension';
 import { $createListItemNode, $createListNode } from '@lexical/list';
 import { $createHeadingNode } from '@lexical/rich-text';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import * as Y from '@y/y';
 import {
   $createParagraphNode,
@@ -19,6 +19,7 @@ import {
 import * as stylex from '@stylexjs/stylex';
 import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { SCHEMA_VERSION } from '../../shared/schema';
 import { editorScope } from '../editor/editor.stylex';
 import { editorTheme, jotEditorExtension, TitleExtension } from '../editor/extensions';
 import { colors, docs, fonts } from '../theme/tokens.stylex';
@@ -88,7 +89,7 @@ export default function Inspector() {
   const [box, setBox] = useState<Box | null>(null);
 
   useEffect(() => {
-    const doc = new Y.Doc();
+    const doc = createYDoc();
     const created = buildEditorFromExtensions(
       defineExtension({
         name: 'jot/docs-inspector',
@@ -101,7 +102,7 @@ export default function Inspector() {
           // Its first line has the inspector's own style, not the note's title.
           configExtension(TitleExtension, { disabled: true }),
           // A local document is synced from the start: initialize at once.
-          configExtension(YCollabExtension, { doc, synced: true }),
+          configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
         ],
       }),
     );

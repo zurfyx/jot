@@ -92,6 +92,13 @@ export function QuickStart() {
         jot note id, 22 base64url characters: the relay answers anything else with a 400, and the
         provider would retry forever.
       </P>
+      <P>
+        The document comes from <C>createYDoc()</C>, which the binding requires.{' '}
+        <C>schemaVersion</C> is your app's version of what it stores: each client records it with
+        its first write, and a client with a lower one opens the note read only instead of editing
+        over content it can't keep. Raise it in the release that starts writing something older
+        releases can't keep.
+      </P>
       <Callout title="Why wait for the first sync?">
         Initializing earlier would write an empty note on top of content you haven't received yet.
         After the sync, <C>initialize()</C> reads the note, or seeds an empty one. The seed's client
@@ -111,9 +118,10 @@ export function QuickStart() {
       <P>
         The extension's output also has a <C>status</C> signal: <C>'pending'</C> until the first
         sync, then <C>'active'</C>, or <C>'readonly'</C> when the binding can't write the note
-        safely: a newer layout, content with no layout record, node types the editor doesn't
-        register, a type recorded with a storage kind this editor can't use, or an older layout's
-        root that needs converting. jot then says "Read only" and keeps the note readable.
+        safely: a newer schema version or layout, content with no layout record, node types the
+        editor doesn't register, a type recorded with a storage kind this editor can't use, or an
+        older layout's root that needs converting. jot then says "Read only" and keeps the note
+        readable.
       </P>
       <H2>Install</H2>
       <Code source={SNIPPETS.install} />

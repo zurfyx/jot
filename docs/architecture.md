@@ -73,7 +73,10 @@ jot's own. Every frame starts with a varuint message type.
 
 A note's Y.Doc has two roots: `lexical-y`, the editor's content in `@lexical/y`'s layout,
 and `jot-people` (`PEOPLE_ROOT`), the people registry blame reads (D19). The relay treats
-both as opaque Yjs content.
+both as opaque Yjs content. Every client binds with jot's schema version (`SCHEMA_VERSION`
+in `src/shared/schema.ts`), which `@lexical/y` records on the `lexical-y` root with the
+client's first write; a tab running an older jot opens a note a newer one wrote read only
+(D29).
 
 On connect the server sends sync step 1, the current awareness states and a note status.
 The client answers step 1 and sends its own; the server's step 2 marks the client synced.

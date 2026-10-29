@@ -1,5 +1,5 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension, type YDoc } from '@lexical/y';
 import * as Y from '@y/y';
 import {
   $createParagraphNode,
@@ -18,21 +18,25 @@ import { $lexicalLines } from './lexical';
 import { mainAuthor, matchLines } from './lines';
 import { markMovedLines } from './moves';
 import { writeEntry } from './registry';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 const nobody = { personId: 'nobody-here', clients: new Set<number>() };
 
-function peer(doc: Y.Doc): LexicalEditor {
+function peer(doc: YDoc): LexicalEditor {
   return buildEditorFromExtensions(
     defineExtension({
       name: 'test/peer',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
 }
 
 function pair() {
-  const anaDoc = new Y.Doc();
-  const beaDoc = new Y.Doc();
+  const anaDoc = createYDoc();
+  const beaDoc = createYDoc();
   anaDoc.on('update', (update: Uint8Array, origin: unknown) => {
     if (origin !== beaDoc) Y.applyUpdate(beaDoc, update, anaDoc);
   });
@@ -175,7 +179,7 @@ describe('blame and moved lines', () => {
 
 describe('markMovedLines', () => {
   it('marks every line when its walk disagrees with the delta', () => {
-    const doc = new Y.Doc();
+    const doc = createYDoc();
     const editor = peer(doc);
     editor.update(() => $getRoot().clear().append(paragraph('a'), paragraph('b')), {
       discrete: true,

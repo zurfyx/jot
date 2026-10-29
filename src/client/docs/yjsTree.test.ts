@@ -3,8 +3,7 @@ import { $createLinkNode } from '@lexical/link';
 import { $createListItemNode, $createListNode } from '@lexical/list';
 import { $createHeadingNode } from '@lexical/rich-text';
 import { $createTableNodeWithDimensions } from '@lexical/table';
-import { YCollabExtension } from '@lexical/y';
-import * as Y from '@y/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import {
   $createLineBreakNode,
   $createParagraphNode,
@@ -18,13 +17,17 @@ import { describe, expect, it } from 'vitest';
 import { jotEditorExtension } from '../editor/extensions';
 import { lineKeys } from './lines';
 import { printValue, readRows, type Row, rowsFromDelta, visibleText } from './yjsTree';
+import { SCHEMA_VERSION } from '../../shared/schema';
 
 function bound() {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'test/inspector',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
       onWarn: () => {},
     }),
   );

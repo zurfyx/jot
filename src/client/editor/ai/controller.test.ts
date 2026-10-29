@@ -4,7 +4,7 @@ import {
   signal,
 } from '@lexical/extension';
 import { $createListItemNode, $createListNode } from '@lexical/list';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import { Awareness } from '@y/protocols/awareness';
 import * as Y from '@y/y';
 import {
@@ -25,20 +25,24 @@ import { jotEditorExtension } from '../extensions';
 import { type AiBackend, ModelError, promptApiBackend } from './backend';
 import { type AiState, createAiState, JOT_AI_NAME, MESSAGES } from './controller';
 import type { LanguageModelApi, ModelAvailability, ModelCreateOptions } from './prompt-api';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 /**
  * The page's side: a synced document with two paragraphs (or, given `from`,
  * someone else's note as it is), its editor and presence.
  */
 function createHost(from?: Y.Doc) {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   if (from !== undefined) {
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(from));
   }
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'test/ai-host',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
   const { binding } = getExtensionDependencyFromEditor(editor, YCollabExtension).output;

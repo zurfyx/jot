@@ -12,7 +12,10 @@ import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 
 // Use your clients' extensions, all of them. With fewer (these two alone), editYState
 // refuses, read only, any note holding a node it doesn't register: a link, a table…
-const config: HeadlessYConfig = { extensions: [RichTextExtension, ListExtension] };
+const config: HeadlessYConfig = {
+  extensions: [RichTextExtension, ListExtension],
+  schemaVersion: 1, // your clients' schemaVersion
+};
 
 /** A new note's state: content-hashed, so seeding it twice merges into one copy. */
 export function seedNote(title: string): Uint8Array {

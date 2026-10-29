@@ -3,7 +3,7 @@ import {
   getExtensionDependencyFromEditor,
   signal,
 } from '@lexical/extension';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import {
   applyAwarenessUpdate,
   Awareness,
@@ -19,6 +19,7 @@ import { encodeAwarenessUpdate } from '../../../worker/awareness';
 import { readRegistry, SEEN_REFRESH_MS } from '../blame/registry';
 import { jotEditorExtension } from '../extensions';
 import { createInTabPeer, type InTabPeer, type PeerPerson } from './peer';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 const ANA: PeerPerson = { personId: 'demo-ana', name: 'Ana (demo)', color: 1, kind: 'demo' };
 const AI: PeerPerson = {
@@ -31,11 +32,14 @@ const AI: PeerPerson = {
 
 /** The page's side: a synced document, its editor and its presence. */
 function createHost() {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'test/host',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
   const { binding } = getExtensionDependencyFromEditor(editor, YCollabExtension).output;
