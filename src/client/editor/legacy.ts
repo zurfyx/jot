@@ -1,3 +1,4 @@
+import { createYDoc } from '@lexical/y/headless';
 import { Awareness } from '@y/protocols/awareness';
 import { WebsocketProvider } from '@y/websocket';
 import * as Y from '@y/y';
@@ -45,7 +46,7 @@ export function parseLegacyCopy(stored: string | null): Uint8Array | null {
       update[i] = binary.charCodeAt(i);
     }
     // Throws if it isn't a Yjs update.
-    Y.applyUpdate(new Y.Doc(), update);
+    createYDoc(update).destroy();
     return update;
   } catch {
     return null;
@@ -71,7 +72,7 @@ export function legacyCopyIds(storage: Storage): string[] {
  * as known).
  */
 export function copyAddsTo(state: Uint8Array, copy: Uint8Array): boolean {
-  const scratch = new Y.Doc({ gc: false });
+  const scratch = createYDoc(null, { gc: false });
   try {
     Y.applyUpdate(scratch, state);
     let changed = false;
@@ -151,9 +152,12 @@ function pushCopy(id: string): void {
   }
   pushing.add(id);
 
-  // Empty at first, so the server's sync step 2 is its whole state.
-  const doc = new Y.Doc();
-  const server = new Y.Doc({ gc: false });
+  // Empty at first, so the server's sync step 2 is its whole state. Both from
+  // createYDoc, with Yjs's format cleanup off, as on every client and the relay:
+  // with it on, applying the server's state would delete the format items the
+  // note keeps around deleted text, and the provider would send the deletions.
+  const doc = createYDoc();
+  const server = createYDoc(null, { gc: false });
   // No presence: this client only carries the copy.
   const awareness = new Awareness(doc);
   awareness.setLocalState(null);
