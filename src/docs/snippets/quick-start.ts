@@ -1,8 +1,7 @@
 import { buildEditorFromExtensions, getExtensionDependencyFromEditor } from '@lexical/extension';
 import { RichTextExtension } from '@lexical/rich-text';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import { WebsocketProvider } from '@y/websocket';
-import * as Y from '@y/y';
 import { configExtension, defineExtension } from 'lexical';
 import * as decoding from 'lib0/decoding';
 
@@ -12,11 +11,14 @@ import { MESSAGE_NOTE_STATUS } from '../../shared/protocol';
 export function openNote(element: HTMLElement, id: string) {
   // jot's relay only opens 22-character note ids; anything else is a 400.
   if (!isNoteId(id)) throw new Error('Not a jot note id');
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'my-app/note',
-      dependencies: [RichTextExtension, configExtension(YCollabExtension, { doc })],
+      dependencies: [
+        RichTextExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: 1 }),
+      ],
     }),
   );
   const { binding } = getExtensionDependencyFromEditor(editor, YCollabExtension).output;

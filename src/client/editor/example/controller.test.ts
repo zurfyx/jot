@@ -3,7 +3,7 @@ import {
   getExtensionDependencyFromEditor,
   signal,
 } from '@lexical/extension';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import { Awareness } from '@y/protocols/awareness';
 import * as Y from '@y/y';
 import {
@@ -21,6 +21,7 @@ import { jotEditorExtension } from '../extensions';
 import type { NoteSession } from '../session';
 import { EXAMPLE } from './content';
 import { createExampleState, type ExampleDeps } from './controller';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -32,7 +33,7 @@ afterEach(() => {
 
 /** A note page as the controller sees it: synced or not, writable or not. */
 function fakeSession(id = 'AAAAAAAAAAAAAAAAAAAAAA', from: Y.Doc | null = null) {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   if (from !== null) {
     // Another tab on the same note: it starts from what the relay holds.
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(from));
@@ -40,7 +41,10 @@ function fakeSession(id = 'AAAAAAAAAAAAAAAAAAAAAA', from: Y.Doc | null = null) {
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'test/page',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
   if (from === null) {

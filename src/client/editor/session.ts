@@ -4,7 +4,7 @@ import {
   type ReadonlySignal,
   signal,
 } from '@lexical/extension';
-import { type YBinding, type YBindingStatus, YCollabExtension } from '@lexical/y';
+import { createYDoc, type YBinding, type YBindingStatus, YCollabExtension } from '@lexical/y';
 import { Awareness } from '@y/protocols/awareness';
 import { WebsocketProvider } from '@y/websocket';
 import * as Y from '@y/y';
@@ -13,6 +13,7 @@ import * as decoding from 'lib0/decoding';
 
 import { NOTE_SOCKET_BASE, notePath } from '../../shared/ids';
 import { type CapState, capState } from '../../shared/limits';
+import { SCHEMA_VERSION } from '../../shared/schema';
 import {
   MESSAGE_NOTE_STATUS,
   MESSAGE_SYNC,
@@ -81,7 +82,7 @@ function socketBase(): string {
 
 /** Opens note `id`: its document, editor and provider. */
 export function createNoteSession(id: string): NoteSession {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
 
   const editor = buildEditorFromExtensions(
     defineExtension({
@@ -89,6 +90,7 @@ export function createNoteSession(id: string): NoteSession {
         jotEditorExtension,
         configExtension(YCollabExtension, {
           doc,
+          schemaVersion: SCHEMA_VERSION,
           // Initialized on the first sync (onSync below).
           synced: false,
           selfCheck: import.meta.env.DEV,

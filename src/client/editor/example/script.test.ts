@@ -1,7 +1,6 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import { Awareness } from '@y/protocols/awareness';
-import * as Y from '@y/y';
 import {
   $createParagraphNode,
   $getRoot,
@@ -20,6 +19,7 @@ import { createInTabPeer } from '../peers/peer';
 import { ANA, JOT_AI_DEMO } from './controller';
 import { $agendaItem, $isEmptyNote, $lastText, $writeExample, EXAMPLE } from './content';
 import { type DemoCast, DemoAborted, resetDemo, runDemo } from './script';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 /** The note's blocks as `type: text`, list items and table rows flattened one level. */
 function outline(editor: LexicalEditor): string[] {
@@ -60,11 +60,14 @@ afterEach(() => {
 
 /** A page with the example's two demo collaborators, and "you" typing through the page's editor. */
 function setup() {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: 'test/page',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
   editor.update(() => $getRoot().clear().append($createParagraphNode()), { discrete: true });

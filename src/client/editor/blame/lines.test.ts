@@ -1,7 +1,7 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
 import { $createListItemNode, $createListNode, $isListNode } from '@lexical/list';
 import { $createHeadingNode } from '@lexical/rich-text';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension, type YDoc } from '@lexical/y';
 import * as Y from '@y/y';
 import {
   $createLineBreakNode,
@@ -20,13 +20,17 @@ import { computeBlame } from './attribution';
 import { $lexicalLines } from './lexical';
 import { type BlameLine, linesFromDelta, mainAuthor, matchLines, sharesOf } from './lines';
 import { writeEntry } from './registry';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 /** A peer: its own Y.Doc and headless editor, synced with the others. */
-function peer(doc: Y.Doc): LexicalEditor {
+function peer(doc: YDoc): LexicalEditor {
   return buildEditorFromExtensions(
     defineExtension({
       name: 'test/peer',
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
 }
@@ -49,8 +53,8 @@ function runs(line: BlameLine): string {
  * line break, and a word inside Ana's list item.
  */
 function twoAuthors() {
-  const anaDoc = new Y.Doc();
-  const beaDoc = new Y.Doc();
+  const anaDoc = createYDoc();
+  const beaDoc = createYDoc();
   link(anaDoc, beaDoc);
   const ana = peer(anaDoc);
   ana.update(
@@ -163,7 +167,7 @@ describe('blame lines from Yjs 14 attributions', () => {
   });
 
   it('leaves text by clients nobody registered unattributed', () => {
-    const doc = new Y.Doc();
+    const doc = createYDoc();
     const editor = peer(doc);
     editor.update(
       () => {

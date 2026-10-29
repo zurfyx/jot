@@ -13,8 +13,8 @@ editor state.
 
 - Every `lexical` and `@lexical/*` dependency comes from **one commit**, by its full-sha
   URL: `https://pkg.pr.new/meta/lexical/<package>@<sha>`. Currently `main` at
-  `92d6af7047fc04a27ec2d35d5299101c6b1c036a`, which carries the whole `@lexical/y` stack
-  including the headless API. Pick the newest `main` commit with a successful Continuous
+  `0823b74ef4b5e034b412dcb4ac622b936ab72c3d`, which carries the whole `@lexical/y` stack
+  including the headless API and the schema version gate (D29). Pick the newest `main` commit with a successful Continuous
   Releases run.
 - Full shas, not 7-character ones: the published packages name their own Lexical
   dependencies by full-sha URL, so matching them keeps one resolution per package.

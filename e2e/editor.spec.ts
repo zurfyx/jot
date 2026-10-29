@@ -1,3 +1,9 @@
+import { RichTextExtension } from '@lexical/rich-text';
+import { seedYState } from '@lexical/y/headless';
+import * as Y from '@y/y';
+import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
+
+import { SCHEMA_VERSION } from '../src/shared/schema';
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
 import { writeRawNote } from './raw-client';
 
@@ -173,6 +179,23 @@ test('a note from a newer layout opens read only', async ({ page, baseURL }) => 
   await expect(page.getByTestId('status-pill')).toHaveText('Read only');
   await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
   await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
+});
+
+test('a note a newer jot wrote opens read only', async ({ page, baseURL }) => {
+  const id = freshNoteId();
+  // What a jot one schema version ahead writes: a note it can read, recorded with its version.
+  const written = seedYState(
+    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 },
+    () => {
+      $getRoot().append($createParagraphNode().append($createTextNode('From a newer jot')));
+    },
+  );
+  await writeRawNote(baseURL!, id, (doc) => Y.applyUpdate(doc, written));
+  await page.goto(`/n/${id}`);
+  await expect(page.getByTestId('status-pill')).toHaveText('Read only');
+  await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
+  await expect(editor(page)).toContainText('From a newer jot');
 });
 
 test('replacing a large passage again and again does not make the note look full', async ({

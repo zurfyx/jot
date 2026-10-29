@@ -19,11 +19,12 @@ import {
   getExtensionDependencyFromEditor,
   type ReadonlySignal,
 } from '@lexical/extension';
-import { type YBinding, YCollabExtension } from '@lexical/y';
+import { createYDoc, type YBinding, YCollabExtension } from '@lexical/y';
 import { applyAwarenessUpdate, Awareness, encodeAwarenessUpdate } from '@y/protocols/awareness';
 import * as Y from '@y/y';
 import { configExtension, defineExtension, type LexicalEditorWithDispose } from 'lexical';
 
+import { SCHEMA_VERSION } from '../../../shared/schema';
 import { type PersonKind, REGISTRY_ORIGIN, SEEN_REFRESH_MS, writeEntry } from '../blame/registry';
 import { jotEditorExtension } from '../extensions';
 
@@ -100,7 +101,7 @@ const FROM_HOST = Symbol('jot-peer-from-host');
  * a person's client ids by their stable person id instead.
  */
 export function createInTabPeer(host: PeerHost, person: PeerPerson): InTabPeer {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   // The origin of the peer's updates applied to the host: unique per peer, so
   // each peer only skips its own echo.
   const fromPeer = { peer: person.personId };
@@ -131,7 +132,12 @@ export function createInTabPeer(host: PeerHost, person: PeerPerson): InTabPeer {
       dependencies: [
         jotEditorExtension,
         // Already synced (a copy of the host); no undo: peers never undo.
-        configExtension(YCollabExtension, { doc, synced: true, captureTimeout: null }),
+        configExtension(YCollabExtension, {
+          doc,
+          schemaVersion: SCHEMA_VERSION,
+          synced: true,
+          captureTimeout: null,
+        }),
       ],
       name: `jot/peer/${person.personId}`,
       onWarn: (warning) => {

@@ -1,5 +1,5 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
-import { YCollabExtension } from '@lexical/y';
+import { createYDoc, YCollabExtension } from '@lexical/y';
 import * as Y from '@y/y';
 import {
   $createParagraphNode,
@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { jotEditorExtension } from '../extensions';
 import { $replaceBlocks } from './markdown';
 import { $applyTextDiff, diffWords, type Hunk } from './textDiff';
+import { SCHEMA_VERSION } from '../../../shared/schema';
 
 /** A small seeded generator (mulberry32), so a failure replays. */
 function random(seed: number) {
@@ -115,14 +116,17 @@ afterEach(() => {
 
 /** An editor bound to its own Yjs document, as the page and jot AI each have. */
 function createClient(name: string, from?: Y.Doc) {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   if (from !== undefined) {
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(from));
   }
   const editor = buildEditorFromExtensions(
     defineExtension({
       name: `test/text-diff-${name}`,
-      dependencies: [jotEditorExtension, configExtension(YCollabExtension, { doc, synced: true })],
+      dependencies: [
+        jotEditorExtension,
+        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+      ],
     }),
   );
   cleanups.push(() => {
