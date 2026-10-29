@@ -4,8 +4,9 @@ Status: `DECIDED`
 
 ## Context
 
-`@lexical/y` is not on npm yet. meta/lexical (formerly facebook/lexical) publishes every
-commit on `main`, and every PR commit, to pkg.pr.new.
+`@lexical/y` is on meta/lexical's `main` (formerly facebook/lexical) but in no stable npm
+release yet; npm has only nightly builds of it. meta/lexical publishes every commit on
+`main`, and every PR commit, to pkg.pr.new.
 Lexical must be a single copy per app: two copies of `lexical` break node identity and
 editor state.
 

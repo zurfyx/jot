@@ -17,14 +17,17 @@ Two systems, each doing one job:
 
 ## The merge gate
 
-`ci.yml` has four jobs:
+`ci.yml` has five jobs:
 
 - `static`: lint, typecheck, format check, build;
 - `test`: Vitest, unit and workers;
-- `e2e`: Playwright Chromium against the dev server, uploading traces on failure. It runs in
-  the official `mcr.microsoft.com/playwright` image, pinned by tag and digest, whose tag
-  matches the exact `@playwright/test` version, so Chromium and its system libraries come
-  with the image. The pin, the tag and the digest move together.
+- `e2e-shard`: Playwright Chromium against the dev server, with the production-build and
+  visual suites (D27), split into three shards that run at once, each uploading its traces
+  on failure. It runs in the official `mcr.microsoft.com/playwright` image, pinned by tag
+  and digest, whose tag matches the exact `@playwright/test` version, so Chromium and its
+  system libraries come with the image. The pin, the tag and the digest move together.
+- `e2e`: waits for the three shards and passes only when all of them did (a cancelled or
+  skipped shard fails it), so one required check stands for the whole suite.
 - `zizmor`: audits `.github/` with [zizmor](https://docs.zizmor.sh) at the pedantic persona
   and fails on any finding.
 

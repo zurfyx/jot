@@ -147,6 +147,17 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   large passage a few times would look full long before the stored note is. It
   drives the pill, Note info and the cap state; a rejection makes the note read only at
   once.
+- **Read only.** The binding's `status` turns `readonly` when it can't write the note
+  safely: a newer jot wrote to it (a higher schema version, D29), its layout is newer or
+  from before the layout froze (D25), or it holds node types jot doesn't register. That
+  can happen on open or mid-session, the moment such a write arrives; the binding then
+  keeps showing the note and its remote changes and writes nothing (after a newer schema
+  version, for good: only reloading the newer jot edits the note again). The binding
+  says why through `onWarn` (`UNSUPPORTED_SCHEMA_WARNING`, `UNSUPPORTED_LAYOUT_WARNING`,
+  …), which the session logs; the page shows "Read only" in the pill and one banner for
+  every reason, "This note was written by a newer version of jot; reload to edit.", and
+  disables Aa, Ask AI and Work offline. In-tab peers and jot AI write nothing while it
+  lasts.
 
 **The chrome** (`editor/`):
 
@@ -176,9 +187,10 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
     author per line), and pairs them with Lexical's lines without guessing: unique texts
     anywhere, repeated texts only in order and in equal numbers. Unknown shapes mark a
     line unreadable; nothing throws.
-  - `moves.ts`: layout 1 writes a moved line as a deletion and an insertion, so the delta
-    is in Lexical's order and the mover is named. A note written by an earlier build in
-    layout 2 can hold move records (`↷`); it opens read only, and when its delta holds them
+  - `moves.ts`: the binding writes a moved line as a deletion and an insertion, so the
+    delta is in Lexical's order and the mover is named. A note written by one of jot's
+    builds from before `@lexical/y` froze its layout (its root records `lexical-y` = `2`)
+    can hold move records (`↷`); it opens read only (D25), and when its delta holds them
     this walk of the stored items marks the lines a record's range covers (and a join's own
     line) unreadable, or every line if the walk and the delta disagree.
   - `lexical.ts`, `paint.ts`, `highlights.ts`: Lexical's lines (blocks with inline

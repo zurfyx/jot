@@ -92,13 +92,13 @@ export function Blame() {
       <H2>Never guess</H2>
       <Ul>
         <Li>
-          <B>Moves and joins.</B> Layout 1 writes a moved line as a deletion and an insertion, so
+          <B>Moves and joins.</B> The binding writes a moved line as a deletion and an insertion, so
           whoever moved it wrote it again, and blame names them. <C>toDelta</C> renders storage
-          order, which then is Lexical's order. A note from an earlier build in layout 2 can hold
-          move records (<C>↷</C>), which show a range of lines somewhere else; such a note opens
-          read only, and blame walks its stored items to find every line a record covers, and the
-          line a join shows in, and leaves those unpainted. If that walk and the delta disagree at
-          all, nothing is painted.
+          order, which then is Lexical's order. Notes from jot's earliest builds, written before{' '}
+          <C>@lexical/y</C> froze its layout, can hold move records (<C>↷</C>), which show a range
+          of lines somewhere else; such a note opens read only, and blame walks its stored items to
+          find every line a record covers, and the line a join shows in, and leaves those unpainted.
+          If that walk and the delta disagree at all, nothing is painted.
         </Li>
         <Li>
           <B>Pairing lines.</B> Blame's lines pair with Lexical's line elements (a walk of the
@@ -129,8 +129,9 @@ export function Blame() {
         .
       </P>
       <Callout title="Missing, never wrong">
-        Where blame can't be sure (a moved or joined line, a repeated line after a move, text
-        written before its author registered) it shows nothing, rather than the wrong person.
+        Where blame can't be sure (a line an early note's move record covers, a line it can't pair
+        with Lexical's, text written before its author registered) it shows nothing, rather than the
+        wrong person.
       </Callout>
     </>
   );

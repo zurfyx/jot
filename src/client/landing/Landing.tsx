@@ -19,7 +19,7 @@ const GITHUB_URL = 'https://github.com/zurfyx/jot';
 const LEXICAL_URL = 'https://lexical.dev';
 const YJS_URL = 'https://github.com/yjs/yjs';
 
-/** The docs pages the landing page points at (PR "docs" serves them). */
+/** The docs pages the landing page points at (D22). */
 export const DOCS = {
   home: '/docs',
   quickStart: '/docs/quick-start',
