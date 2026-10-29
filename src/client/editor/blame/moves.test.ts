@@ -80,10 +80,11 @@ function painted(editor: LexicalEditor, doc: Y.Doc) {
 }
 
 describe('blame and moved lines', () => {
-  // Layout 1 writes a moved line as a deletion and an insertion: the mover
+  // The binding writes a moved line as a deletion and an insertion: the mover
   // writes it again, so blame names the mover, and the delta's order is
-  // Lexical's. Move records (`↷`) only come from layout 2 notes, which this
-  // version of the binding opens read only (moves.ts still guards those).
+  // Lexical's. Move records (`↷`) only come from notes written before
+  // @lexical/y froze its layout, which the binding opens read only (D25;
+  // moves.ts still guards those).
   it('never swaps authors when a peer moves a line with the same text as another', () => {
     const { anaDoc, beaDoc, ana, joinBea } = pair();
     ana.update(() => $getRoot().clear().append(paragraph('Title'), paragraph('same')), {

@@ -36,8 +36,8 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - blame and moves: a move is written again by its mover (layout 1, no `↷` records), so
   when Bea moves her line "same" above Ana's "same" the two are painted Bea then Ana, never
   swapped; a line joined from a moved one ("onefour") gets its main author, and the
-  others keep theirs; a walk of layout 2 move records that disagrees with the delta marks
-  every line;
+  others keep theirs; a walk of move records (from notes written before `@lexical/y`
+  froze its layout) that disagrees with the delta marks every line;
 - painting: runs map onto text nodes and line breaks in one sweep, linear on long lines;
   the recompute debounce still runs at least once a second while updates keep coming;
 - the people registry: entries parsed defensively, the newest entry names a person, a
@@ -127,11 +127,22 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations (`/new` and the example's route), the two-windows
-  phases and steps, and the feature tabs.
+  phases and steps, and the feature tabs;
+- the schema version (D29) and older layouts (D25), on jot's own editor configuration: a
+  page's first write records `lexical-y-schema:<SCHEMA_VERSION>`; a note a jot one version
+  ahead seeded opens read only with `UNSUPPORTED_SCHEMA_WARNING` (`newer`, the version
+  found and jot's own), shows its text and writes nothing, whatever code changes in the
+  editor; a newer jot's first edit arriving mid-session turns an open page read only for
+  good, keeping its own edits and showing the newer ones and later ones; an in-tab peer
+  writes nothing to such a note even when its host says the note takes edits; and a note
+  from before the layout froze (`lexical-y` = 2) opens read only with
+  `UNSUPPORTED_LAYOUT_WARNING` (`missing`), showing its text, and `initialize()` writes
+  nothing to it;
 - the docs: routes, the page order and Previous and Next, and that every landing page link
   names a docs page; the highlighter keeps every character; excerpts cut whole
   declarations and fail on a missing one; the inspector's rows for headings, lists, bold,
-  links, line breaks and tables, paired with Lexical's line elements; the binding's links
+  links, line breaks and tables, with the root's layout and schema records, paired with
+  Lexical's line elements; the binding's links
   name the pinned Lexical commit; and the chunk boundaries, from the source's static
   imports: the landing page reaches no docs or editor code, and the docs reach no Lexical
   or Yjs outside the lazy inspector;
@@ -273,7 +284,11 @@ Durable Objects, over real WebSockets.
 - scrollbars, in light and dark: the page, the ⋯ menu, the docs nav and its code blocks
   compute a transparent track, a thin width and the theme's thumb; the landing page's dark
   code block has the light thumb;
-- a note in a newer layout opens read only with its banner.
+- read only: a note in a newer layout, one a newer jot wrote (seeded one schema version
+  ahead) and one from before the layout froze each open with "Read only" in the pill, the
+  banner and a non-editable editor; a newer jot's edit arriving while a note is open turns
+  it read only at once, showing both that edit and what the page typed before (which the
+  server keeps), and keys no longer change it;
 - the keyboard and pointer paths between features: Aa from the keyboard (the first item
   takes the focus, arrows wrap past the last enabled item, Home goes back, Enter applies
   and gives the caret to the note); Aa → Link focuses its field and Esc returns to the

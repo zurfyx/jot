@@ -1,11 +1,11 @@
 import { RichTextExtension } from '@lexical/rich-text';
-import { seedYState } from '@lexical/y/headless';
+import { editYState, readYState, seedYState } from '@lexical/y/headless';
 import * as Y from '@y/y';
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 
 import { SCHEMA_VERSION } from '../src/shared/schema';
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
-import { writeRawNote } from './raw-client';
+import { readRawNote, writeRawNote } from './raw-client';
 
 // Two pages in one context: each page is its own Yjs client. (Chromium's
 // single-process mode, used in sandboxed shells, allows one context.)
@@ -196,6 +196,60 @@ test('a note a newer jot wrote opens read only', async ({ page, baseURL }) => {
   await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
   await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
   await expect(editor(page)).toContainText('From a newer jot');
+});
+
+test("an open note turns read only when a newer jot's first edit arrives", async ({
+  page,
+  baseURL,
+}) => {
+  const id = freshNoteId();
+  await openNote(page, id);
+  await editor(page).click();
+  await page.keyboard.type('Typed here first');
+  await expect(page.getByTestId('status-pill')).toHaveText(/^Synced/);
+
+  // A tab of a jot one schema version ahead appends a line to the same note.
+  const newer = { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 };
+  await writeRawNote(baseURL!, id, (doc) => {
+    const { update } = editYState(
+      Y.encodeStateAsUpdate(doc),
+      newer,
+      () => {
+        $getRoot().append($createParagraphNode().append($createTextNode('From a newer jot')));
+      },
+      { writer: null },
+    );
+    Y.applyUpdate(doc, update!);
+  });
+  await expect(page.getByTestId('status-pill')).toHaveText('Read only');
+  await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
+  await expect(editor(page)).toContainText('Typed here first');
+  await expect(editor(page)).toContainText('From a newer jot');
+
+  // Keys do nothing now, and what this tab typed before is on the server.
+  await page.keyboard.type(' and more');
+  await expect(editor(page)).not.toContainText('and more');
+  await expect(page.getByTestId('dock').getByRole('button', { name: /^Format/ })).toBeDisabled();
+  const text = readYState(await readRawNote(baseURL!, id), newer, () =>
+    $getRoot().getTextContent(),
+  );
+  expect(text).toBe('Typed here first\n\nFrom a newer jot');
+});
+
+test('a note from before the layout froze opens read only (D25)', async ({ page, baseURL }) => {
+  const id = freshNoteId();
+  // jot's earliest builds recorded their layout as `lexical-y` = 2, not `lexical-y:<n>`.
+  await writeRawNote(baseURL!, id, (doc) => {
+    const root = doc.get('lexical-y');
+    root.setAttr('lexical-y', 2);
+    root.insert(0, 'An early note');
+  });
+  await page.goto(`/n/${id}`);
+  await expect(page.getByTestId('status-pill')).toHaveText('Read only');
+  await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
+  await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
+  await expect(editor(page)).toContainText('An early note');
 });
 
 test('replacing a large passage again and again does not make the note look full', async ({
