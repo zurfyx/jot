@@ -111,7 +111,8 @@ leftover `jot:draft` to the new note's `jot:pending:<id>` under the Web Lock
 `jot:legacy-draft`, re-reading the draft inside it, and removes the draft only once the copy
 reads back; it never rejects, so storage or lock failures just open the note. `editor/legacy.ts`
 runs when a note page opens: each `jot:pending:<id>` is pushed to its note by a headless
-client, an empty `Y.Doc` and a `WebsocketProvider` with no presence. The server's sync step 2
+client, an empty document from `createYDoc()` (format cleanup off, as on every client)
+and a `WebsocketProvider` with no presence. The server's sync step 2
 (its whole state, against an empty state vector) and every later update are mirrored into a
 gc-off document; once synced, `copyAddsTo` applies the copy to a scratch copy of the mirror.
 No change means the server has it all, and the copy is removed; otherwise the copy is

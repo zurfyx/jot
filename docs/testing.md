@@ -224,7 +224,8 @@ Durable Objects, over real WebSockets.
   nothing and the draft survives the page closing; with `localStorage` throwing, `/new` and
   "Start a new note" still open fresh notes; a `jot:pending:<id>` copy reaches its own note
   (not the new one) when a note page opens, and is cleared; a copy the server already
-  holds, with a deletion, is cleared and changes nothing; a copy for a full note is
+  holds, with a deletion, is cleared and changes nothing, and pushing one leaves the format
+  items the note keeps around deleted text where they are; a copy for a full note is
   refused, cleared, and its note is not dialled again by the next page;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;

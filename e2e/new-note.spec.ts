@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { createYDoc } from '@lexical/y/headless';
 import * as Y from '@y/y';
 
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
@@ -238,6 +239,45 @@ test('a copy the server already holds, deletions included, is cleared and change
   await expectFreshNote(page);
   await expect.poll(() => storedKeys(page)).toEqual([]);
   await expect(editor(writer)).toHaveText('Hello again');
+});
+
+test('pushing a copy keeps the format items the note holds', async ({ page, baseURL }) => {
+  // Ana bolds "A" while Bea deletes it: the bold's format items stay around the
+  // deleted text, as every client and the relay keep them (Yjs's format cleanup
+  // off, D03). The client that pushes a copy must not clean them up and send that.
+  const ana = createYDoc();
+  const bea = createYDoc();
+  ana.get('text').insert(0, 'AB');
+  Y.applyUpdate(bea, Y.encodeStateAsUpdate(ana));
+  ana.get('text').format(0, 1, { bold: true });
+  bea.get('text').delete(0, 1);
+  Y.applyUpdate(ana, Y.encodeStateAsUpdate(bea));
+  const formats = (doc: Y.Doc) => {
+    const out: string[] = [];
+    for (let item = doc.get('text')._start; item !== null; item = item.right) {
+      if (!item.deleted && item.content instanceof Y.ContentFormat) {
+        out.push(`${item.content.key}=${JSON.stringify(item.content.value)}`);
+      }
+    }
+    return out;
+  };
+  expect(formats(ana)).toEqual(['bold=true', 'bold=null']);
+
+  const id = freshNoteId();
+  await writeRawNote(baseURL!, id, (doc) => Y.applyUpdate(doc, Y.encodeStateAsUpdate(ana)));
+  const held = async () => formats(createYDoc(await readRawNote(baseURL!, id)));
+  expect(await held()).toEqual(['bold=true', 'bold=null']);
+  const copy = JSON.stringify({
+    id: 'old',
+    state: Buffer.from(Y.encodeStateAsUpdate(ana)).toString('base64'),
+  });
+  await storeCopy(page, id, copy);
+  await page.goto('/new');
+  await expectFreshNote(page);
+  await expect.poll(() => storedKeys(page)).toEqual([]);
+  // The push has hung up; the relay holds what it did before, format items included.
+  await page.waitForTimeout(500);
+  expect(await held()).toEqual(['bold=true', 'bold=null']);
 });
 
 test('a copy for a full note is dropped, not retried on every page', async ({ page, baseURL }) => {

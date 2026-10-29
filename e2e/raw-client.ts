@@ -1,3 +1,4 @@
+import { createYDoc } from '@lexical/y/headless';
 import * as syncProtocol from '@y/protocols/sync';
 import * as Y from '@y/y';
 import * as decoding from 'lib0/decoding';
@@ -5,9 +6,13 @@ import * as encoding from 'lib0/encoding';
 
 import { MESSAGE_SYNC } from '../src/shared/protocol';
 
-/** Joins note `id` from Node over the real protocol and syncs its document. */
+/**
+ * Joins note `id` from Node over the real protocol and syncs its document: one from
+ * `createYDoc()`, as every client's and the relay's, so Yjs's format cleanup never
+ * rewrites what the note holds (and never sends that rewrite back).
+ */
 async function syncRaw(baseURL: string, id: string) {
-  const doc = new Y.Doc();
+  const doc = createYDoc();
   const socket = new WebSocket(`${baseURL.replace(/^http/, 'ws')}/api/n/${id}/ws`);
   socket.binaryType = 'arraybuffer';
   const send = (build: (encoder: encoding.Encoder) => void) => {
