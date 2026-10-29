@@ -67,10 +67,12 @@ every tab a new client id, so a client id alone is not a person.
   impostor keeps refreshing). Registry values are parsed as untrusted input; a `seen`
   more than five minutes in the future counts as never seen, so a forgery can't outrank
   honest entries for good, and nobody else's text can show as "You".
-- Blame is missing, never wrong, where it can't be sure: lines a peer moved or joined
-  (and, after a move, repeated texts such as two lines that both read "same") go
-  unpainted until they are edited into unique text or the record's range is deleted.
+- Blame is missing, never wrong, where it can't be sure: in a note from before the layout
+  froze (D25), the lines a move or join record covers go unpainted; anywhere, so does a
+  line blame can't pair with Lexical's (repeated text out of order, or text that doesn't
+  match its element). A line moved today is written again by its mover, who is credited.
 - Text written before a client registered (or by older clients) shows no author.
 - Colours are random per browser, so two people can pick the same one; blame gives the
   smaller share the next free colour, so its colours can differ from the avatars'.
-- PR "example" and PR "ai" write entries of kind `demo` and `ai` for their own peers.
+- The example's demo collaborators (D20) and jot AI (D21) are in-tab peers that write
+  entries of their own, of kind `demo` and `ai` (jot AI's with `askedBy`).

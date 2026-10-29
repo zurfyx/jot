@@ -129,8 +129,9 @@ export function Blame() {
         .
       </P>
       <Callout title="Missing, never wrong">
-        Where blame can't be sure (a moved or joined line, a repeated line after a move, text
-        written before its author registered) it shows nothing, rather than the wrong person.
+        Where blame can't be sure (a line an early note's move record covers, a line it can't pair
+        with Lexical's, text written before its author registered) it shows nothing, rather than the
+        wrong person.
       </Callout>
     </>
   );
