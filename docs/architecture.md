@@ -270,11 +270,14 @@ URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWor
     on text nodes, so blocks that start or end with a line break export too), its lossless
     snapshot (every node's JSON), the prompt, the reply cleaned of an unambiguous
     `markdown` fence, and `$replaceBlocks` (`$generateNodesFromMarkdownString`, links
-    other than http, https and mailto unwrapped; when the reply has as many blocks as the
-    target, each of the same kind and holding plain text alone, each old block takes its
-    new text in place, its text nodes' text changed by `$applyTextDiff` from
-    `textDiff.ts`; otherwise the new blocks are inserted before the first target, then
-    the targets removed).
+    other than http, https and mailto unwrapped; old and new blocks are paired in order,
+    and a pair that both hold plain text alone (a one-item list counts, by its item) is
+    written in place: of another kind, the old block's text nodes move into the new block
+    as a Markdown shortcut moves them, then the text nodes take the reply's text as
+    word splices across them (`diffWords` from `textDiff.ts`) and are split at the reply's
+    run edges to take its formats, so no character the reply keeps is written again; any
+    other pair is replaced, extra new blocks follow the last one, and extra old blocks are
+    removed).
   - `textDiff.ts`: `diffWords` (a word-level diff into ordered hunks: the common start
     and end, then a longest common subsequence of words, whitespace runs and punctuation)
     and `$applyTextDiff`, which turns a text node into new text with one `spliceText` per

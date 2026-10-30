@@ -69,7 +69,8 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   start or end with a line break and code blocks with blank first and last lines; a caret
   in a list targets the list (and the field says "the whole list") and a selection every
   block it touches, tables are refused; a reply replaces its blocks (an empty one changes
-  nothing), rewriting blocks of the same kind in place, code blocks round-trip, only http, https and mailto links survive, and only
+  nothing), rewriting blocks of the same kind in place, code blocks round-trip, random runs and formats
+  written in place read as the reply, only http, https and mailto links survive, and only
   an unambiguous `markdown` fence is unwrapped (single and multiple code blocks keep
   theirs); the snapshot sees underline and alignment that Markdown drops. With a fake
   model on a real binding: nothing is sent before Ask; jot AI joins only once the model
@@ -88,7 +89,10 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   ordered hunks apart, changes whole words and never splits a character; applied to a text
   node it reaches the target and keeps the node; under `@lexical/y` jot AI's client holds
   only the words it changed; and a rewrite racing a peer who types inside a word the
-  rewrite keeps leaves the peer's text in that word, on both clients;
+  rewrite keeps leaves the peer's text in that word, on both clients; bolding a word writes
+  no text again, and keeps a peer's concurrent deletion; turning a block into a list keeps
+  a peer's concurrent bold; two rewrites of one block made at once merge without doubling
+  the text; and a longer reply writes its first block in place, a peer's deletion kept;
 - Ask AI's models (D26): phones (UA-CH, the user agent, an iPad's touch), little memory
   and small screens count as small; the default is Chrome's model when available, else
   Small or Larger with WebGPU, else Chrome's download, else none, and a chosen model that
