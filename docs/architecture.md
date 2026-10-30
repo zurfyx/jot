@@ -51,7 +51,8 @@ clients (D03).
   deleted content never accumulates in storage (D05).
 - **Cap.** 2,000,000 bytes of stored state (D05). Each update is checked against a cheap
   upper bound (`size + pending + update + 64`); only near the cap does the object measure
-  `mergeUpdates([state, update])` exactly. An update that would pass the cap is not applied,
+  exactly the size the update would leave, by applying the state and the update to a
+  scratch gc-on document and re-encoding it, as a save would. An update that would pass the cap is not applied,
   and its sender gets a note-status message with the rejected flag.
 - **Expiry.** Each connection sets the alarm to now + 90 days. When it fires with nobody
   connected, the object deletes all storage; with someone connected it reschedules (D06).
