@@ -309,8 +309,11 @@ export function Size() {
       </P>
       <Code source={SNIPPETS.fitsUnderCap} />
       <P>
-        Only when the bound fails does it measure exactly, by merging the update into the state. An
-        update that would pass 2 MB isn't applied, and its sender is told.
+        Only when the bound fails does it measure exactly: it applies the state and the update to a
+        scratch document with garbage collection on and re-encodes it, as the next save would.
+        (Merging the update into the state would also count the text the update deletes, and refuse
+        a rewrite whose result fits.) An update that would pass 2 MB isn't applied, and its sender
+        is told.
       </P>
       <Code source={SNIPPETS.roomUpdate} />
       <H2>Compaction</H2>
