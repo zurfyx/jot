@@ -1,11 +1,13 @@
 import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
+import * as syncProtocol from '@y/protocols/sync';
 import * as Y from '@y/y';
-import { describe, expect, it } from 'vitest';
+import * as encoding from 'lib0/encoding';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { generateNoteId, noteSocketPath } from '../shared/ids';
 import { NOTE_EXPIRY_MS, NOTE_MAX_BYTES } from '../shared/limits';
-import { CLOSE_MALFORMED } from '../shared/protocol';
+import { CLOSE_MALFORMED, MESSAGE_SYNC } from '../shared/protocol';
 import type { NoteRoom } from './room';
 import { TestClient } from './test-client';
 
@@ -22,6 +24,15 @@ function storedRows(id: string): Promise<number> {
       return 0;
     }
     return state.storage.sql.exec('SELECT COUNT(*) AS n FROM note').one().n as number;
+  });
+}
+
+function storedText(id: string): Promise<string> {
+  return runInDurableObject(stubFor(id), (_room: NoteRoom, state) => {
+    const row = state.storage.sql.exec('SELECT state FROM note').one();
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, new Uint8Array(row.state as ArrayBuffer));
+    return doc.get('text').toString();
   });
 }
 
@@ -314,5 +325,120 @@ describe('NoteRoom', () => {
     expect(formats(a.doc)).toEqual(['bold=true', 'bold=null']);
     a.close();
     witness.close();
+  });
+});
+
+describe('NoteRoom when a socket dies', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** A sync update inserting `text`, framed as a client sends it. */
+  function textUpdate(text: string): ArrayBuffer {
+    const doc = new Y.Doc();
+    doc.get('text').insert(0, text);
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, MESSAGE_SYNC);
+    syncProtocol.writeUpdate(encoder, Y.encodeStateAsUpdate(doc));
+    return encoding.toUint8Array(encoder).slice().buffer;
+  }
+
+  it('saves and closes on an abnormal close (1006) without throwing', async () => {
+    const id = generateNoteId();
+    const errors = vi.spyOn(console, 'error');
+    await TestClient.connect(id);
+    await runInDurableObject(stubFor(id), async (room: NoteRoom, state) => {
+      const [ws] = state.getWebSockets();
+      // Applied here, so the room's save timer has not written it yet.
+      await room.webSocketMessage(ws!, textUpdate('kept'));
+      await expect(room.webSocketClose(ws!, 1006, '')).resolves.toBeUndefined();
+      expect(ws!.readyState).not.toBe(WebSocket.OPEN);
+    });
+    expect(await storedText(id)).toBe('kept');
+    expect(errors).not.toHaveBeenCalled();
+  });
+
+  it('saves and closes on a socket error without throwing', async () => {
+    const id = generateNoteId();
+    const errors = vi.spyOn(console, 'error');
+    await TestClient.connect(id);
+    await runInDurableObject(stubFor(id), async (room: NoteRoom, state) => {
+      const [ws] = state.getWebSockets();
+      // Applied here, so the room's save timer has not written it yet.
+      await room.webSocketMessage(ws!, textUpdate('kept'));
+      await expect(room.webSocketError(ws!, new Error('reset'))).resolves.toBeUndefined();
+      expect(ws!.readyState).not.toBe(WebSocket.OPEN);
+    });
+    expect(await storedText(id)).toBe('kept');
+    expect(errors).not.toHaveBeenCalled();
+  });
+
+  it('survives a dead peer while announcing a departure', async () => {
+    const id = generateNoteId();
+    const leaving = await TestClient.connect(id);
+    const dead = await TestClient.connect(id);
+    const { encodeAwarenessUpdate } = await import('./awareness');
+    const encoding = await import('lib0/encoding');
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, 1);
+    encoding.writeVarUint8Array(
+      encoder,
+      encodeAwarenessUpdate([{ clientID: 7, clock: 1, state: '{"user":{"name":"Ana"}}' }]),
+    );
+    leaving.send(encoding.toUint8Array(encoder));
+    await dead.until(() => dead.awarenessMessages.length === 1);
+    leaving.type(0, 'kept');
+    await dead.until(() => dead.text === 'kept');
+
+    const errors = vi.spyOn(console, 'error');
+    await runInDurableObject(stubFor(id), async (room: NoteRoom, state) => {
+      const announced = (ws: WebSocket) =>
+        Object.keys((ws.deserializeAttachment() as { clocks: object }).clocks).length > 0;
+      const sockets = state.getWebSockets();
+      const departing = sockets.find(announced)!;
+      const peer = sockets.find((ws) => !announced(ws))!;
+      const send = vi.spyOn(peer, 'send').mockImplementation(() => {
+        throw new Error('dead peer');
+      });
+      await expect(room.webSocketClose(departing, 1006, '')).resolves.toBeUndefined();
+      // The removal went to the peer, whose send threw.
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(departing.readyState).not.toBe(WebSocket.OPEN);
+      await expect(room.webSocketClose(peer, 1006, '')).resolves.toBeUndefined();
+    });
+    expect(await storedText(id)).toBe('kept');
+    expect(errors).not.toHaveBeenCalled();
+  });
+
+  it('logs a failed save, still closes the socket, and saves on the next try', async () => {
+    const id = generateNoteId();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await TestClient.connect(id);
+    await runInDurableObject(stubFor(id), async (room: NoteRoom, state) => {
+      const [ws] = state.getWebSockets();
+      // Applied here, so the room's save timer has not written it yet.
+      await room.webSocketMessage(ws!, textUpdate('kept'));
+      const save = vi.spyOn(room, 'save').mockImplementationOnce(() => {
+        throw new Error('disk full');
+      });
+      await expect(room.webSocketClose(ws!, 1006, '')).resolves.toBeUndefined();
+      expect(ws!.readyState).not.toBe(WebSocket.OPEN);
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(state.storage.sql.exec('SELECT * FROM note').toArray()).toEqual([]);
+    });
+    expect(errors).toHaveBeenCalledTimes(1);
+    const [message, details] = errors.mock.calls[0]!;
+    expect(message).toBe(`[note ${id}] webSocketClose: save failed`);
+    expect(details).toMatchObject({
+      note: id,
+      handler: 'webSocketClose',
+      code: 1006,
+      error: 'Error: disk full',
+    });
+    expect((details as { stack: string }).stack).toContain('disk full');
+
+    // The document is still unsaved, so the next save writes it.
+    await flush(id);
+    expect(await storedText(id)).toBe('kept');
   });
 });
