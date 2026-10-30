@@ -12,8 +12,10 @@ grows unless deleted content is garbage collected.
 - A note's stored state may not exceed **2,000,000 bytes** (the conservative reading of
   "2 MB"; local workerd does not enforce the row limit, production does).
 - The server checks each incoming update against an upper bound
-  (`size + pending + update + 64`) and, only near the cap, measures
-  `mergeUpdates([state, update])` exactly. An update that would pass the cap is not applied;
+  (`size + pending + update + 64`) and, only near the cap, measures exactly the size
+  the update would leave: the state and the update applied to a scratch gc-on document
+  and re-encoded, as a save would (`mergeUpdates` would count the content the update
+  deletes, refusing a rewrite whose result fits). An update that would pass the cap is not applied;
   its sender gets a note-status message with the rejected flag.
 - The client shows "This note is almost full" at 1,600,000 bytes and goes read only with
   "This note is full. Start a new note to keep writing." when it reaches the cap or is

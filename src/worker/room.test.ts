@@ -172,6 +172,31 @@ describe('NoteRoom', () => {
     reader.close();
   });
 
+  it('accepts a rewrite near the cap whose result fits', async () => {
+    const id = generateNoteId();
+    const writer = await TestClient.connect(id);
+    const reader = await TestClient.connect(id);
+    writer.type(0, filler(1_100_000));
+    await reader.until(() => reader.text.length === 1_100_000, 15_000);
+    await flush(id);
+
+    // One update that deletes the whole note and writes 1.5 MB: the note and
+    // the update together pass the cap, the note it leaves does not.
+    const text = writer.doc.get('text');
+    writer.doc.transact(() => {
+      text.delete(0, text.length);
+      text.insert(0, filler(1_500_000).toUpperCase());
+    });
+    await reader.until(() => reader.text.length === 1_500_000, 15_000);
+    expect(writer.rejections).toBe(0);
+    expect(reader.text.startsWith(filler(20).toUpperCase())).toBe(true);
+    await flush(id);
+    const bytes = await runInDurableObject(stubFor(id), (room: NoteRoom) => room.storedBytes);
+    expect(bytes).toBeLessThanOrEqual(NOTE_MAX_BYTES);
+    writer.close();
+    reader.close();
+  });
+
   it('keeps the document across eviction, with sockets hibernated', async () => {
     const id = generateNoteId();
     const a = await TestClient.connect(id);

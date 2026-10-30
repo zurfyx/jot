@@ -315,18 +315,14 @@ export class NoteRoom extends DurableObject<Env> {
   /**
    * Applies a client's update unless it would push the stored state past the
    * cap (D05). The cheap bound (`size + pending + update`) decides almost
-   * every update; near the cap the merged size is measured exactly.
+   * every update; near the cap the size the update would leave is measured.
    */
   private receiveUpdate(ws: WebSocket, update: Uint8Array): void {
     if (update.byteLength === 0) {
       throw new MalformedMessage('empty update');
     }
     if (!fitsUnderCap(this.size + this.pending, update.byteLength)) {
-      const state = Y.encodeStateAsUpdate(this.doc);
-      const merged = Y.mergeUpdates([state, update as Uint8Array<ArrayBuffer>]);
-      this.size = state.byteLength;
-      this.pending = 0;
-      if (merged.byteLength > NOTE_MAX_BYTES) {
+      if (this.sizeAfter(update) > NOTE_MAX_BYTES) {
         ws.send(encodeNoteStatus(this.size, NOTE_STATUS_REJECTED));
         return;
       }
@@ -334,6 +330,26 @@ export class NoteRoom extends DurableObject<Env> {
     Y.applyUpdate(this.doc, update, ws);
     this.pending += update.byteLength;
     this.scheduleSave();
+  }
+
+  /**
+   * The stored size `update` would leave: the state and the update applied to
+   * a scratch gc-on document and re-encoded, as the next save would write it.
+   * (`mergeUpdates([state, update])` keeps the content the update deletes, so
+   * it refused a rewrite whose result fits.) Also refreshes `size`.
+   */
+  private sizeAfter(update: Uint8Array): number {
+    const state = Y.encodeStateAsUpdate(this.doc);
+    this.size = state.byteLength;
+    this.pending = 0;
+    const scratch = createYDoc();
+    try {
+      Y.applyUpdate(scratch, state);
+      Y.applyUpdate(scratch, update);
+      return Y.encodeStateAsUpdate(scratch).byteLength;
+    } finally {
+      scratch.destroy();
+    }
   }
 
   private receiveAwareness(ws: WebSocket, update: Uint8Array): void {
