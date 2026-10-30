@@ -8,6 +8,7 @@ import * as encoding from 'lib0/encoding';
 import { isNoteId } from '../shared/ids';
 import { fitsUnderCap, NOTE_EXPIRY_MS, NOTE_MAX_BYTES, SAVE_DEBOUNCE_MS } from '../shared/limits';
 import {
+  CLOSE_INTERNAL_ERROR,
   CLOSE_MALFORMED,
   MESSAGE_AWARENESS,
   MESSAGE_NOTE_STATUS,
@@ -55,7 +56,13 @@ export class NoteRoom extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    this.load();
+    try {
+      this.load();
+    } catch (error) {
+      // Rethrown: a room that cannot read its note must not serve it.
+      this.logError('constructor', error, undefined, 'loading the note failed');
+      throw error;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -111,7 +118,7 @@ export class NoteRoom extends DurableObject<Env> {
     if (this.saveTimer === null) {
       this.saveTimer = setTimeout(() => {
         this.saveTimer = null;
-        this.save();
+        this.trySave('save timer');
       }, SAVE_DEBOUNCE_MS);
     }
   }
@@ -145,6 +152,18 @@ export class NoteRoom extends DurableObject<Env> {
     this.broadcast(encodeNoteStatus(this.size, 0));
   }
 
+  /**
+   * Saves, logging a failure instead of throwing it. The document stays dirty,
+   * so the next change's timer or the next departure tries again.
+   */
+  private trySave(handler: string, code?: number): void {
+    try {
+      this.save();
+    } catch (error) {
+      this.logError(handler, error, code, 'save failed');
+    }
+  }
+
   /** The stored size the client sees, for tests and status messages. */
   get storedBytes(): number {
     return this.size;
@@ -154,7 +173,9 @@ export class NoteRoom extends DurableObject<Env> {
   // Expiry (D06)
 
   private touch(): void {
-    void this.ctx.storage.setAlarm(Date.now() + NOTE_EXPIRY_MS);
+    this.ctx.storage.setAlarm(Date.now() + NOTE_EXPIRY_MS).catch((error: unknown) => {
+      this.logError('fetch', error, undefined, 'setting the expiry alarm failed');
+    });
   }
 
   async alarm(): Promise<void> {
@@ -189,17 +210,24 @@ export class NoteRoom extends DurableObject<Env> {
 
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ clocks: {} } satisfies SocketAttachment);
-
-    const step1 = encoding.createEncoder();
-    encoding.writeVarUint(step1, MESSAGE_SYNC);
-    syncProtocol.writeSyncStep1(step1, this.doc);
-    server.send(encoding.toUint8Array(step1));
-    const states = this.awareness.snapshot();
-    if (states.length > 0) {
-      server.send(encodeAwarenessMessage(states));
+    try {
+      server.serializeAttachment({ clocks: {} } satisfies SocketAttachment);
+      const step1 = encoding.createEncoder();
+      encoding.writeVarUint(step1, MESSAGE_SYNC);
+      syncProtocol.writeSyncStep1(step1, this.doc);
+      server.send(encoding.toUint8Array(step1));
+      const states = this.awareness.snapshot();
+      if (states.length > 0) {
+        server.send(encodeAwarenessMessage(states));
+      }
+      server.send(encodeNoteStatus(this.size + this.pending, 0));
+    } catch (error) {
+      // The socket is already accepted: forget it rather than leave it open
+      // with nobody on the other end.
+      this.logError('fetch', error);
+      this.forget(server, 'fetch', CLOSE_INTERNAL_ERROR, 'Internal error');
+      return new Response('Could not open the note.', { status: 500 });
     }
-    server.send(encodeNoteStatus(this.size + this.pending, 0));
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -213,41 +241,66 @@ export class NoteRoom extends DurableObject<Env> {
     } catch (error) {
       // Malformed input is ignored and its socket closed (D01).
       console.warn(`[note ${this.noteId}] closing socket:`, String(error));
-      this.drop(ws);
-      try {
-        ws.close(CLOSE_MALFORMED, 'Malformed message');
-      } catch {
-        // already closing
-      }
+      this.forget(ws, 'webSocketMessage', CLOSE_MALFORMED, 'Malformed message');
     }
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
-    this.drop(ws);
+    this.forget(ws, 'webSocketClose', code, reason);
+  }
+
+  async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
+    console.warn(`[note ${this.noteId}] socket error:`, String(error));
+    this.forget(ws, 'webSocketError', CLOSE_INTERNAL_ERROR, 'Socket error');
+  }
+
+  /**
+   * Drops a socket and closes it. Never throws: a handler that throws reaches
+   * the logs as a bare "exception" with no message, and skips the close.
+   */
+  private forget(ws: WebSocket, handler: string, code: number, reason: string): void {
+    this.drop(ws, handler, code);
     try {
-      ws.close(code === 1005 ? 1000 : code, reason);
+      ws.close(sendableCloseCode(code), reason);
     } catch {
       // already closed
     }
   }
 
-  async webSocketError(ws: WebSocket): Promise<void> {
-    this.drop(ws);
+  /**
+   * Forgets a socket: announces its awareness removal, saves if it was the
+   * last. Each step logs its own failure so the next one still runs.
+   */
+  private drop(ws: WebSocket, handler: string, code?: number): void {
+    try {
+      const attachment = ws.deserializeAttachment() as SocketAttachment | null;
+      if (attachment !== null) {
+        ws.serializeAttachment({ clocks: {} } satisfies SocketAttachment);
+        const removed = this.awareness.remove(attachment.clocks);
+        if (removed.length > 0) {
+          this.broadcast(encodeAwarenessMessage(removed), ws);
+        }
+      }
+    } catch (error) {
+      this.logError(handler, error, code, 'awareness removal failed');
+    }
+    try {
+      if (this.openSockets(ws).length === 0) {
+        this.trySave(handler, code);
+      }
+    } catch (error) {
+      this.logError(handler, error, code, 'listing sockets failed');
+    }
   }
 
-  /** Forgets a socket: announces its awareness removal, saves if it was the last. */
-  private drop(ws: WebSocket): void {
-    const attachment = ws.deserializeAttachment() as SocketAttachment | null;
-    if (attachment !== null) {
-      ws.serializeAttachment({ clocks: {} } satisfies SocketAttachment);
-      const removed = this.awareness.remove(attachment.clocks);
-      if (removed.length > 0) {
-        this.broadcast(encodeAwarenessMessage(removed), ws);
-      }
-    }
-    if (this.openSockets(ws).length === 0) {
-      this.save();
-    }
+  private logError(handler: string, error: unknown, code?: number, what = 'failed'): void {
+    console.error(`[note ${this.noteId}] ${handler}: ${what}`, {
+      note: this.noteId,
+      handler,
+      ...(code === undefined ? {} : { code }),
+      error: String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
   }
 
   private openSockets(except?: WebSocket): WebSocket[] {
@@ -369,6 +422,14 @@ export function encodeNoteStatus(bytes: number, flags: number): Uint8Array {
   encoding.writeVarUint(encoder, bytes);
   encoding.writeVarUint(encoder, flags);
   return encoding.toUint8Array(encoder);
+}
+
+/**
+ * A code this side may send. 1005, 1006 and 1015 only describe a close that
+ * had no close frame; `close()` throws on them.
+ */
+function sendableCloseCode(code: number): number {
+  return code === 1005 || code === 1006 || code === 1015 ? 1000 : code;
 }
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {

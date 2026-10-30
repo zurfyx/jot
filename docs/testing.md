@@ -153,6 +153,9 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 - the last client leaving saves at once;
 - the expiry alarm is 90 days out and deletes storage when it fires;
 - malformed frames close only their socket;
+- an abnormal close (1006) or a socket error saves and closes without throwing, a dead
+  peer during a departure's awareness removal throws nothing, and a failed save is
+  logged with its handler and close code, still closes the socket and is retried;
 - deleted content is compacted out of the stored row;
 - format items the clients keep (a bold around text another client deleted) are stored
   and relayed as they are: the room's document has Yjs's format cleanup off and sends no

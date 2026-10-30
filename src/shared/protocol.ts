@@ -39,3 +39,4 @@ export const SYNC_UPDATE = 2;
 /** WebSocket close codes the Durable Object uses. */
 export const CLOSE_MALFORMED = 1007;
 export const CLOSE_GOING_AWAY = 1001;
+export const CLOSE_INTERNAL_ERROR = 1011;

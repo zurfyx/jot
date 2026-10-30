@@ -57,7 +57,15 @@ clients (D03).
   connected, the object deletes all storage; with someone connected it reschedules (D06).
 - **Robustness.** Any malformed frame (text, unknown type, truncated varint, bad awareness
   JSON, undecodable update) closes that socket with 1007 and leaves the others alone.
-  Clients reconnect with backoff and re-sync with the sync steps.
+  Clients reconnect with backoff and re-sync with the sync steps. No socket handler
+  throws: a throw reaches Workers Logs as a bare exception with no message. Leaving
+  (close, error or a malformed frame) runs each step on its own: the awareness removal,
+  then the save if it was the last socket, then the close, with a code the server may
+  send (1000 for the 1005, 1006 and 1015 the runtime reports). An unexpected failure is a
+  `console.error` with the note id, the handler, the close code, the error and its stack.
+  A failed save leaves the document unsaved, so the next change or departure tries again;
+  a socket error is a `console.warn` and a 1011 close. If the upgrade fails after the
+  socket is accepted, the socket is dropped and closed and the request gets a 500.
 
 ## Wire protocol (`src/shared/protocol.ts`)
 
