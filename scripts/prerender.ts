@@ -135,6 +135,9 @@ async function main(): Promise<void> {
   const app = (await import(pathToFileURL(join(SERVER, 'prerender.js')).href)) as Prerender;
 
   const template = await readFile(join(CLIENT, 'index.html'), 'utf8');
+  if (!template.includes('<div id="root"></div>')) {
+    throw new Error('prerender: dist/client/index.html is not the built shell; run `pnpm build`.');
+  }
   const manifestFile = join(CLIENT, '.vite/manifest.json');
   const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as Record<
     string,
