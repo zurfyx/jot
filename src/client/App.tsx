@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
 import { useExampleId } from './examples';
-import { applyHead } from './head';
+import { syncHead } from './syncHead';
 import { useHydratedMark } from './hydrated';
 import { Landing } from './landing/Landing';
 import { loadNotePage } from './loadNote';
@@ -29,7 +29,7 @@ export function App() {
   useEffect(() => {
     // A note's head has none of a public page's tags (D31); its page sets the title.
     if (route.name === 'note' || route.name === 'new' || route.name === 'example') {
-      applyHead('note');
+      syncHead('note');
     }
   }, [route.name]);
 

@@ -371,7 +371,8 @@ The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
 - moving from `/docs/blame` to `/docs/ai` in the app brings the head `/docs/ai` has when
   loaded (title, description, canonical, Open Graph, Twitter, JSON-LD); an unknown docs
   page reached in the app has the 404 page's (`noindex`, no canonical), and back restores
-  it;
+  it; a note opened from the landing page has none of the public tags, and back on the
+  landing page its head is the one it loads with;
 - with scripts off, `/new`, `/new?example` and a note show that jot needs JavaScript to
   edit notes, and the link home opens the landing page; with scripts on, a note shows no
   notice;

@@ -17,8 +17,7 @@ import { JoinField } from './JoinField';
 import { classifyTarget, landingKeyAction, startShortcutLabel } from './keys';
 import { NEW_NOTE_PATH, newNotePath } from '../notes';
 import { EXAMPLE_PATH, openNote, plainClick } from './open';
-import { applyHead } from '../head';
-import { LANDING_HEAD } from '../site';
+import { syncHead } from '../syncHead';
 import { section } from './section.styles';
 import { landingLight } from '../theme/themes';
 import { colors, fonts, landing, motion } from '../theme/tokens.stylex';
@@ -477,7 +476,7 @@ export function Landing() {
   const focusHeroStart = useCallback(() => heroStart.current?.focus(), []);
 
   useEffect(() => {
-    applyHead(LANDING_HEAD);
+    syncHead('landing');
   }, []);
 
   // The page behind the landing page (overscroll, the view transition's

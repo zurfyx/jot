@@ -288,3 +288,24 @@ test('with scripts on, a note page shows no notice', async ({ page }) => {
   await expect(page.getByTestId('editor')).toBeVisible();
   await expect(page.getByText('jot needs JavaScript to edit notes.')).toBeHidden();
 });
+
+test('a note has none of the public tags, and the landing page gets its head back', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const landing = await headOf(page);
+  expect(landing.canonical).toBe(siteUrl('/'));
+  await page
+    .getByRole('link', { name: /^Start a new note/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/n\/[\w-]{22}$/);
+  await expect(page.getByTestId('editor')).toBeVisible();
+  await expect.poll(async () => (await headOf(page)).canonical).toBeNull();
+  const note = await headOf(page);
+  expect(note.meta).toEqual([]);
+  expect(note.structured).toEqual([]);
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
+  await expect.poll(() => headOf(page)).toEqual(landing);
+});

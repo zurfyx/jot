@@ -1,7 +1,7 @@
 import * as stylex from '@stylexjs/stylex';
 import { type ReactNode, useEffect } from 'react';
 
-import { applyHead } from './head';
+import { syncHead } from './syncHead';
 import { colors, fonts } from './theme/tokens.stylex';
 
 /**
@@ -11,7 +11,7 @@ import { colors, fonts } from './theme/tokens.stylex';
  */
 export default function NotFound() {
   useEffect(() => {
-    applyHead('not-found');
+    syncHead('not-found');
   }, []);
 
   return (

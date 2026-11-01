@@ -71,9 +71,10 @@ const MANAGED =
 /**
  * Puts a page's head in place: a public page's tags, the 404 page's
  * (`noindex`, no canonical), or a note's (none of them, and its title left to
- * the note page).
+ * the note page). The entry chunk reaches it through syncHead.ts, on demand.
  */
-export function applyHead(head: PageHead | 'not-found' | 'note'): void {
+export function applyHead(page: PageHead | 'landing' | 'not-found' | 'note'): void {
+  const head = page === 'landing' ? LANDING_HEAD : page;
   const tags = typeof head === 'object' ? headTags(head) : null;
   if (tags !== null) {
     document.title = tags.title;

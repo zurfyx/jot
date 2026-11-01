@@ -172,7 +172,15 @@ async function main(): Promise<void> {
     plugins: [stylex({ rootDir: ROOT }), react()],
     build: {
       ssr: ENTRY,
-      rolldownOptions: { output: { entryFileNames: 'prerender.js' } },
+      rolldownOptions: {
+        output: { entryFileNames: 'prerender.js' },
+        // One file: a module the browser loads on demand is simply in it.
+        onLog(level, log, handler) {
+          if (log.code !== 'INEFFECTIVE_DYNAMIC_IMPORT') {
+            handler(level, log);
+          }
+        },
+      },
       outDir: SERVER,
       emptyOutDir: true,
       minify: false,

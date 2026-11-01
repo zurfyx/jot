@@ -72,16 +72,17 @@ from 81.3 to 120.7 KB gzipped (+39 KB), almost all of it the framework's own run
 in about 80 lines. React Router's framework mode and Next.js (through OpenNext or vinext)
 bring the same kind of runtime and a routing model of their own; Astro ships little script,
 but would move the public pages into a second kind of page with its own build, for a site
-with three public routes. A prerender script costs nothing at runtime: the landing page grows by
-about half a kilobyte (the 404 page and the hydrate path).
+with three public routes. A prerender script costs almost nothing at runtime: the landing page
+grows by about 0.9 KB (the 404 page, the hydrate path, the still frames and the head's
+upkeep; `head.ts` itself loads only when the app moves between pages).
 
-## Cost (measured with `pnpm build`, gzipped, against `main`)
+## Cost (measured with `pnpm build`, gzipped, against `main` with recent notes, D30)
 
 |                              | `main`          | Prerendered     |
 | ---------------------------- | --------------- | --------------- |
-| Landing first load, JS + CSS | 81.3 + 9.3 KB   | 81.7 + 9.4 KB   |
-| Note page, JS + CSS          | 355.0 + 12.1 KB | 355.5 + 12.2 KB |
-| Docs, JS + CSS               | 114.8 + 10.4 KB | 115.4 + 10.4 KB |
+| Landing first load, JS + CSS | 84.8 + 9.8 KB   | 85.7 + 9.9 KB   |
+| Note page, JS + CSS          | 358.8 + 12.6 KB | 359.7 + 12.6 KB |
+| Docs, JS + CSS               | 118.3 + 10.9 KB | 120.3 + 10.9 KB |
 
 The prerendered HTML is larger (about 30 KB for the landing page, before compression), and
 the build takes a second longer for the server build and the render.

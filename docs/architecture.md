@@ -412,7 +412,9 @@ on jot.rovira.sh, link-preview image (`public/og/`) and type. The prerender writ
 (`WebSite` on `/`, `TechArticle` on a docs page), from `headTags` (`head.ts`); when the app
 moves to another page without a reload, `applyHead` puts the same tags in place: the
 landing page's, a docs page's, the 404 page's (`noindex`, no canonical) or a note's (none of
-them). The 404 page is `noindex`.
+them). The docs import it; the landing page, the 404 page and a note reach it through
+`syncHead.ts`, which loads `head.ts` only when the head isn't already theirs (a page loaded
+directly has its own), so it stays out of the entry chunk. The 404 page is `noindex`.
 
 ## Build and deploy
 
