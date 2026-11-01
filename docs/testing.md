@@ -143,7 +143,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   waiting for the lock leaves `pagehide` something to write (all three fail if the note is
   read when the write is queued); across tabs the last title write wins, with a clock a
   minute behind and in the same millisecond; a write that finds the note unlisted reads
-  nothing, stays pending and lands once it is listed; a lock-free write that read before another
+  nothing, stays pending and lands once it is listed; a note left while its write waits for
+  the lock writes its last title at once, and the queued write then writes nothing, so
+  another tab's newer title stays (it fails without the dispose); a lock-free write that read before another
   tab's Clear or removal doesn't undo it. At most the newest 100 tombstones are kept. A
   subscriber that throws stops neither the others nor the change, which runs once. The
   title recorder reads the note only when it writes: at once, then at most every 2 s with

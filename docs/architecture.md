@@ -128,11 +128,11 @@ notifies subscribers, other tabs arrive through the `storage` event, and `<html>
 first paint and every subscription brings up to date. `editor/useRecentVisit.ts` records a
 visit when a note page opens and, once the note has synced, marks the title stale on every
 content change; its recorder hands the store a getter for the first line and the start of
-the rest, read only when a write runs (at most every 2 s, falling back to the last text
-read once the editor is gone), keeps a change pending until a write that read it lands,
-and is flushed on
-`visibilitychange` to hidden, on unmount and, without the lock, on `pagehide`. A subscriber
-that throws is logged and skipped. The landing page's `RecentNotes` reads the list with
+the rest, read only when a write runs (at most every 2 s), keeps a change pending until a
+write that read it lands, and is flushed on `visibilitychange` to hidden and, without the
+lock, on `pagehide`. On unmount it writes the last title at once and is disposed, so a
+write still queued from it reads nothing and writes nothing. A subscriber that throws is
+logged and skipped. The landing page's `RecentNotes` reads the list with
 `useSyncExternalStore` (an empty server snapshot), hides its slot once hydrated if the list
 is empty, refreshes its times every minute while visible, and opens a note through
 `landing/open.ts` with its row as the card.

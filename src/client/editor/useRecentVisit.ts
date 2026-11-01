@@ -12,8 +12,10 @@ import { useSignal } from './useSignal';
  * the title. A change to the note's content only marks the title stale; the
  * text is read when a write runs (the throttle lets one through at most every
  * 2 s; the page hidden or closed, or left, flushes one), inside the lock, so
- * a write that waited writes the latest text. Selection-only updates (caret
- * moves, a peer's caret) are ignored.
+ * a write that waited writes the latest text. Leaving the note writes its
+ * last title at once and disposes the recorder, so a write still queued from
+ * this editor writes nothing. Selection-only updates (caret moves, a peer's
+ * caret) are ignored.
  */
 export function useRecentVisit(session: NoteSession): void {
   const synced = useSignal(session.everSynced);
@@ -28,13 +30,10 @@ export function useRecentVisit(session: NoteSession): void {
       return;
     }
     const { editor } = session;
-    // Called when a write runs, which may be after the page left (a write
-    // that waited for the lock): the last text read stands in if the editor
-    // can't be read any more.
-    let last: [string, string] = ['', ''];
-    const readNote = (): [string, string] => {
+    // Called when a write runs; the recorder stops calling it once disposed.
+    const readNote = (): [string, string] | null => {
       try {
-        last = editor.getEditorState().read(() => {
+        return editor.getEditorState().read(() => {
           const [first, ...rest] = $getRoot().getChildren();
           let excerpt = '';
           for (const node of rest) {
@@ -46,9 +45,8 @@ export function useRecentVisit(session: NoteSession): void {
           return [first?.getTextContent() ?? '', excerpt];
         });
       } catch {
-        // The editor is gone: keep what it last said.
+        return null;
       }
-      return last;
     };
     const recorder = recentNotes.titleRecorder(session.noteId, readNote);
     recorder.changed();
@@ -70,7 +68,9 @@ export function useRecentVisit(session: NoteSession): void {
       unregister();
       document.removeEventListener('visibilitychange', onHidden);
       window.removeEventListener('pagehide', onPageHide);
-      recorder.flush();
+      // Leaving the note: its last title is written now, before the editor
+      // goes, and nothing from this editor is written after it.
+      recorder.dispose();
     };
   }, [session, synced]);
 }

@@ -43,7 +43,9 @@ from a new or emptied one.
   clock corrected backwards or two tabs writing in the same millisecond change nothing.
   Wall-clock time serves only for display and the 90-day prune. A change stays pending in
   its tab until a write that read it lands, so the page hiding while a write waits still
-  writes, and a write that found the note unlisted is tried again.
+  writes, and a write that found the note unlisted is tried again. Leaving a note writes its
+  last title at once and retires its editor's recorder, so only a live editor's text is ever
+  written.
 - Where Web Locks are missing, and for the title written on `pagehide` (when the page may be
   gone before a lock is granted), the change runs at once, without the lock. It still
   merges with what storage holds a moment before it writes, so a Clear or a removal that

@@ -583,6 +583,36 @@ describe('title writes that wait for the lock', () => {
     expect(store.read()[0]?.title).toBe('Latest pagehide');
   });
 
+  it("a left note's queued write never overwrites another tab's newer title", async () => {
+    const storage = new MemoryStorage();
+    const locks = new FakeLocks();
+    const a = setup({ storage, locks });
+    const b = setup({ storage, locks });
+    const x = generateNoteId();
+    await a.store.recordOpen(x);
+    // Tab A edits; its title write queues behind the lock.
+    let aEditor = 'A editing';
+    const recorder = a.store.titleRecorder(x, () => [aEditor, '']);
+    const release = await locks.hold();
+    recorder.changed();
+    // A types on and presses Back: its last title is written at once, then its editor goes.
+    aEditor = 'A final';
+    recorder.changed();
+    recorder.dispose();
+    expect(a.store.read()[0]?.title).toBe('A final');
+    // Tab B, still on the note, writes a newer title.
+    await b.store.updateTitle(x, () => ['B newer', ''], { sync: true });
+    // A's queued write runs: its editor is gone, so it writes nothing.
+    release();
+    await locks.idle();
+    await microtasks();
+    expect(b.store.read()[0]?.title).toBe('B newer');
+    // And a disposed recorder takes no more changes.
+    recorder.changed();
+    recorder.flush({ sync: true });
+    expect(b.store.read()[0]?.title).toBe('B newer');
+  });
+
   it('across tabs the last write wins, whatever their clocks say', async () => {
     const storage = new MemoryStorage();
     const locks = new FakeLocks();

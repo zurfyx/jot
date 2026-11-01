@@ -164,8 +164,11 @@ export function reservedRows(count: number): [number, number] {
   return [shown, Math.ceil(shown / 2)];
 }
 
-/** A note's first line and the text after it, as the editor has them now. */
-export type ReadNote = () => [firstLine: string, rest: string];
+/**
+ * A note's first line and the text after it, as the editor has them now; null
+ * once the editor is gone, and the write is then skipped.
+ */
+export type ReadNote = () => [firstLine: string, rest: string] | null;
 
 export interface TitleRecorder {
   /** The note changed: its text is read, and written, when the throttle allows. */
@@ -175,6 +178,12 @@ export interface TitleRecorder {
    * lock, for `pagehide`, when the page may be gone before a lock is granted.
    */
   flush(options?: { sync?: boolean }): void;
+  /**
+   * The note page is going: writes the pending title at once, then stops. A
+   * write still queued from this recorder reads nothing and writes nothing,
+   * so only a live editor's latest text is ever written.
+   */
+  dispose(): void;
 }
 
 export interface RecentStore {
@@ -348,7 +357,11 @@ export function createRecentStore(env: RecentEnv): RecentStore {
           return null;
         }
         // Read now, inside the lock: whatever waited, this is the latest text.
-        const [firstLine, rest] = readNote();
+        const text = readNote();
+        if (text === null) {
+          return null;
+        }
+        const [firstLine, rest] = text;
         const title = titleOf(firstLine);
         const excerpt = clip(rest, EXCERPT_MAX);
         if (entry.title === title && entry.excerpt === excerpt) {
@@ -444,17 +457,21 @@ export function createRecentStore(env: RecentEnv): RecentStore {
       let landed = 0;
       let lastWrite = -Infinity;
       let timer: ReturnType<typeof setTimeout> | null = null;
+      let disposed = false;
       const flush = (options: { sync?: boolean } = {}) => {
         if (timer !== null) {
           clearTimeout(timer);
           timer = null;
         }
-        if (changes === landed) {
+        if (disposed || changes === landed) {
           return;
         }
         lastWrite = env.now();
         let read = landed;
         const readNow: ReadNote = () => {
+          if (disposed) {
+            return null;
+          }
           read = changes;
           return readNote();
         };
@@ -466,6 +483,9 @@ export function createRecentStore(env: RecentEnv): RecentStore {
       };
       return {
         changed() {
+          if (disposed) {
+            return;
+          }
           changes += 1;
           if (timer !== null) {
             return;
@@ -478,6 +498,10 @@ export function createRecentStore(env: RecentEnv): RecentStore {
           }
         },
         flush,
+        dispose() {
+          flush({ sync: true });
+          disposed = true;
+        },
       };
     },
   };
