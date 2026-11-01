@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import react from '@vitejs/plugin-react';
@@ -21,25 +21,70 @@ import { stylex } from './vite-stylex.ts';
  */
 
 const ROOT = join(import.meta.dirname, '..');
-const CLIENT = join(ROOT, 'dist/client');
-const SERVER = join(ROOT, 'node_modules/.cache/jot-prerender');
 
-/** Only what scripts/prerender.ts reads of src/client/heads.ts and site.ts. */
+/** `--name=value` from the command line, or `fallback`. */
+function option(name: string, fallback: string): string {
+  const prefix = `--${name}=`;
+  const found = process.argv.find((arg) => arg.startsWith(prefix));
+  return found === undefined ? fallback : found.slice(prefix.length);
+}
+
+/** The app's prerender entry; scripts/prerender.test.ts passes one that fails. */
+const ENTRY = option('entry', 'src/client/prerender.tsx');
+/** The client build to prerender into. */
+const CLIENT = resolve(ROOT, option('client', 'dist/client'));
+const SERVER = join(ROOT, `node_modules/.cache/jot-prerender-${process.pid}`);
+
+/** React leaves this where a Suspense boundary failed on the server, for the browser to render. */
+const CLIENT_FALLBACK = '<!--$!-->';
+
+/** Only what scripts/prerender.ts reads of src/client/heads.ts, site.ts and head.ts. */
 interface PageHead {
   path: string;
   title: string;
   description: string;
-  image: string;
-  type: 'website' | 'article';
+  card: { heading: string };
+}
+
+interface HeadTags {
+  canonical: string;
+  meta: { attr: 'name' | 'property'; key: string; content: string }[];
+  structured: Record<string, unknown>;
 }
 
 interface Prerender {
   renderPage(path: string): Promise<string>;
+  renderNoScriptNotice(): Promise<string>;
+  headTags(head: PageHead): HeadTags;
   PAGE_HEADS: readonly PageHead[];
   LANDING_HEAD: PageHead;
   NOT_FOUND_TITLE: string;
-  SITE_NAME: string;
-  siteUrl(path: string): string;
+}
+
+/** A root's text, tags dropped and entities read, for checking what a page says. */
+function textOf(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Fails unless a rendered root has what its page must say, and no boundary
+ * left for the browser to render.
+ */
+function checkRoot(page: string, html: string, expected: string): void {
+  if (html.includes(CLIENT_FALLBACK)) {
+    throw new Error(`prerender: ${page} has a part React left for the browser to render.`);
+  }
+  if (!textOf(html).includes(expected)) {
+    throw new Error(`prerender: ${page} does not say "${expected}".`);
+  }
 }
 
 interface ManifestChunk {
@@ -126,7 +171,8 @@ async function main(): Promise<void> {
     logLevel: 'warn',
     plugins: [stylex({ rootDir: ROOT }), react()],
     build: {
-      ssr: 'src/client/prerender.tsx',
+      ssr: ENTRY,
+      rolldownOptions: { output: { entryFileNames: 'prerender.js' } },
       outDir: SERVER,
       emptyOutDir: true,
       minify: false,
@@ -136,7 +182,7 @@ async function main(): Promise<void> {
 
   const template = await readFile(join(CLIENT, 'index.html'), 'utf8');
   if (!template.includes('<div id="root"></div>')) {
-    throw new Error('prerender: dist/client/index.html is not the built shell; run `pnpm build`.');
+    throw new Error(`prerender: ${CLIENT}/index.html is not the built shell; run \`pnpm build\`.`);
   }
   const manifestFile = join(CLIENT, '.vite/manifest.json');
   const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as Record<
@@ -199,45 +245,18 @@ async function main(): Promise<void> {
   const files: [string, string][] = [];
 
   for (const head of app.PAGE_HEADS) {
-    const url = app.siteUrl(head.path);
-    const image = app.siteUrl(head.image);
-    const structured =
-      head.path === '/'
-        ? {
-            '@context': 'https://schema.org',
-            '@type': 'WebSite',
-            name: app.SITE_NAME,
-            url,
-            description: head.description,
-          }
-        : {
-            '@context': 'https://schema.org',
-            '@type': 'TechArticle',
-            headline: head.title,
-            description: head.description,
-            url,
-            inLanguage: 'en',
-            isPartOf: { '@type': 'WebSite', name: app.SITE_NAME, url: app.siteUrl('/') },
-          };
+    const tags = app.headTags(head);
     const meta = [
-      `<link rel="canonical" href="${url}" />`,
-      `<meta property="og:type" content="${head.type}" />`,
-      `<meta property="og:site_name" content="${app.SITE_NAME}" />`,
-      `<meta property="og:title" content="${escapeHtml(head.title)}" />`,
-      `<meta property="og:description" content="${escapeHtml(head.description)}" />`,
-      `<meta property="og:url" content="${url}" />`,
-      `<meta property="og:image" content="${image}" />`,
-      '<meta property="og:image:width" content="1200" />',
-      '<meta property="og:image:height" content="630" />',
-      '<meta name="twitter:card" content="summary_large_image" />',
-      `<meta name="twitter:title" content="${escapeHtml(head.title)}" />`,
-      `<meta name="twitter:description" content="${escapeHtml(head.description)}" />`,
-      `<meta name="twitter:image" content="${image}" />`,
-      `<script type="application/ld+json">${scriptJson(structured)}</script>`,
+      `<link rel="canonical" href="${tags.canonical}" />`,
+      ...tags.meta.map(
+        ({ attr, key, content }) => `<meta ${attr}="${key}" content="${escapeHtml(content)}" />`,
+      ),
+      `<script type="application/ld+json">${scriptJson(tags.structured)}</script>`,
       fontPreload,
     ].join('\n    ');
     const links = head.path === '/' ? '' : docsLinks;
     const body = await app.renderPage(head.path);
+    checkRoot(head.path, body, head.card.heading);
     const file = head.path === '/' ? 'index.html' : `${head.path.slice(1)}/index.html`;
     files.push([
       file,
@@ -245,27 +264,43 @@ async function main(): Promise<void> {
     ]);
   }
 
+  const notFound = await app.renderPage('/404');
+  checkRoot('404.html', notFound, "This page doesn't exist.");
   files.push([
     '404.html',
     page({
       title: app.NOT_FOUND_TITLE,
       meta: ['<meta name="robots" content="noindex" />', fontPreload].join('\n    '),
       links: '',
-      body: await app.renderPage('/404'),
+      body: notFound,
     }),
   ]);
-  // The note page's shell, exactly as Vite built it.
-  files.push(['n/shell.html', template]);
+  // The note page's shell, as Vite built it, with what it shows when scripts
+  // are off (notes need them) and the dark token sets for that case.
+  const notice = await app.renderNoScriptNotice();
+  checkRoot('n/shell.html', notice, 'jot needs JavaScript to edit notes.');
+  files.push([
+    'n/shell.html',
+    template
+      .replace('</head>', `  ${noScript}\n  </head>`)
+      .replace('<div id="root"></div>', `<noscript>${notice}</noscript><div id="root"></div>`),
+  ]);
 
   for (const [file, html] of files) {
     const path = join(CLIENT, file);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, html);
   }
-  if (existsSync(SERVER)) {
-    await rm(SERVER, { recursive: true, force: true });
-  }
   console.log(`prerender: ${files.map(([file]) => file).join(', ')}`);
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+} finally {
+  if (existsSync(SERVER)) {
+    await rm(SERVER, { recursive: true, force: true });
+  }
+}

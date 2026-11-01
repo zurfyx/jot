@@ -18,18 +18,22 @@ is private (D17) and is all script.
   class names), React's `prerender` from `react-dom/static` in Node, and the built
   `index.html` as the template. It writes `index.html`, `docs/index.html`,
   `docs/<slug>/index.html` (from the docs' table of contents) and `404.html`, and keeps
-  the empty shell as `n/shell.html`. The client entry hydrates a root that has children
-  and renders into an empty one.
+  the shell as `n/shell.html`. A render error fails the build: React would otherwise
+  leave the failed part empty for the browser to render, so every error it reports is
+  collected and the script exits non-zero, as it does when a page lacks its heading. The
+  client entry hydrates a root that has children and renders into an empty one.
 - **jot's own router stays** (`src/client/router.ts`, History API only). The prerender
   sets the path it renders; the browser reads its own address.
-- **A note stays client-only**: the Worker serves the empty shell for `/n/<id>`, and for
-  `/new` and `/new?example`, which now run the Worker first. The shell sits under `/n/`,
-  where asking for it directly is a malformed link (400).
+- **A note stays client-only**: the Worker serves the shell, an empty root, for `/n/<id>`,
+  and for `/new` and `/new?example`, which now run the Worker first. With scripts off, the
+  shell's `<noscript>` says that jot needs JavaScript to edit notes, with a link home. The
+  shell sits under `/n/`, where asking for it directly is a malformed link (400).
 - **A head per page**, from one list (`src/client/heads.ts`: the landing page's head in
   `site.ts`, one per docs page from `docs/pages.ts`): the title, the description, the
   canonical URL on jot.rovira.sh, Open Graph and Twitter tags, and JSON-LD (`WebSite` on
-  the landing page, `TechArticle` on a docs page). The pages set their own title from it
-  when reached in the app.
+  the landing page, `TechArticle` on a docs page). The same tags (`head.ts`) follow the
+  page when the app moves between pages without a reload: the docs page's, the 404 page's
+  (`noindex`, no canonical) or a note's (none).
 - **A link-preview card per page**, 1200×630, drawn by `pnpm og-images`
   (`scripts/og-images.ts`, with the Playwright Chromium the tests already use) from the
   same list, jot's tokens and Geist, and committed under `public/og/`. Each PNG carries
@@ -37,7 +41,8 @@ is private (D17) and is all script.
   stale. Nothing draws images at build or deploy time.
 - **Real 404s.** Workers Static Assets uses `not_found_handling: "404-page"` and
   `html_handling: "drop-trailing-slash"`: a path no file answers gets `404.html` with a
-  404, an unknown docs slug included, and `/docs/blame/` redirects to `/docs/blame`. A
+  404, an unknown docs slug included, and `/docs/blame/` redirects to `/docs/blame`. The
+  404 page's own address (`/404`) is answered by the Worker, with a 404 too. A
   malformed note link keeps its 400. In the app, an unknown path or docs page shows the
   same 404 page.
 - **The first render is the browser's first render.** What depends on the browser runs in
@@ -52,8 +57,9 @@ is private (D17) and is all script.
   platforms for CSS to pick one. Without scripts, the prerendered head's `<noscript>`
   style gives the dark sets to a system in dark mode.
 - **Primary actions are links.** Start a new note and See the example are `<a href>` to
-  `/new` and `/new?example`, so they work before hydration and without scripts; a plain
-  click still opens the note in place with its view transition. Every link to `/new` is
+  `/new` and `/new?example`, so they work before hydration; without scripts they lead to
+  the shell's notice that notes need JavaScript. A plain click still opens the note in
+  place with its view transition. Every link to `/new` is
   `rel="nofollow"`: following one creates a note.
 - The main Geist font is preloaded on prerendered pages.
 
@@ -88,6 +94,7 @@ the build takes a second longer for the server build and the render.
 - A new public page gets its head in `heads.ts`, a card from `pnpm og-images`, and its path
   prerendered from the same list.
 - A click on a button before hydration does nothing (a link still navigates); the tests
-  wait for `data-hydrated` on `<html>`, which App sets once it runs.
+  wait for `data-hydrated` on `<html>`, which App sets once the page has committed, and
+  the docs' lazy page itself once its own chunk has hydrated.
 - The dev server prerenders nothing: `pnpm dev` is the single-page app it was. The
   production build's tests run against `wrangler dev` on the built Worker.

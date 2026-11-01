@@ -366,9 +366,17 @@ The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
   one `rel="nofollow"`;
 - they hydrate without a single console warning or error, in light with motion and in
   dark with reduced motion, and so does the 404 page, for any path and for an unknown docs
-  page;
+  page; with the docs' chunk held back 1.5 s, the wait for `data-hydrated` still covers the
+  docs' own hydration, and a mismatch injected into their HTML is caught;
+- moving from `/docs/blame` to `/docs/ai` in the app brings the head `/docs/ai` has when
+  loaded (title, description, canonical, Open Graph, Twitter, JSON-LD); an unknown docs
+  page reached in the app has the 404 page's (`noindex`, no canonical), and back restores
+  it;
+- with scripts off, `/new`, `/new?example` and a note show that jot needs JavaScript to
+  edit notes, and the link home opens the landing page; with scripts on, a note shows no
+  notice;
 - every path gets its real status: 200 for the pages, 404 for an unknown path or docs page
-  (the 404 page, `noindex`), 307 from a trailing slash to the page, 400 for a malformed note
+  and for `/404` itself (the 404 page, `noindex`), 307 from a trailing slash to the page, 400 for a malformed note
   link (`/n/public` and the shell's own path included), 200 and the empty shell for a note,
   `/new` and `/new?example`, which open a fresh note in the browser, and
   `noindex, nofollow` on `/n/*` and `/api/*`;
@@ -403,6 +411,11 @@ And the StyleX output (D28):
 - the docs page and a note page compute the same styles for every element whether opened
   directly or reached from the landing page or each other (their stylesheets load in a
   different order).
+
+Unit tests run the prerender itself on a stand-in for the client build
+(`scripts/prerender.test.ts`): it writes every page with its content and the shell's notice,
+and it fails the build (a non-zero exit, nothing written) when a page throws inside a
+Suspense boundary or renders without its heading (`scripts/fixtures/prerender-broken.tsx`).
 
 Plain unit tests (`scripts/vite-stylex.test.ts`) cover the plugin: a module imports its own
 rules, layered by priority; the order declaration; a priority it can't order fails loudly;

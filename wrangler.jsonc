@@ -17,9 +17,9 @@
     "html_handling": "drop-trailing-slash",
     // A path no file answers gets the prerendered 404 page, with a 404.
     "not_found_handling": "404-page",
-    // The Worker validates note ids before anything is served (D02), and
-    // serves the note page's shell for /n/<id> and /new.
-    "run_worker_first": ["/api/*", "/n/*", "/new", "/new/"],
+    // The Worker validates note ids before anything is served (D02), serves
+    // the note page's shell for /n/<id> and /new, and gives /404 its status.
+    "run_worker_first": ["/api/*", "/n/*", "/new", "/new/", "/404", "/404.html"],
   },
   // One SQLite-backed Durable Object per note (D01).
   "durable_objects": {

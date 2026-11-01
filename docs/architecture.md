@@ -23,6 +23,7 @@ path no file answers gets the prerendered `404.html` with a 404 (`not_found_hand
 | ------------------- | ----------------------------------------------------------------- |
 | `GET /n/:id`        | Valid id: the note page's shell (`n/shell.html`). Otherwise 400.  |
 | `GET /new`          | The shell: the client picks the new note (and `?example`).        |
+| `GET /404`          | The 404 page, with a 404.                                         |
 | `GET /api/n/:id/ws` | Valid id and a WebSocket upgrade: forwarded to the note's object. |
 |                     | Invalid id: 400. No upgrade: 426.                                 |
 | `/api/*` otherwise  | 404                                                               |
@@ -400,15 +401,18 @@ What depends on the device is CSS: the landing page's and the docs' roots carry
 start shortcut renders both labels, and `index.html`'s pre-paint script marks Apple
 platforms (`data-platform`) for CSS to show ⌘ rather than Ctrl. Start a new note and See
 the example are links to `/new` and `/new?example`, so they work before hydration, each
-`rel="nofollow"`, since following one creates a note. App
-marks `<html>` with `data-hydrated` once it runs; tests wait for it.
+`rel="nofollow"`, since following one creates a note. `<html>` gets `data-hydrated` once
+the page has committed (`hydrated.ts`): from App for every page but the docs, whose lazy
+page marks it once its own chunk has hydrated; tests wait for it.
 
 Every public page's head comes from one list, `heads.ts` (the landing page's head in
 `site.ts`, one per docs page from `docs/pages.ts`): its title, description, canonical URL
 on jot.rovira.sh, link-preview image (`public/og/`) and type. The prerender writes them as
 `<title>`, the description, `<link rel=canonical>`, Open Graph and Twitter tags and JSON-LD
-(`WebSite` on `/`, `TechArticle` on a docs page); the pages set their title from the same
-list when reached in the app. The 404 page is `noindex`.
+(`WebSite` on `/`, `TechArticle` on a docs page), from `headTags` (`head.ts`); when the app
+moves to another page without a reload, `applyHead` puts the same tags in place: the
+landing page's, a docs page's, the 404 page's (`noindex`, no canonical) or a note's (none of
+them). The 404 page is `noindex`.
 
 ## Build and deploy
 
@@ -420,7 +424,9 @@ same class names) renders each public page with React's `prerender` into the bui
 stylesheet linked (from the client build's manifest, which it then removes) and a
 `<noscript>` style that gives the dark token sets to a system in dark mode when no script
 runs. It writes `index.html`, `docs/index.html`, `docs/<slug>/index.html` and `404.html`,
-and keeps the built shell as `n/shell.html`. `wrangler` reads the built config. The
+and keeps the built shell as `n/shell.html`, with a `<noscript>` notice (`NoScriptNotice`,
+which shares the 404 page's styles) that jot needs JavaScript to edit notes. Any error
+React reports while rendering, or a page without its heading, fails the build. `wrangler` reads the built config. The
 link-preview cards are not built: `pnpm og-images` (`scripts/og-images.ts`) draws them in
 Chromium from `heads.ts` and they are committed, each PNG carrying the hash of its card
 (`scripts/og.ts`). Cloudflare Workers Builds, connected to the

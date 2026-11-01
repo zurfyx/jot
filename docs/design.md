@@ -31,9 +31,11 @@ included; with no script at all, the prerendered pages follow `prefers-color-sch
 | `--ai`, `--ai-tint`                      | jot AI's violet (`--peer-2`); the tint on Ask AI's target |
 | `--scrollbar`                            | the scrollbar thumb, on a transparent track               |
 
-The landing page scopes a second set on its root (`landing` in `tokens.stylex.ts`, its dark
-values in `themes.ts`). In dark it re-points the base tokens to the Night treatment (a deep
-navy `--landing-bg`, a brighter glow), so its styles read the same names.
+The landing page scopes a second set on its root (`landing` in `tokens.stylex.ts`, its light
+values in `themes.ts`, its dark values in `globals.css` on `data-scope="landing"`, so they
+apply before the first paint of the prerendered page, D31). In dark it re-points the base
+tokens to the Night treatment (a deep navy `--landing-bg`, a brighter glow), so its styles
+read the same names.
 
 | Token                                 | Use                                                  |
 | ------------------------------------- | ---------------------------------------------------- |
@@ -226,7 +228,8 @@ The copy is a playground's, never a hosted service's: no sign-up or retention re
 `src/client/docs/`, styled with StyleX in each component's file (tokens only). The prose
 elements are small components in `ui.tsx` (`P`, `H2`, `Ul`, `Li`, `B`, `C` for inline
 code), so a page's JSX carries its look. The base tokens, light and dark, plus the `docs`
-set (`docsDark` on the docs root): the people's tints for the home's hero and the diagram
+set, whose dark values sit in `globals.css` on the docs root (`data-scope="docs"`), so they
+apply before the first paint of a prerendered page (D31): the people's tints for the home's hero and the diagram
 (`--docs-tint-*`), the inspector's highlight (`--docs-hl`), callouts (`--docs-callout-*`,
 `--docs-warn-*`) and light code blocks (`--docs-code-*`). The pages and the diagram are
 marked with the peer colours of you, Ana and jot AI (`tint.ts`). One plain rule is left in

@@ -7,6 +7,8 @@ export { NoteRoom } from './room';
 const SOCKET_ROUTE = /^\/api\/n\/([^/]+)\/ws$/;
 const NOTE_ROUTE = /^\/n\/([^/]+)\/?$/;
 const NEW_ROUTE = /^\/new\/?$/;
+/** The 404 page's own file, which the assets would otherwise serve with a 200. */
+const NOT_FOUND_ROUTE = /^\/404(?:\.html)?$/;
 /**
  * The note page's shell, the client-only document (scripts/prerender.ts,
  * D31). It sits under /n/, where a request for it is a malformed note link.
@@ -88,6 +90,12 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (NEW_ROUTE.test(url.pathname)) {
     // A fresh note (D23) or the example: the client picks its id.
     return shell(request, env, url);
+  }
+
+  if (NOT_FOUND_ROUTE.test(url.pathname)) {
+    // The 404 page, with its status (D31).
+    const page = await env.ASSETS.fetch(new Request(new URL('/404', url), request));
+    return new Response(page.body, { status: 404, headers: page.headers });
   }
 
   if (url.pathname.startsWith('/api/')) {

@@ -3,7 +3,7 @@ import type { ConsoleMessage, Page } from '@playwright/test';
 import { DOCS_HEADS, PAGE_HEADS } from '../../src/client/heads';
 import { siteUrl } from '../../src/client/site';
 import { expect, freshNoteId, test } from '../helpers';
-import { ORIGIN } from './serve';
+import { navigateInApp, ORIGIN } from './serve';
 
 /**
  * The prerendered pages and the Worker's answers, on the production build in
@@ -145,6 +145,9 @@ test('every path gets its real status', async ({ request }) => {
     ...DOCS_HEADS.map((head): [string, number, string | null] => [head.path, 200, null]),
     ['/docs/nope', 404, null],
     ['/no/such/page', 404, null],
+    // The 404 page's own file is no page either.
+    ['/404', 404, null],
+    ['/404.html', 404, null],
     ['/new', 200, null],
     ['/new?example', 200, null],
     [`/n/${note}`, 200, NOINDEX],
@@ -179,4 +182,109 @@ test('/new and /new?example open a fresh note in the browser', async ({ page }) 
   await expect(page).toHaveURL(/\/n\/[\w-]{22}$/);
   await page.goto('/new?example');
   await expect(page.getByTestId('example-banner')).toBeVisible();
+});
+
+for (const injected of [false, true]) {
+  test(`hydration waits for the docs' own chunk, however late it arrives${injected ? ', and a mismatch in it is caught' : ''}`, async ({
+    page,
+  }) => {
+    const found = problems(page);
+    await page.route(/\/assets\/DocsPage-[\w-]+\.js$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
+    if (injected) {
+      // The HTML says something the browser's first render won't.
+      await page.route(
+        (url) => url.pathname === '/docs/blame',
+        async (route) => {
+          const response = await route.fetch();
+          const html = await response.text();
+          expect(html).toContain('>Blame and history</h1>');
+          const body = html.replace('>Blame and history</h1>', '>Blame and histories</h1>');
+          await route.fulfill({ response, body });
+        },
+      );
+    }
+    // goto waits for `data-hydrated`, which the docs' page sets once it has hydrated.
+    await page.goto('/docs/blame');
+    await page.waitForTimeout(300);
+    if (injected) {
+      expect(found.join('\n')).toMatch(/#418|hydrat/i);
+    } else {
+      expect(found).toEqual([]);
+    }
+  });
+}
+
+/** What a page's head tells search engines and link previews. */
+function headOf(page: Page) {
+  return page.evaluate(() => ({
+    title: document.title,
+    description: document.querySelector('meta[name="description"]')?.getAttribute('content'),
+    canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null,
+    meta: [
+      ...document.querySelectorAll(
+        'meta[property^="og:"], meta[name^="twitter:"], meta[name="robots"]',
+      ),
+    ]
+      .map(
+        (meta) =>
+          `${meta.getAttribute('property') ?? meta.getAttribute('name')}=${meta.getAttribute('content')}`,
+      )
+      .sort(),
+    structured: [...document.querySelectorAll('script[type="application/ld+json"]')].map(
+      (script) => JSON.parse(script.textContent ?? '') as unknown,
+    ),
+  }));
+}
+
+test('moving between docs pages in the app brings the whole head with each page', async ({
+  page,
+}) => {
+  await page.goto('/docs/ai');
+  const ai = await headOf(page);
+  expect(ai.canonical).toBe(siteUrl('/docs/ai'));
+  await page.goto('/docs/blame');
+  await page
+    .getByTestId('docs-nav')
+    .getByRole('link', { name: 'AI as a collaborator', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/docs\/ai$/);
+  await expect(page).toHaveTitle('AI as a collaborator · jot docs');
+  expect(await headOf(page)).toEqual(ai);
+
+  // A docs page that doesn't exist has the 404 page's head, and back again.
+  await navigateInApp(page, '/docs/nope');
+  await expect(page).toHaveTitle('Page not found · jot');
+  const missing = await headOf(page);
+  expect(missing.canonical).toBeNull();
+  expect(missing.meta).toEqual(['robots=noindex']);
+  expect(missing.structured).toEqual([]);
+  await page.goBack();
+  await expect(page).toHaveTitle('AI as a collaborator · jot docs');
+  expect(await headOf(page)).toEqual(ai);
+});
+
+test("with scripts off, a note's page says notes need JavaScript, with a link home", async ({
+  newContext,
+}) => {
+  const context = await newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  for (const path of ['/new', '/new?example', `/n/${freshNoteId()}`]) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1 }), path).toHaveText(
+      'jot needs JavaScript to edit notes.',
+    );
+  }
+  await page.getByRole('link', { name: 'Go to jot' }).click();
+  await page.waitForURL(`${ORIGIN}/`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
+});
+
+test('with scripts on, a note page shows no notice', async ({ page }) => {
+  await page.routeWebSocket(/.*/, () => {});
+  await page.goto(`/n/${freshNoteId()}`);
+  await expect(page.getByTestId('editor')).toBeVisible();
+  await expect(page.getByText('jot needs JavaScript to edit notes.')).toBeHidden();
 });

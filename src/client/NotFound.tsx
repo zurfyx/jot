@@ -1,7 +1,7 @@
 import * as stylex from '@stylexjs/stylex';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
-import { NOT_FOUND_TITLE } from './site';
+import { applyHead } from './head';
 import { colors, fonts } from './theme/tokens.stylex';
 
 /**
@@ -11,14 +11,44 @@ import { colors, fonts } from './theme/tokens.stylex';
  */
 export default function NotFound() {
   useEffect(() => {
-    document.title = NOT_FOUND_TITLE;
+    applyHead('not-found');
   }, []);
 
   return (
+    <Message kicker="404" title="This page doesn't exist.">
+      The link may be mistyped, or the page may have moved.
+    </Message>
+  );
+}
+
+/**
+ * What a note's shell shows inside <noscript> (scripts/prerender.ts): a note
+ * is edited live, in the browser. It shares the 404 page's styles, which ship
+ * in the entry stylesheet the shell links.
+ */
+export function NoScriptNotice() {
+  return (
+    <Message kicker="jot" title="jot needs JavaScript to edit notes.">
+      Turn JavaScript on and reload this page. The home page and the docs work without it.
+    </Message>
+  );
+}
+
+/** A page with one message: a kicker, a heading, a line, and a link home. */
+function Message({
+  kicker,
+  title,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
     <main {...stylex.props(styles.page)}>
-      <p {...stylex.props(styles.code)}>404</p>
-      <h1 {...stylex.props(styles.title)}>This page doesn't exist.</h1>
-      <p {...stylex.props(styles.text)}>The link may be mistyped, or the page may have moved.</p>
+      <p {...stylex.props(styles.code)}>{kicker}</p>
+      <h1 {...stylex.props(styles.title)}>{title}</h1>
+      <p {...stylex.props(styles.text)}>{children}</p>
       <a href="/" {...stylex.props(styles.home)}>
         Go to jot
       </a>

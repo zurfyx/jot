@@ -1,7 +1,9 @@
 import * as stylex from '@stylexjs/stylex';
 import { type ComponentType, useEffect, useState } from 'react';
 
+import { applyHead } from '../head';
 import { headFor } from '../heads';
+import { useHydratedMark } from '../hydrated';
 import NotFound from '../NotFound';
 import { colors } from '../theme/tokens.stylex';
 import { Ai, Blame, Size } from './content/features';
@@ -32,12 +34,16 @@ export default function DocsPage({ slug }: { slug: string }) {
   const Content = CONTENT[slug];
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // The whole head follows the page, also when the app moves between pages
+  // without a reload (D31); an unknown page is NotFound's.
   useEffect(() => {
     const head = headFor(docsPath(slug));
     if (head !== undefined) {
-      document.title = head.title;
+      applyHead(head);
     }
   }, [slug]);
+  // This lazy page has hydrated (or rendered): the page is live (D31).
+  useHydratedMark(true);
 
   // A new page closes the narrow-screen menu.
   const [shownSlug, setShownSlug] = useState(slug);

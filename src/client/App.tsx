@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
 import { useExampleId } from './examples';
+import { applyHead } from './head';
+import { useHydratedMark } from './hydrated';
 import { Landing } from './landing/Landing';
 import { loadNotePage } from './loadNote';
 import { newNotePath } from './notes';
@@ -21,11 +23,15 @@ export function App() {
   const exampleId = useExampleId();
   const invalid = route.name === 'note' && !isNoteId(route.id);
 
+  // The page is live; the docs' lazy page marks itself once it has hydrated (D31).
+  useHydratedMark(route.name !== 'docs');
+
   useEffect(() => {
-    // The page is live: prerendered pages have hydrated (D31). Tests wait
-    // for this before they act on a page.
-    document.documentElement.dataset.hydrated = '';
-  }, []);
+    // A note's head has none of a public page's tags (D31); its page sets the title.
+    if (route.name === 'note' || route.name === 'new' || route.name === 'example') {
+      applyHead('note');
+    }
+  }, [route.name]);
 
   useEffect(() => {
     // Malformed note links go home (the Worker already answers 400 for a
