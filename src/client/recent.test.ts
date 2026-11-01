@@ -82,6 +82,30 @@ class FakeLocks {
     this.queue = run.catch(() => undefined);
     return run;
   }
+  /** Resolves once every request made so far, and any they queued, has run. */
+  async idle(): Promise<void> {
+    let queue: Promise<unknown>;
+    do {
+      queue = this.queue;
+      await queue;
+    } while (queue !== this.queue);
+  }
+  /** Takes the lock and keeps it until `release`; resolves once it is held. */
+  async hold(): Promise<() => void> {
+    let release = () => {};
+    let acquired = () => {};
+    const held = new Promise<void>((resolve) => (acquired = resolve));
+    void this.request(
+      'jot:recent',
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+          acquired();
+        }),
+    );
+    await held;
+    return () => release();
+  }
 }
 
 function fakeRoot() {
@@ -102,14 +126,24 @@ interface Setup {
   storage?: MemoryStorage;
   locks?: FakeLocks | null;
   events?: EventTarget | null;
+  writer?: string;
+  /** This tab's clock, when it differs from the shared one. */
+  now?: () => number;
 }
 
-function setup({ storage = new MemoryStorage(), locks = new FakeLocks(), events }: Setup = {}) {
+function setup({
+  storage = new MemoryStorage(),
+  locks = new FakeLocks(),
+  events,
+  writer,
+  now = () => clock,
+}: Setup = {}) {
   const root = fakeRoot();
   const target = events === undefined ? new EventTarget() : events;
   const env: RecentEnv = {
     storage: () => storage,
-    now: () => clock,
+    now,
+    writer,
     locks: locks as unknown as RecentEnv['locks'],
     events: target,
     root: root as unknown as RecentEnv['root'],
@@ -488,21 +522,21 @@ describe('changes from several tabs', () => {
 });
 
 describe('title writes that overtake each other', () => {
-  it('a queued title write never replaces a newer pagehide write', async () => {
+  it("a queued title write never replaces the same tab's newer pagehide write", async () => {
     const locks = new FakeLocks();
     const { store } = setup({ locks });
     const x = generateNoteId();
     await store.recordOpen(x);
     // Something holds the lock; a title write queues behind it.
-    let release = () => {};
-    void locks.request('jot:recent', () => new Promise<void>((resolve) => (release = resolve)));
+    const release = await locks.hold();
     const queued = store.updateTitle(x, 'Older queued', '');
-    tick();
     // The page hides: the newer title is written at once, without the lock.
-    await store.updateTitle(x, 'Latest pagehide', '', { sync: true });
+    expect(await store.updateTitle(x, 'Latest pagehide', '', { sync: true })).toBe('written');
     expect(store.read()[0]?.title).toBe('Latest pagehide');
     release();
-    await queued;
+    await locks.idle();
+    // The queued write ran, found it was overtaken, and wrote nothing.
+    expect(await queued).toBe('superseded');
     expect(store.read()[0]?.title).toBe('Latest pagehide');
   });
 
@@ -511,8 +545,7 @@ describe('title writes that overtake each other', () => {
     const { store } = setup({ locks });
     const x = generateNoteId();
     await store.recordOpen(x);
-    let release = () => {};
-    void locks.request('jot:recent', () => new Promise<void>((resolve) => (release = resolve)));
+    const release = await locks.hold();
     let text = 'Older queued';
     const recorder = store.titleRecorder(x, () => [text, '']);
     // The first change writes at once, but the write waits for the lock.
@@ -527,8 +560,40 @@ describe('title writes that overtake each other', () => {
     recorder.flush({ sync: true });
     expect(store.read()[0]?.title).toBe('Latest pagehide');
     release();
+    await locks.idle();
     await microtasks();
     expect(store.read()[0]?.title).toBe('Latest pagehide');
+  });
+
+  it('across tabs the last write wins, whatever their clocks say', async () => {
+    const storage = new MemoryStorage();
+    const locks = new FakeLocks();
+    const a = setup({ storage, locks, writer: 'tab-a' });
+    const x = generateNoteId();
+    await a.store.recordOpen(x);
+    expect(await a.store.updateTitle(x, 'From A', '')).toBe('written');
+    // Tab B's clock runs a minute behind (corrected backwards): its title still lands.
+    const b = setup({ storage, locks, writer: 'tab-b', now: () => clock - 60_000 });
+    expect(await b.store.updateTitle(x, 'From B, earlier clock', '')).toBe('written');
+    expect(a.store.read()[0]?.title).toBe('From B, earlier clock');
+    // And in the same millisecond, each tab's write replaces the other's.
+    const c = setup({ storage, locks, writer: 'tab-c' });
+    expect(await c.store.updateTitle(x, 'From C', '')).toBe('written');
+    expect(await a.store.updateTitle(x, 'From A again', '')).toBe('written');
+    expect(c.store.read()[0]?.title).toBe('From A again');
+  });
+
+  it("a write skipped because the note isn't listed stays pending, and lands later", async () => {
+    const { store } = setup();
+    const x = generateNoteId();
+    const recorder = store.titleRecorder(x, () => ['Written once listed', '']);
+    recorder.changed();
+    await microtasks();
+    expect(store.read()).toEqual([]);
+    await store.recordOpen(x);
+    recorder.flush();
+    await microtasks();
+    expect(store.read()[0]?.title).toBe('Written once listed');
   });
 
   it("a lock-free write that read before another tab's Clear doesn't undo it", async () => {

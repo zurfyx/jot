@@ -138,8 +138,11 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   happens inside the lock, a title write racing another tab's Clear can't bring the note
   back, changes still apply without locks or when a lock request throws or rejects, and a
   sync (`pagehide`) write doesn't wait for a held lock. A title write queued behind the lock
-  never replaces a newer `pagehide` write, and with the recorder a write still waiting for
-  the lock leaves `pagehide` something to write; a lock-free write that read before another
+  runs once it is released and, overtaken, never replaces the same tab's newer `pagehide`
+  write (both tests fail without the check), and with the recorder a write still waiting
+  for the lock leaves `pagehide` something to write; across tabs the last title write wins,
+  with a clock a minute behind and in the same millisecond; a write skipped because the
+  note isn't listed stays pending and lands once it is; a lock-free write that read before another
   tab's Clear or removal doesn't undo it. At most the newest 100 tombstones are kept. A
   subscriber that throws stops neither the others nor the change, which runs once. The
   title recorder reads the note only when it writes: at once, then at most every 2 s with

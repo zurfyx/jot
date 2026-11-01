@@ -36,10 +36,15 @@ from a new or emptied one.
   Clear all a `clearedAt`; a visit stamped before either is not recorded, and a title write
   only changes an entry that is still there. Every write also re-reads storage just before
   it writes and keeps the newer `clearedAt` and tombstones of the two, dropping any entry
-  they cover. A title carries the time it was read from the note (`titledAt`), and a write
-  of an older read is dropped, so a title write that waited for the lock never replaces a
-  newer one. A change stays pending in its tab until its write lands, so the page hiding
-  while a write waits still writes the latest title.
+  they cover. A title records which tab wrote it and that tab's sequence number for it
+  (`titledBy`, `titleSeq`); a write is dropped only when the stored title came from the
+  same tab with a higher number, so a title write that waited for the lock never replaces
+  the same tab's newer one. Across tabs the last write wins, since both read the same
+  synced note; no clock is compared, so a clock corrected backwards or two tabs writing in
+  the same millisecond can't drop a title. Wall-clock time serves only for display and the
+  90-day prune. A change stays pending in its tab until its write lands or is overtaken by
+  that tab's newer write, so the page hiding while a write waits still writes the latest
+  title, and a write skipped for any other reason is tried again.
 - Where Web Locks are missing, and for the title written on `pagehide` (when the page may be
   gone before a lock is granted), the change runs at once, without the lock. It still
   merges with what storage holds a moment before it writes, so a Clear or a removal that
@@ -74,8 +79,9 @@ from a new or emptied one.
 - localStorage keeps the playground's promise: no accounts, nothing about you on the server.
 - A title from the first line matches how jot already names a note (`document.title`).
 - One lock and a fresh read per change make concurrent tabs safe without a merge format;
-  tombstones and title times cover what a lock can't order: a visit or a title read before
-  a change but written after it, and the lock-free `pagehide` write.
+  tombstones and per-tab title sequence numbers cover what a lock can't order: a visit
+  stamped before a removal but written after it, and a tab's queued title write overtaken
+  by its own lock-free `pagehide` write.
 - Pruning at 90 days never lists a deleted note: a note lives at least 90 days past this
   browser's last visit. Marking an entry "expired" from an empty room would also mark notes
   someone emptied.
