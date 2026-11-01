@@ -22,6 +22,45 @@
           (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
       })();
+      // Reserve the recent notes' rows before the first paint, so nothing moves when the
+      // list fills in (D30). It counts as parseRecent in src/client/recent.ts does: well-formed
+      // ids, one entry each, opened in the last 90 days and after their removal and the last
+      // Clear, at most 20; six rows show.
+      (function () {
+        var count = 0;
+        try {
+          var state = JSON.parse(localStorage.getItem('jot:recent') || '{}') || {};
+          var list = Array.isArray(state.entries) ? state.entries : [];
+          var removed = state.removed && typeof state.removed === 'object' ? state.removed : {};
+          var clearedAt = typeof state.clearedAt === 'number' ? state.clearedAt : 0;
+          var seen = {};
+          var now = Date.now();
+          for (var i = 0; i < list.length && count < 20; i++) {
+            var entry = list[i];
+            if (
+              entry &&
+              typeof entry.id === 'string' &&
+              /^[A-Za-z0-9_-]{21}[AQgw]$/.test(entry.id) &&
+              !seen[entry.id] &&
+              typeof entry.openedAt === 'number' &&
+              isFinite(entry.openedAt) &&
+              now - entry.openedAt <= 7776000000 &&
+              entry.openedAt > clearedAt &&
+              !(typeof removed[entry.id] === 'number' && entry.openedAt <= removed[entry.id])
+            ) {
+              seen[entry.id] = true;
+              count++;
+            }
+          }
+        } catch (e) {}
+        var root = document.documentElement;
+        if (count > 0) {
+          var rows = Math.min(count, 6);
+          root.setAttribute('data-recent', '');
+          root.style.setProperty('--jot-recent-rows', String(rows));
+          root.style.setProperty('--jot-recent-rows-wide', String(Math.ceil(rows / 2)));
+        }
+      })();
     </script>
   </head>
   <body>

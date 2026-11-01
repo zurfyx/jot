@@ -26,6 +26,13 @@ version of the engine.
   Examples expire like any note (D20).
 - **Share it.** Share (or ⌘⇧C, or ⋯ → Copy link) copies the note's link. The link is the
   whole access model.
+- **Come back to one.** The landing page lists the notes this browser opened, right below
+  the hero under "Your recent notes": each note's first line (or "Untitled note"), the start
+  of its text and when it was last opened, the example marked as such. Six show, then Show
+  all; a note can be removed from the list, or the whole list cleared after a question.
+  The list lives only in this browser, nothing about it reaches the server, and a note not
+  opened here for 90 days drops off, since it may have expired. With no recent notes the
+  landing page shows no list (D30).
 - **Join one.** Paste a jot link or just its code into the landing page's quiet "Or paste a
   note link to join it." line. It says which note it opens, or that the text isn't a note
   link or code.
@@ -69,7 +76,8 @@ version of the engine.
 ## Promises
 
 - **The link is the key.** Ids are 128 random bits; there are no accounts and no listing.
-  Anyone with a link can read and edit that note (D02).
+  Anyone with a link can read and edit that note (D02). The recent notes list is this
+  browser's own, kept in its storage (D30).
 - **Notes expire.** A note is deleted 90 days after its last visit (D06).
 - **Notes stay out of search engines.** Note pages and the API are marked `noindex,
 nofollow` and disallowed in `robots.txt`; only the landing page is indexable (D17).
