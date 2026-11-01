@@ -1,7 +1,8 @@
-import { exports } from 'cloudflare:workers';
+import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 import { SITE_URL } from '../shared/site';
+import worker from './index';
 
 /**
  * robots.txt and the sitemap by host (D32): production names its sitemap; a
@@ -25,9 +26,27 @@ describe('robots.txt and the sitemap', () => {
     const robots = await exports.default.fetch(`${PREVIEW}/robots.txt`);
     expect(robots.status).toBe(200);
     expect(await robots.text()).toBe(`${RULES.join('\n')}\n`);
-    const sitemap = await exports.default.fetch(`${PREVIEW}/sitemap.xml`);
+    // Its sitemap is the 404 page, as any unknown path's is. The test Worker
+    // has no assets: these stand in for the built ones.
+    const asked: string[] = [];
+    const assets = {
+      fetch: (request: Request) => {
+        asked.push(new URL(request.url).pathname);
+        return Promise.resolve(
+          new Response('<h1>This page doesn&#x27;t exist.</h1>', {
+            headers: { 'content-type': 'text/html; charset=utf-8' },
+          }),
+        );
+      },
+    } as unknown as Fetcher;
+    const sitemap = await worker.fetch!(
+      new Request(`${PREVIEW}/sitemap.xml`) as Parameters<NonNullable<typeof worker.fetch>>[0],
+      { ...env, ASSETS: assets },
+    );
     expect(sitemap.status).toBe(404);
-    await sitemap.body?.cancel();
+    expect(sitemap.headers.get('content-type')).toBe('text/html; charset=utf-8');
+    expect(await sitemap.text()).toContain('This page doesn&#x27;t exist.');
+    expect(asked).toEqual(['/404']);
   });
 
   it('the rules keep notes, the API and the links that create notes out of crawlers', async () => {

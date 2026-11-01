@@ -21,9 +21,14 @@ HTML.
   `<article>` from the HTML the build just rendered: headings, paragraphs, lists, links
   (made absolute), inline code, tables, callouts as quotes, and code blocks fenced with the
   language their `<pre>` names (`data-language`). It drops what only a browser needs:
-  buttons, what is hidden from assistive technology, an animation's moving frames. It is
-  a small parser for the markup React renders, not a general HTML library, so the build
-  gains no dependency.
+  buttons, what is hidden from assistive technology, an animation's moving frames. Text
+  never reads as Markdown it isn't: `\`, `` ` ``, `*`, `_`, `[`, `]` and `<` are escaped
+  anywhere, and a line that would start a heading, a quote, a bullet or a numbered item
+  is escaped at its start; code takes a fence longer than any run of backticks in it,
+  with a space inside when it starts or ends with one. Where the page separates a label
+  from its text by CSS alone (a block title), the source puts a space between them, so
+  the Markdown keeps them apart too. It is a small parser for the markup React renders,
+  not a general HTML library, so the build gains no dependency.
 - **The landing page has no Markdown copy.** It is `llms.txt`'s subject (its name, summary
   and address head the index); its illustrations make no sense as text.
 - **Types.** The build writes `_headers` rules for each file it generated, by name:
@@ -33,7 +38,8 @@ HTML.
   by host. Everywhere: `Disallow: /n/`, `/api/` and `/new` (a link that creates a note). In
   production, `Sitemap: https://jot.rovira.sh/sitemap.xml` too, and the built sitemap. On a
   Preview (a `*.workers.dev` host, D24): the same rules, no `Sitemap:` line, and a 404 for
-  `/sitemap.xml`, since the built sitemap lists production's pages. Previews stay noindex
+  `/sitemap.xml` (the 404 page, as for any unknown path), since the built sitemap lists
+  production's pages. Previews stay noindex
   through Cloudflare's header, so robots.txt does not block them: a crawler must fetch a
   page to see its noindex.
 

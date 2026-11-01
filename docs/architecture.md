@@ -25,7 +25,7 @@ path no file answers gets the prerendered `404.html` with a 404 (`not_found_hand
 | `GET /new`          | The shell: the client picks the new note (and `?example`).        |
 | `GET /404`          | The 404 page, with a 404.                                         |
 | `GET /robots.txt`   | The rules; in production also `Sitemap:` (D32).                   |
-| `GET /sitemap.xml`  | Production: the built sitemap. A Preview (workers.dev): 404.      |
+| `GET /sitemap.xml`  | Production: the built sitemap. A Preview: the 404 page, 404.      |
 | `GET /api/n/:id/ws` | Valid id and a WebSocket upgrade: forwarded to the note's object. |
 |                     | Invalid id: 400. No upgrade: 426.                                 |
 | `/api/*` otherwise  | 404                                                               |

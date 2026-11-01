@@ -4,4 +4,3 @@
 # referrer policy from its own script's response.
 /assets/webllm-*
   Referrer-Policy: no-referrer
-

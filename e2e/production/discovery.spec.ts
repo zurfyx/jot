@@ -15,6 +15,21 @@ import { ORIGIN } from './serve';
 
 test.use({ baseURL: ORIGIN });
 
+/**
+ * Bold text glued to the word after it (`**Worker**routes`), where the page
+ * separates the two with CSS but the Markdown runs them together. Code is
+ * left out: a `**` there is code.
+ */
+function gluedBold(markdown: string): string[] {
+  const prose = markdown
+    .replace(/^(`{3,})[^\n]*\n[\s\S]*?\n\1$/gm, '')
+    .replace(/(`+)[\s\S]*?\1/g, '');
+  // Each bold span, paired from the left, then what follows it.
+  return [...prose.matchAll(/\*\*(?:\\.|[^*\\\n])+?\*\*/g)]
+    .filter((match) => /[\p{L}\p{N}]/u.test(prose.charAt(match.index + match[0].length)))
+    .map(([bold]) => bold);
+}
+
 /** A production URL, fetched from the build under test. */
 const local = (url: string) => url.replace(SITE_URL, ORIGIN);
 
@@ -83,6 +98,12 @@ test('llms.txt indexes every page, and every link in it is served', async ({ req
   }
 });
 
+test('the glued-bold check finds a label run into the next word, and only that', () => {
+  expect(gluedBold('**Worker**routes and **You** a browser')).toEqual(['**Worker**']);
+  expect(gluedBold('a **line**; a **format**. `**x**y` and **1 · Who**A')).toEqual(['**1 · Who**']);
+  expect(gluedBold('```ts\nconst a = **b**c;\n```\n')).toEqual([]);
+});
+
 test('every docs page has its Markdown copy, converted from the page', async ({ request }) => {
   const full = await request.get('/llms-full.txt');
   expect(full.headers()['content-type']).toBe('text/plain; charset=utf-8');
@@ -101,6 +122,12 @@ test('every docs page has its Markdown copy, converted from the page', async ({ 
     // And it is in the full text, under its address.
     expect(fullText, path).toContain(`Source: ${siteUrl(path)}\n\n${markdown.trimEnd()}`);
   }
+  // No bold label runs into the word after it, in any page or in the full text.
+  for (const docs of DOCS_PAGES) {
+    const path = markdownPath(docsPath(docs.slug));
+    expect(gluedBold(await (await request.get(path)).text()), path).toEqual([]);
+  }
+  expect(gluedBold(fullText), '/llms-full.txt').toEqual([]);
   // Code keeps its language.
   const quickStart = await (await request.get('/docs/quick-start.md')).text();
   expect(quickStart).toContain('```ts\nimport {');

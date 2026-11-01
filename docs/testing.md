@@ -174,8 +174,11 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   whole with its language and without its Copy button, lists (nested blocks too, and
   numbered ones), a table with its header row, a callout as a quote; leaves out what is
   hidden from assistive technology, an animation's moving frame and SVG; escapes
-  formatting characters, reads character references, and fails without the part to
-  convert. `scripts/discovery.test.ts`: every docs page's Markdown address sits next to its
+  formatting characters, link syntax and raw HTML in text, and a line that would start a
+  heading, a quote, a bullet or a numbered item (but not the same characters mid-line, or
+  `#hashtag`, `-1`, `2.5`); fences inline code and code blocks longer than any run of
+  backticks in them, padding code that starts or ends with one; reads character
+  references, and fails without the part to convert. `scripts/discovery.test.ts`: every docs page's Markdown address sits next to its
   own; the sitemap lists every public page by its canonical URL, escaped; `llms.txt` opens
   with jot's name and summary, names the site, and lists every docs page under its group
   in reading order with its Markdown link and its line, then the full text; and
@@ -206,7 +209,7 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
   `X-Robots-Tag: noindex, nofollow`;
 - `robots.txt` and the sitemap by host (D32, `discovery.test.ts`): in production the rules
   and the `Sitemap:` line; on a Preview (a workers.dev host) the same rules without it, and
-  a 404 for `/sitemap.xml`; the rules keep `/n/`, `/api/` and `/new` out and block nothing
+  the 404 page for `/sitemap.xml`; the rules keep `/n/`, `/api/` and `/new` out and block nothing
   else.
 
 ## End to end (`pnpm e2e`)
@@ -382,8 +385,9 @@ What crawlers and assistants read (D32, `discovery.spec.ts`), the guard:
 - `llms.txt` (`text/plain`, UTF-8) names the site and has a line for every docs page with
   its Markdown link and its line, and every link in it is served;
 - every docs page's Markdown (`text/markdown`, UTF-8) has the page's heading, no markup
-  and its text, and is in `llms-full.txt` under its address; code keeps its language
-  (`ts`, `sh`); an unknown `.md` path is the 404 page, as HTML.
+  and its text, and is in `llms-full.txt` under its address; no bold label runs into the
+  word after it (`**Worker**routes`) in any page or in the full text, code left out; code
+  keeps its language (`ts`, `sh`); an unknown `.md` path is the 404 page, as HTML.
 
 The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
 

@@ -70,3 +70,37 @@ describe('the HTML to Markdown converter', () => {
     expect(() => htmlToMarkdown('<p>x</p>', (e) => e.tag === 'article', { base })).toThrow();
   });
 });
+
+describe('the converter never reads text as Markdown it is not', () => {
+  it('escapes a line that would start a heading, a quote, a list or a numbered item', () => {
+    expect(article('<p># not a heading</p>')).toBe('\\# not a heading\n');
+    expect(article('<p>&gt; not a quote</p>')).toBe('\\> not a quote\n');
+    expect(article('<p>- not a bullet</p><p>+ nor this</p>')).toBe(
+      '\\- not a bullet\n\n\\+ nor this\n',
+    );
+    expect(article('<p>1. not a list</p><p>2) nor this</p>')).toBe(
+      '1\\. not a list\n\n2\\) nor this\n',
+    );
+    expect(article('<p>first<br/># second</p>')).toBe('first  \n\\# second\n');
+    // In the middle of a line they are just text.
+    expect(article('<p>a # b - c 1. d &gt; e</p>')).toBe('a # b - c 1. d > e\n');
+    // A word that only starts like one is left alone.
+    expect(article('<p>#hashtag, -1 and 2.5</p>')).toBe('#hashtag, -1 and 2.5\n');
+  });
+
+  it('escapes link syntax and raw HTML written as text', () => {
+    expect(article('<p>[not a link](https://x.dev) and &lt;b&gt;not bold&lt;/b&gt;</p>')).toBe(
+      '\\[not a link\\](https://x.dev) and \\<b>not bold\\</b>\n',
+    );
+  });
+
+  it('fences code longer than any run of backticks in it', () => {
+    expect(article('<p><code>a`b</code></p>')).toBe('``a`b``\n');
+    expect(article('<p><code>`start</code> and <code>end``</code></p>')).toBe(
+      '`` `start `` and ``` end`` ```\n',
+    );
+    expect(article('<pre data-language="md"><code>```ts\nx\n```</code></pre>')).toBe(
+      '````md\n```ts\nx\n```\n````\n',
+    );
+  });
+});

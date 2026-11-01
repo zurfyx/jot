@@ -4,7 +4,10 @@
  * which is well formed and escaped. It keeps what a reader needs (headings,
  * paragraphs, lists, links, code with its language, tables, callouts) and
  * drops what only a browser needs (buttons, decorations hidden from assistive
- * technology, an animation's moving frames).
+ * technology, an animation's moving frames). Text never reads as Markdown it
+ * isn't: formatting characters, brackets and `<` are escaped, and so is a
+ * line that would start a heading, a quote or a list; code takes a fence
+ * longer than any run of backticks in it.
  */
 
 interface Element {
@@ -114,9 +117,41 @@ function skipped(element: Element): boolean {
   );
 }
 
-/** Characters that would start Markdown formatting in running text. */
-function escapeText(text: string): string {
-  return text.replace(/([\\`*_])/g, '\\$1');
+/**
+ * Text with every character that could start Markdown formatting escaped
+ * anywhere in a line: emphasis, code, links and raw HTML. What only starts a
+ * block at a line's start (headings, quotes, lists) is `escapeLineStart`'s.
+ */
+export function escapeText(text: string): string {
+  return text.replace(/([\\`*_[\]<])/g, '\\$1');
+}
+
+/**
+ * A line of text that would read as a block's start, escaped: a heading
+ * (`#`), a quote (`>`), a bullet (`-`, `+`, `*`) or a numbered item (`1.`).
+ */
+export function escapeLineStart(line: string): string {
+  return line
+    .replace(
+      /^(\s*)(#{1,6}(?:\s|$)|>|[-+](?:\s|$))/,
+      (_, space: string, mark: string) => `${space}\\${mark}`,
+    )
+    .replace(/^(\s*\d+)([.)])(\s|$)/, '$1\\$2$3');
+}
+
+/** The longest run of backticks in `text`. */
+function longestTicks(text: string): number {
+  return Math.max(0, ...[...text.matchAll(/`+/g)].map(([run]) => run.length));
+}
+
+/**
+ * Inline code: a fence one backtick longer than any run inside, and a space
+ * inside it when the code starts or ends with a backtick (CommonMark).
+ */
+export function inlineCode(code: string): string {
+  const fence = '`'.repeat(longestTicks(code) + 1);
+  const pad = code.startsWith('`') || code.endsWith('`') ? ' ' : '';
+  return `${fence}${pad}${code}${pad}${fence}`;
 }
 
 export interface MarkdownOptions {
@@ -135,8 +170,7 @@ function inline(node: Node, options: MarkdownOptions): string {
       return '\n';
     case 'code': {
       const code = textOf(node);
-      const fence = code.includes('`') ? '``' : '`';
-      return code === '' ? '' : `${fence}${code}${fence}`;
+      return code === '' ? '' : inlineCode(code);
     }
     case 'b':
     case 'strong': {
@@ -159,11 +193,14 @@ function inline(node: Node, options: MarkdownOptions): string {
   }
 }
 
-/** Joins inline Markdown into a paragraph: one line, but for line breaks. */
+/**
+ * Joins inline Markdown into a paragraph: one line, but for line breaks, none
+ * of them read as the start of another block.
+ */
 function paragraph(text: string): string {
   return text
     .split('\n')
-    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .map((line) => escapeLineStart(line.replace(/\s+/g, ' ').trim()))
     .filter((line) => line !== '')
     .join('  \n');
 }
@@ -250,7 +287,7 @@ function block(element: Element, options: MarkdownOptions): string[] {
     case 'pre': {
       const language = element.attrs['data-language'] ?? '';
       const code = textOf(element).replace(/\n+$/, '');
-      const fence = code.includes('```') ? '````' : '```';
+      const fence = '`'.repeat(Math.max(3, longestTicks(code) + 1));
       return [`${fence}${language}\n${code}\n${fence}`];
     }
     case 'table': {

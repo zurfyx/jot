@@ -69,7 +69,8 @@ function Box({
       <b {...stylex.props(prose.b, styles.boxTitle)}>
         {tint !== undefined && <i aria-hidden="true" {...stylex.props(styles.dot, TINT[tint])} />}
         {title}
-      </b>
+      </b>{' '}
+      {/* The space keeps title and text apart in text and in /docs/relay.md (D32). */}
       <span {...stylex.props(styles.boxText)}>{children}</span>
     </div>
   );
