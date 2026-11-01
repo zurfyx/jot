@@ -20,3 +20,9 @@ export const tabMarker = stylex.defineMarker();
 
 /** A recent note's row: hovering or focusing inside shows its remove button. */
 export const recentMarker = stylex.defineMarker();
+
+/** A recent note's link: keyboard focus on it shows the row's remove button. */
+export const recentLinkMarker = stylex.defineMarker();
+
+/** A recent note's remove button: keyboard focus on it hides the row's time. */
+export const recentRemoveMarker = stylex.defineMarker();

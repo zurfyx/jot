@@ -126,13 +126,20 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   into the first line, and the point stays inside even a box narrower than its insets;
 - recent notes (D30): a visit goes to the top and keeps the title it had, at most 20 notes
   with the oldest dropped, the example's label survives a reopen; titles fall back to
-  "Untitled note", collapse whitespace and are clipped on a word; a removed note isn't
-  re-added by a title update; remove and clear; notes not opened for 90 days are pruned;
-  malformed storage, bad or repeated ids read as nothing; denied or full storage never
-  throws; `<html>` carries the rows the landing page reserves; another tab's write arrives
-  through the `storage` event (other keys ignored, a cleared storage counted); the list is
-  the same object until storage changes; title updates write at once, then at most every
-  2 s with the latest, and a flush writes the pending one; the relative times;
+  "Untitled note", collapse whitespace and are clipped on a word; remove (with its
+  tombstone) and clear (with `clearedAt`); a title update never re-adds a removed note, and
+  a visit stamped before a removal or a Clear is not recorded while a later one is; notes
+  not opened for 90 days are pruned at read, with no write; malformed state, bad or
+  repeated ids read as nothing; denied or full storage never throws; `<html>` carries the
+  rows the landing page reserves, and a stale mark (cleared in another tab while nobody
+  listened) is fixed on subscribe; another tab's write arrives through the `storage` event
+  (other keys ignored, a cleared storage counted); the list is the same object until
+  storage changes. With fake Web Locks: two tabs' visits at once both stay, every write
+  happens inside the lock, a title write racing another tab's Clear can't bring the note
+  back, changes still apply without locks or when a lock request throws or rejects, and a
+  sync (`pagehide`) write doesn't wait for a held lock. The title recorder reads the note
+  only when it writes: at once, then at most every 2 s with the latest text, and on a
+  flush; a flush with nothing pending reads nothing. The relative times;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations (`/new` and the example's route), the two-windows
@@ -197,15 +204,21 @@ Durable Objects, over real WebSockets.
   opened from "Start a new note" is listed as "Untitled note" at once, and back on the
   landing page it shows its first line, the start of its text and "Just now", linking to
   its page; a reload keeps the title typed last; the example says "Example · Just now";
-  clicking a row opens the note; removing one (its button hidden until hover) and the last
-  hides the section; Clear all asks, Cancel and Escape keep the list, Clear empties it and
-  the storage; six show, then Show all shows eight inside the section; a note opened 91
-  days ago is gone; from the keyboard, focus in a row shows its remove button, Enter on it
-  removes the note and the focus moves to the next one, whose Enter opens it; on a touch
-  screen the button is always shown and a tap removes; a second tab follows a note opened,
-  retitled and the list cleared without a reload; with the app's script held, `<html>`
-  already carries the rows, and the empty slot has the filled one's height; and with
-  localStorage throwing, the landing page and a new note still work;
+  clicking a row opens the note; removing one (its button hidden until hover) moves the
+  focus to the next note, and removing the last hides the section and focuses the hero's
+  "Start a new note"; Clear all asks with the focus on Clear, Cancel and Escape keep the
+  list and focus Clear all, Clear empties it and focuses the hero's action; six show, then
+  Show all shows eight inside the section and focuses the seventh; a note opened 91 days
+  ago is gone; the times move from "Just now" to "2 min ago" and a note 91 days old drops
+  off with the page left open (Playwright's clock); from the keyboard, focus in a row shows
+  its remove button, Enter on it removes the note and the focus moves to the next one, or
+  the previous one after the last; on a touch screen the button is always shown, answers
+  taps 3px outside its 26px circle on every side, and a tap removes; the notes are a list
+  (`role="list"`) of list items; a second tab follows a note opened, retitled and the list
+  cleared without a reload; a Clear in another tab sticks while a note stays open and is
+  edited, and going back leaves no empty slot and no mark on `<html>`; with the app's
+  script held, `<html>` already carries the rows, and the empty slot has the filled one's
+  height; and with localStorage throwing, the landing page and a new note still work;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;

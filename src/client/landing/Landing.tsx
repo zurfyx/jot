@@ -1,5 +1,13 @@
 import * as stylex from '@stylexjs/stylex';
-import { type ComponentProps, type ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
+import {
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from 'react';
 
 import { prefetchNotePage } from '../loadNote';
 import { SparkleIcon } from './bits';
@@ -449,12 +457,15 @@ function platform(): string {
 export function Landing() {
   const newCard = useRef<HTMLAnchorElement>(null);
   const exampleCard = useRef<HTMLAnchorElement>(null);
+  const heroStart = useRef<HTMLButtonElement>(null);
   const startNew = () => void openNote(newNotePath, newCard.current);
   const openExample = () => void openNote(EXAMPLE_PATH, exampleCard.current);
   const shortcut = startShortcutLabel(platform());
   // A recent note grows from its row into the note page, as a card does.
   const openRecent = (entry: { id: string }, row: HTMLElement | null) =>
     void openNote(notePath(entry.id), row);
+  // When the last recent note goes, the focus moves to the hero's primary action.
+  const focusHeroStart = useCallback(() => heroStart.current?.focus(), []);
   // The landing page's own token set: "Clean" in light, "Night" in dark (D07).
   const scope = useThemeName() === 'dark' ? [landingDark, landingCardsDark] : landingLight;
 
@@ -499,8 +510,9 @@ export function Landing() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const startButton = (
+  const startButton = (ref?: RefObject<HTMLButtonElement | null>) => (
     <button
+      ref={ref}
       type="button"
       {...stylex.props(styles.button, styles.primary)}
       aria-keyshortcuts="Meta+Enter Control+Enter"
@@ -552,7 +564,7 @@ export function Landing() {
                 device.
               </p>
               <div {...stylex.props(styles.actions)}>
-                {startButton}
+                {startButton(heroStart)}
                 <button
                   type="button"
                   {...stylex.props(styles.button, styles.secondary)}
@@ -574,7 +586,7 @@ export function Landing() {
             />
           </section>
 
-          <RecentNotes onOpen={openRecent} />
+          <RecentNotes onOpen={openRecent} onEmpty={focusHeroStart} />
           <TwoWindows />
           <EngineTabs />
 
@@ -645,7 +657,7 @@ export function Landing() {
               Open a note in two windows, or read the code behind it.
             </p>
             <div {...stylex.props(styles.actions, styles.endingActions)}>
-              {startButton}
+              {startButton()}
               <a {...stylex.props(styles.link, styles.button, styles.secondary)} href={DOCS.home}>
                 Read the docs →
               </a>

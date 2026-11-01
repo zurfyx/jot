@@ -9,12 +9,19 @@ import { NOTE_EXPIRY_MS } from '../shared/limits';
  * the server. Kept free of Lexical and Yjs so the landing page stays light,
  * and it never throws: where storage is denied the list is simply empty.
  *
+ * Every tab of the origin shares the list. A change re-reads it and writes it
+ * back inside the Web Lock `jot:recent`, so two tabs never interleave, and a
+ * removal or a Clear leaves a time behind (a tombstone, `clearedAt`) that a
+ * visit from before it can't undo. Where Web Locks are missing, and on
+ * `pagehide`, the change runs at once, unsynchronised.
+ *
  * The relay can't tell an expired note from a new one (an expired note's
  * object deletes its storage and opens empty, D06), so an entry this browser
  * hasn't opened for 90 days is pruned instead of marked.
  */
 
 export const RECENT_KEY = 'jot:recent';
+export const RECENT_LOCK = 'jot:recent';
 /** The most entries the list keeps; opening a 21st drops the oldest. */
 export const RECENT_MAX = 20;
 /** The landing page shows this many before "Show all". */
@@ -26,6 +33,8 @@ export const TITLE_THROTTLE_MS = 2000;
 
 const TITLE_MAX = 120;
 const EXCERPT_MAX = 160;
+/** Removals remembered at most; older ones go first. */
+const TOMBSTONES_MAX = 100;
 
 /** On <html> while the list has entries, set before the first paint (index.html). */
 export const RECENT_ATTR = 'data-recent';
@@ -45,11 +54,24 @@ export interface RecentNote {
   example?: true;
 }
 
+/** What `jot:recent` holds. */
+export interface RecentState {
+  entries: RecentNote[];
+  /** When each note was last removed: a visit from before it is not recorded. */
+  removed: Record<string, number>;
+  /** When the list was last cleared: a visit from before it is not recorded. */
+  clearedAt: number;
+}
+
+type Locks = Pick<LockManager, 'request'>;
+
 /** What a store reads and writes; the app's is the window's, tests pass fakes. */
 export interface RecentEnv {
   /** The storage, read inside a guard: it throws where storage is denied. */
   storage: () => Storage;
   now: () => number;
+  /** Web Locks, or null where they are missing. */
+  locks: Locks | null;
   /** Where `storage` events arrive from other tabs. */
   events: EventTarget | null;
   /** <html>, which carries the hint the landing page sizes its slot by. */
@@ -71,23 +93,43 @@ export function titleOf(firstLine: string): string {
   return clip(firstLine, TITLE_MAX) || UNTITLED;
 }
 
-/** Parses the stored list: well-formed, unexpired, one entry per note, newest first, capped. */
-export function parseRecent(raw: string | null, now: number): RecentNote[] {
+const EMPTY_STATE: RecentState = { entries: [], removed: {}, clearedAt: 0 };
+
+function isTime(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * Parses the stored state: well-formed, unexpired entries, one per note, none
+ * from before its removal or the last Clear, newest first, capped.
+ */
+export function parseRecent(raw: string | null, now: number): RecentState {
   if (raw === null) {
-    return [];
+    return EMPTY_STATE;
   }
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
-    return [];
+    return EMPTY_STATE;
   }
-  if (!Array.isArray(value)) {
-    return [];
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return EMPTY_STATE;
+  }
+  const stored = value as Record<string, unknown>;
+  const clearedAt = isTime(stored.clearedAt) ? stored.clearedAt : 0;
+  const removed: Record<string, number> = {};
+  if (typeof stored.removed === 'object' && stored.removed !== null) {
+    for (const [id, at] of Object.entries(stored.removed as Record<string, unknown>)) {
+      // A removal older than the expiry can't outrank any entry still kept.
+      if (isNoteId(id) && isTime(at) && now - at <= NOTE_EXPIRY_MS) {
+        removed[id] = at;
+      }
+    }
   }
   const seen = new Set<string>();
-  const list: RecentNote[] = [];
-  for (const item of value as unknown[]) {
+  const entries: RecentNote[] = [];
+  for (const item of Array.isArray(stored.entries) ? (stored.entries as unknown[]) : []) {
     if (typeof item !== 'object' || item === null) {
       continue;
     }
@@ -96,14 +138,15 @@ export function parseRecent(raw: string | null, now: number): RecentNote[] {
       typeof id !== 'string' ||
       !isNoteId(id) ||
       seen.has(id) ||
-      typeof openedAt !== 'number' ||
-      !Number.isFinite(openedAt) ||
-      now - openedAt > NOTE_EXPIRY_MS
+      !isTime(openedAt) ||
+      now - openedAt > NOTE_EXPIRY_MS ||
+      openedAt <= clearedAt ||
+      openedAt <= (removed[id] ?? -Infinity)
     ) {
       continue;
     }
     seen.add(id);
-    list.push({
+    entries.push({
       id,
       title: typeof title === 'string' && title.trim() !== '' ? clip(title, TITLE_MAX) : UNTITLED,
       excerpt: typeof excerpt === 'string' ? clip(excerpt, EXCERPT_MAX) : '',
@@ -111,7 +154,8 @@ export function parseRecent(raw: string | null, now: number): RecentNote[] {
       ...(example === true ? { example: true as const } : {}),
     });
   }
-  return list.sort((a, b) => b.openedAt - a.openedAt).slice(0, RECENT_MAX);
+  entries.sort((a, b) => b.openedAt - a.openedAt);
+  return { entries: entries.slice(0, RECENT_MAX), removed, clearedAt };
 }
 
 /** The rows the landing page reserves for `count` entries: [phone, two columns]. */
@@ -121,29 +165,42 @@ export function reservedRows(count: number): [number, number] {
 }
 
 export interface TitleRecorder {
-  /** The note's first line and the text after it, as the editor has them now. */
-  update(firstLine: string, rest: string): void;
-  /** Writes what `update` last got, if it hasn't been written. */
-  flush(): void;
+  /** The note changed: its text is read, and written, when the throttle allows. */
+  changed(): void;
+  /**
+   * Writes the title now if a change is pending. `sync` writes without the
+   * lock, for `pagehide`, when the page may be gone before a lock is granted.
+   */
+  flush(options?: { sync?: boolean }): void;
 }
 
 export interface RecentStore {
+  /** The list, newest first, pruned against the current time. */
   read(): RecentNote[];
-  /** A visit: the note moves to the top, keeping the title it had. */
-  recordOpen(id: string, options?: { example?: boolean }): void;
+  /** A visit now: the note moves to the top, keeping the title it had. */
+  recordOpen(id: string, options?: { example?: boolean }): Promise<void>;
   /** A new title and excerpt for a listed note; one that was removed stays removed. */
-  updateTitle(id: string, firstLine: string, rest: string): void;
-  remove(id: string): void;
-  clear(): void;
+  updateTitle(
+    id: string,
+    firstLine: string,
+    rest: string,
+    options?: { sync?: boolean },
+  ): Promise<void>;
+  remove(id: string): Promise<void>;
+  clear(): Promise<void>;
+  /** Subscribing also brings <html>'s hint up to date. */
   subscribe(onChange: () => void): () => void;
-  /** Title updates for one open note, at most one write per `intervalMs`. */
-  titleRecorder(id: string, intervalMs?: number): TitleRecorder;
+  /**
+   * Title updates for one open note: `read` gives its first line and the text
+   * after it, and is called at most once per `intervalMs`.
+   */
+  titleRecorder(id: string, read: () => [string, string], intervalMs?: number): TitleRecorder;
 }
 
 export function createRecentStore(env: RecentEnv): RecentStore {
   const listeners = new Set<() => void>();
   let cachedRaw: string | null | undefined;
-  let cached: RecentNote[] = [];
+  let cached: RecentState = EMPTY_STATE;
 
   const rawValue = (): string | null => {
     try {
@@ -153,71 +210,114 @@ export function createRecentStore(env: RecentEnv): RecentStore {
     }
   };
 
-  const hint = (list: RecentNote[]) => {
-    const root = env.root;
-    if (root === null) {
-      return;
-    }
-    if (list.length === 0) {
-      root.removeAttribute(RECENT_ATTR);
-    } else {
-      root.setAttribute(RECENT_ATTR, '');
-    }
-    const [rows, wide] = reservedRows(list.length);
-    root.style.setProperty(RECENT_ROWS_VAR, String(rows));
-    root.style.setProperty(RECENT_ROWS_WIDE_VAR, String(wide));
-  };
-
-  const read = (): RecentNote[] => {
+  /** The state, re-parsed when storage changed or an entry has expired since. */
+  const state = (): RecentState => {
     const raw = rawValue();
-    if (raw !== cachedRaw) {
+    const now = env.now();
+    if (
+      raw !== cachedRaw ||
+      cached.entries.some((entry) => now - entry.openedAt > NOTE_EXPIRY_MS)
+    ) {
       cachedRaw = raw;
-      cached = parseRecent(raw, env.now());
+      cached = parseRecent(raw, now);
     }
     return cached;
   };
 
+  const read = () => state().entries;
+
+  const hint = () => {
+    const root = env.root;
+    if (root === null) {
+      return;
+    }
+    const count = read().length;
+    if (count === 0) {
+      root.removeAttribute(RECENT_ATTR);
+    } else {
+      root.setAttribute(RECENT_ATTR, '');
+    }
+    const [rows, wide] = reservedRows(count);
+    root.style.setProperty(RECENT_ROWS_VAR, String(rows));
+    root.style.setProperty(RECENT_ROWS_WIDE_VAR, String(wide));
+  };
+
   const notify = () => {
+    hint();
     for (const listener of [...listeners]) {
       listener();
     }
   };
 
-  const write = (list: RecentNote[]) => {
-    const kept = list.slice(0, RECENT_MAX);
+  const write = (next: RecentState) => {
+    const removed = Object.entries(next.removed)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, TOMBSTONES_MAX);
     try {
       const storage = env.storage();
-      if (kept.length === 0) {
+      if (next.entries.length === 0 && removed.length === 0 && next.clearedAt === 0) {
         storage.removeItem(RECENT_KEY);
       } else {
-        storage.setItem(RECENT_KEY, JSON.stringify(kept));
+        storage.setItem(
+          RECENT_KEY,
+          JSON.stringify({
+            entries: next.entries.slice(0, RECENT_MAX),
+            removed: Object.fromEntries(removed),
+            clearedAt: next.clearedAt,
+          }),
+        );
       }
     } catch {
       // Denied or full: the list is a convenience, never an error.
     }
-    hint(read());
-    notify();
   };
 
-  const updateTitle = (id: string, firstLine: string, rest: string) => {
-    const list = read();
-    const index = list.findIndex((entry) => entry.id === id);
-    if (index < 0) {
-      return;
+  /**
+   * Re-reads the state and writes `change(state)` back (unless it returns
+   * null), inside the lock unless `sync`, then tells subscribers.
+   */
+  const mutate = (
+    change: (current: RecentState) => RecentState | null,
+    options: { sync?: boolean } = {},
+  ): Promise<void> => {
+    const apply = () => {
+      const next = change(state());
+      if (next !== null) {
+        write(next);
+        notify();
+      }
+    };
+    const locks = env.locks;
+    if (options.sync || locks === null) {
+      apply();
+      return Promise.resolve();
     }
-    const entry = list[index]!;
+    try {
+      return locks.request(RECENT_LOCK, apply).catch(() => apply());
+    } catch {
+      apply();
+      return Promise.resolve();
+    }
+  };
+
+  const updateTitle: RecentStore['updateTitle'] = (id, firstLine, rest, options) => {
     const title = titleOf(firstLine);
     const excerpt = clip(rest, EXCERPT_MAX);
-    if (entry.title === title && entry.excerpt === excerpt) {
-      return;
-    }
-    write(list.with(index, { ...entry, title, excerpt }));
+    return mutate((current) => {
+      const index = current.entries.findIndex((entry) => entry.id === id);
+      const entry = current.entries[index];
+      if (entry === undefined || (entry.title === title && entry.excerpt === excerpt)) {
+        return null;
+      }
+      const entries = [...current.entries];
+      entries[index] = { ...entry, title, excerpt };
+      return { ...current, entries };
+    }, options);
   };
 
   const onStorage = (event: Event) => {
     const key = (event as StorageEvent).key;
     if (key === RECENT_KEY || key === null) {
-      hint(read());
       notify();
     }
   };
@@ -226,35 +326,56 @@ export function createRecentStore(env: RecentEnv): RecentStore {
     read,
     recordOpen(id, options = {}) {
       if (!isNoteId(id)) {
-        return;
+        return Promise.resolve();
       }
-      const list = read();
-      const known = list.find((entry) => entry.id === id);
-      const example = options.example === true || known?.example === true;
-      const entry: RecentNote = {
-        id,
-        title: known?.title ?? UNTITLED,
-        excerpt: known?.excerpt ?? '',
-        openedAt: env.now(),
-        ...(example ? { example: true as const } : {}),
-      };
-      write([entry, ...list.filter((other) => other.id !== id)]);
+      // The visit's time is now, not when the lock is granted.
+      const openedAt = env.now();
+      return mutate((current) => {
+        if (openedAt <= current.clearedAt || openedAt <= (current.removed[id] ?? -Infinity)) {
+          return null;
+        }
+        const known = current.entries.find((entry) => entry.id === id);
+        const example = options.example === true || known?.example === true;
+        const entry: RecentNote = {
+          id,
+          title: known?.title ?? UNTITLED,
+          excerpt: known?.excerpt ?? '',
+          openedAt,
+          ...(example ? { example: true as const } : {}),
+        };
+        const removed = { ...current.removed };
+        delete removed[id];
+        return {
+          ...current,
+          removed,
+          entries: [entry, ...current.entries.filter((other) => other.id !== id)],
+        };
+      });
     },
     updateTitle,
     remove(id) {
-      const list = read();
-      if (list.some((entry) => entry.id === id)) {
-        write(list.filter((entry) => entry.id !== id));
-      }
+      const at = env.now();
+      return mutate((current) => ({
+        ...current,
+        entries: current.entries.filter((entry) => entry.id !== id),
+        removed: { ...current.removed, [id]: Math.max(at, current.removed[id] ?? 0) },
+      }));
     },
     clear() {
-      write([]);
+      const at = env.now();
+      return mutate((current) => ({
+        entries: [],
+        removed: {},
+        clearedAt: Math.max(at, current.clearedAt),
+      }));
     },
     subscribe(onChange) {
       listeners.add(onChange);
       if (listeners.size === 1) {
         env.events?.addEventListener('storage', onStorage);
       }
+      // Another tab may have changed the list while nobody here listened.
+      hint();
       return () => {
         listeners.delete(onChange);
         if (listeners.size === 0) {
@@ -262,25 +383,26 @@ export function createRecentStore(env: RecentEnv): RecentStore {
         }
       };
     },
-    titleRecorder(id, intervalMs = TITLE_THROTTLE_MS) {
-      let pending: [string, string] | null = null;
+    titleRecorder(id, readNote, intervalMs = TITLE_THROTTLE_MS) {
+      let pending = false;
       let lastWrite = -Infinity;
       let timer: ReturnType<typeof setTimeout> | null = null;
-      const flush = () => {
+      const flush = (options: { sync?: boolean } = {}) => {
         if (timer !== null) {
           clearTimeout(timer);
           timer = null;
         }
-        if (pending !== null) {
-          const [firstLine, rest] = pending;
-          pending = null;
-          lastWrite = env.now();
-          updateTitle(id, firstLine, rest);
+        if (!pending) {
+          return;
         }
+        pending = false;
+        lastWrite = env.now();
+        const [firstLine, rest] = readNote();
+        void updateTitle(id, firstLine, rest, options);
       };
       return {
-        update(firstLine, rest) {
-          pending = [firstLine, rest];
+        changed() {
+          pending = true;
           if (timer !== null) {
             return;
           }
@@ -288,7 +410,7 @@ export function createRecentStore(env: RecentEnv): RecentStore {
           if (wait <= 0) {
             flush();
           } else {
-            timer = setTimeout(flush, wait);
+            timer = setTimeout(() => flush(), wait);
           }
         },
         flush,
@@ -301,6 +423,7 @@ export function createRecentStore(env: RecentEnv): RecentStore {
 export const recentNotes = createRecentStore({
   storage: () => window.localStorage,
   now: () => Date.now(),
+  locks: typeof navigator === 'undefined' ? null : (navigator.locks ?? null),
   events: typeof window === 'undefined' ? null : window,
   root: typeof document === 'undefined' ? null : document.documentElement,
 });
@@ -319,6 +442,9 @@ export function useRecentNotes(): RecentNote[] {
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
+
+/** How often the landing page refreshes its relative times while visible. */
+export const OPENED_REFRESH_MS = MINUTE;
 
 /** When a note was last opened: "Just now", "12 min ago", "3 h ago", "Yesterday", "4 days ago", "Oct 2". */
 export function openedLabel(openedAt: number, now: number): string {

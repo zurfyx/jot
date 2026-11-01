@@ -189,18 +189,22 @@ styles in `section.styles.ts`, relational markers in `markers.stylex.ts`). Conte
   recipe is decoration.
 - **"Your recent notes"** (D30), only when this browser has opened notes: the violet
   eyebrow, then rows of 60px separated by hairlines, as the questions are, in two columns
-  (one under 760px), filled down the first column first. A row is the note's title in
-  semibold, the start of its text in `--muted` under it (both cut with an ellipsis), and
-  when it was last opened on the right ("12 min ago", "Yesterday", "Oct 2"; "Example · 3 h
-  ago" for the example). Hovering a row underlines its title and swaps the time for a round
-  remove button; keyboard focus inside the row does the same, and on touch screens the
-  button is always there beside the time. Six rows show; a foot line says "Only in this
-  browser", with Show all (when there are more) and Clear all, which turns the line into
-  "Clear all 8 recent notes?" with Clear in `--bad` and Cancel. The section's height is
-  fixed by the rows it shows: `index.html` puts `data-recent` and the row counts on
-  `<html>` before the first paint, and one global rule hides the slot without them, so a
-  prerendered page and the first client paint lay out the same and an empty list leaves
-  the page as it was.
+  (one under 760px), filled down the first column first, marked up as a list. A row is the
+  note's title in semibold, the start of its text in `--muted` under it (both cut with an
+  ellipsis), and when it was last opened on the right ("12 min ago", "Yesterday", "Oct 2";
+  "Example · 3 h ago" for the example), refreshed every minute while the page is visible.
+  Hovering a row underlines its title and swaps the time for a round remove button;
+  keyboard focus inside the row does the same, and on touch screens the button is always
+  there beside the time, with 38px of taps around its 26px circle. Six rows show; a foot
+  line says "Only in this browser", with Show all (when there are more) and Clear all,
+  which turns the line into "Clear all 8 recent notes?" with Clear in `--bad` and Cancel.
+  The focus follows each step: Clear when asked, Clear all again on Cancel or Escape, the
+  hero's "Start a new note" after Clear or when the last note is removed, the first new
+  row after Show all, and the next row (or the previous one) after a removal. The
+  section's height is fixed by the rows it shows: `index.html` puts `data-recent` and the
+  row counts on `<html>` before the first paint, and one global rule hides the slot
+  without them, so a prerendered page and the first client paint lay out the same and an
+  empty list leaves the page as it was.
 - **"Try it in two windows":** two mini browser windows play the flow (a note starts, its
   link pill slides across, the second window opens it, both type with each other's carets)
   over a three-step line that fills as it plays.

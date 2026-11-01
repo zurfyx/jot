@@ -1,8 +1,16 @@
 import * as stylex from '@stylexjs/stylex';
-import { type CSSProperties, type MouseEvent, useEffect, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type MouseEvent,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 import { notePath } from '../../shared/ids';
 import {
+  OPENED_REFRESH_MS,
   openedLabel,
   RECENT_ROWS_VAR,
   RECENT_ROWS_WIDE_VAR,
@@ -13,7 +21,7 @@ import {
   useRecentNotes,
 } from '../recent';
 import { colors } from '../theme/tokens.stylex';
-import { recentMarker } from './markers.stylex';
+import { recentLinkMarker, recentMarker, recentRemoveMarker } from './markers.stylex';
 import { section } from './section.styles';
 
 /*
@@ -123,10 +131,12 @@ const styles = stylex.create({
     fontSize: 13,
     whiteSpace: 'nowrap',
     fontVariantNumeric: 'tabular-nums',
+    // Hover, or keyboard focus on the row's link or button, swaps the time for the button.
     opacity: {
       default: 1,
       [stylex.when.ancestor(':hover', recentMarker)]: 0,
-      [stylex.when.ancestor(':focus-within', recentMarker)]: 0,
+      [stylex.when.siblingBefore(':focus-visible', recentLinkMarker)]: 0,
+      [stylex.when.siblingAfter(':focus-visible', recentRemoveMarker)]: 0,
       '@media (hover: none)': 1,
     },
   },
@@ -151,8 +161,19 @@ const styles = stylex.create({
     opacity: {
       default: 0,
       [stylex.when.ancestor(':hover', recentMarker)]: 1,
-      [stylex.when.ancestor(':focus-within', recentMarker)]: 1,
+      [stylex.when.siblingBefore(':focus-visible', recentLinkMarker)]: 1,
+      ':focus-visible': 1,
       '@media (hover: none)': 1,
+    },
+    // On a touch screen the button takes 38px of taps, drawn at its 26px.
+    '::before': {
+      content: "''",
+      position: 'absolute',
+      inset: {
+        default: 0,
+        '@media (pointer: coarse)': -6,
+      },
+      borderRadius: '50%',
     },
   },
   removeIcon: {
@@ -213,30 +234,101 @@ function RemoveIcon() {
   );
 }
 
-/** The section right below the hero; renders nothing inside its slot without entries. */
-export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
+const noSubscription = () => () => {};
+
+/** False while hydrating a prerendered page, true once the client renders on its own. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false,
+  );
+}
+
+/** Where the focus goes once a change has rendered. */
+type Focus =
+  { kind: 'row'; index: number; removed?: string } | { kind: 'clear-all' } | { kind: 'hero' };
+
+/** The current time, refreshed every minute while the page is visible. */
+function useNow(): number {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      clearInterval(timer);
+      timer = setInterval(() => setNow(Date.now()), OPENED_REFRESH_MS);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setNow(Date.now());
+        start();
+      } else {
+        clearInterval(timer);
+      }
+    };
+    if (document.visibilityState === 'visible') {
+      start();
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+  return now;
+}
+
+/**
+ * The section right below the hero; renders nothing inside its slot without
+ * entries. `onEmpty` takes the focus when the last note goes from the
+ * keyboard (the hero's primary action).
+ */
+export function RecentNotes({ onOpen, onEmpty }: { onOpen: OpenRecent; onEmpty: () => void }) {
   const notes = useRecentNotes();
   const [all, setAll] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [now] = useState(Date.now);
+  const now = useNow();
+  const hydrated = useHydrated();
   const listRef = useRef<HTMLUListElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
-  const focusRow = useRef<number | null>(null);
+  const clearAllRef = useRef<HTMLButtonElement>(null);
+  const focus = useRef<Focus | null>(null);
 
   const shown = all ? notes : notes.slice(0, RECENT_SHOWN);
   const [rows, wide] = all
     ? [shown.length, Math.ceil(shown.length / 2)]
     : reservedRows(notes.length);
 
-  // After a removal, the focus goes to the row that took its place.
+  // Focus follows the change that was asked for, once it has rendered.
   useEffect(() => {
-    if (focusRow.current === null) {
+    const target = focus.current;
+    if (target === null) {
+      return;
+    }
+    if (target.kind === 'clear-all') {
+      focus.current = null;
+      clearAllRef.current?.focus();
+      return;
+    }
+    if (target.kind === 'hero' || notes.length === 0) {
+      if (notes.length === 0) {
+        focus.current = null;
+        onEmpty();
+      }
+      return;
+    }
+    // A removal lands asynchronously: wait until the note is gone.
+    if (target.removed !== undefined && notes.some((entry) => entry.id === target.removed)) {
       return;
     }
     const links = listRef.current?.querySelectorAll<HTMLElement>('[data-recent-link]') ?? [];
-    links[Math.min(focusRow.current, links.length - 1)]?.focus();
-    focusRow.current = null;
-  }, [notes]);
+    // The next note, or the previous one when the last went.
+    const link = links[Math.min(target.index, links.length - 1)];
+    if (link !== undefined) {
+      focus.current = null;
+      link.focus();
+    }
+  }, [notes, all, confirming, onEmpty]);
 
   useEffect(() => {
     if (confirming) {
@@ -244,11 +336,20 @@ export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
     }
   }, [confirming]);
 
-  // The slot's rows follow what it shows; before the first render they come from <html>.
-  const style =
+  const cancel = () => {
+    focus.current = { kind: 'clear-all' };
+    setConfirming(false);
+  };
+
+  // The slot's rows follow what it shows. Only a prerender's hydration (an
+  // empty server snapshot) leaves them to <html>'s hint; after it, an empty
+  // list hides the slot even if the hint is stale.
+  const style: CSSProperties | undefined =
     notes.length > 0
       ? ({ [RECENT_ROWS_VAR]: rows, [RECENT_ROWS_WIDE_VAR]: wide } as CSSProperties)
-      : undefined;
+      : hydrated
+        ? { display: 'none' }
+        : undefined;
 
   return (
     <section
@@ -263,7 +364,7 @@ export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
           <h2 id="recent-title" {...stylex.props(section.eyebrow, styles.head)}>
             Your recent notes
           </h2>
-          <ul ref={listRef} {...stylex.props(styles.list)}>
+          <ul ref={listRef} {...stylex.props(styles.list)} role="list">
             {shown.map((entry, index) => (
               <Row
                 key={entry.id}
@@ -271,8 +372,8 @@ export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
                 now={now}
                 onOpen={onOpen}
                 onRemove={() => {
-                  focusRow.current = index;
-                  recentNotes.remove(entry.id);
+                  focus.current = { kind: 'row', index, removed: entry.id };
+                  void recentNotes.remove(entry.id);
                 }}
               />
             ))}
@@ -281,7 +382,7 @@ export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
             {...stylex.props(styles.foot)}
             onKeyDown={(event) => {
               if (confirming && event.key === 'Escape') {
-                setConfirming(false);
+                cancel();
               }
             }}
           >
@@ -294,18 +395,15 @@ export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
                     type="button"
                     {...stylex.props(styles.quiet, styles.confirm)}
                     onClick={() => {
+                      focus.current = { kind: 'hero' };
                       setConfirming(false);
                       setAll(false);
-                      recentNotes.clear();
+                      void recentNotes.clear();
                     }}
                   >
                     Clear
                   </button>
-                  <button
-                    type="button"
-                    {...stylex.props(styles.quiet)}
-                    onClick={() => setConfirming(false)}
-                  >
+                  <button type="button" {...stylex.props(styles.quiet)} onClick={cancel}>
                     Cancel
                   </button>
                 </span>
@@ -318,12 +416,16 @@ export function RecentNotes({ onOpen }: { onOpen: OpenRecent }) {
                     <button
                       type="button"
                       {...stylex.props(styles.quiet)}
-                      onClick={() => setAll(true)}
+                      onClick={() => {
+                        focus.current = { kind: 'row', index: RECENT_SHOWN };
+                        setAll(true);
+                      }}
                     >
                       Show all {notes.length}
                     </button>
                   )}
                   <button
+                    ref={clearAllRef}
                     type="button"
                     {...stylex.props(styles.quiet)}
                     onClick={() => setConfirming(true)}
@@ -363,7 +465,7 @@ function Row({
   return (
     <li ref={ref} {...stylex.props(styles.row, recentMarker)} data-testid="recent-note">
       <a
-        {...stylex.props(styles.link)}
+        {...stylex.props(styles.link, recentLinkMarker)}
         href={notePath(entry.id)}
         onClick={onClick}
         data-recent-link=""
@@ -374,7 +476,7 @@ function Row({
       <span {...stylex.props(styles.meta)}>{entry.example ? `Example · ${opened}` : opened}</span>
       <button
         type="button"
-        {...stylex.props(styles.remove)}
+        {...stylex.props(styles.remove, recentRemoveMarker)}
         aria-label={`Remove ${entry.title} from recent notes`}
         title="Remove from recent notes"
         onClick={onRemove}

@@ -8,6 +8,9 @@ Returning to a note means finding its link again: jot has no accounts and no lis
 so a note you opened yesterday is lost unless you kept the link. The landing page can offer
 the notes this browser opened, as long as nothing about them leaves the browser.
 
+A note's id is its access key (D02): anyone holding it can read and edit the note. A list of
+ids is a list of keys.
+
 Notes expire 90 days after their last visit (D06). When the alarm fires, the note's Durable
 Object deletes all its storage; a later connection to the same id gets an empty room and
 answers exactly as for a note nobody has written yet. The client can't tell an expired note
@@ -15,36 +18,56 @@ from a new or emptied one.
 
 ## Decision
 
-- A list of recently opened notes lives in this browser's localStorage under `jot:recent`:
-  for each note its id, its title (the first line, or "Untitled note"), the start of the
-  text after the first line, when this browser last opened it, and whether it is the
-  example this browser started. At most 20 entries, newest first. Nothing goes to the
-  server.
-- A note is recorded when its page opens, a new note too. Once the note has synced, its
-  first line becomes the title as you type, at most one write every 2 s, and the latest is
-  written at once when the page is hidden or closed and when you leave it. A note removed
-  from the list while open stays removed.
+- A list of recently opened notes lives in this browser's localStorage under `jot:recent`,
+  as `{ entries, removed, clearedAt }`. Each entry holds the note's id, its title (the first
+  line, or "Untitled note"), the start of the text after the first line, when this browser
+  last opened it, and whether it is the example this browser started. At most 20 entries,
+  newest first. Nothing goes to the server.
+- The ids in it are the notes' access keys, kept where the page's own script, and anything
+  else that runs on jot's origin or reads the browser's profile, can read them. That is the
+  same exposure the browser's history already gives the links, and Clear all removes them.
+- A note is recorded when its page opens, a new note too. Once the note has synced, a change
+  to its content marks the title stale; the text is read and written when the throttle lets
+  a write through (at most every 2 s), when the page is hidden, and when you leave it. Caret
+  moves and other selection-only updates are ignored.
+- **Every tab writes through one lock.** A change takes the Web Lock `jot:recent`, re-reads
+  the stored state inside it, applies itself and writes it back, so two tabs never
+  interleave a read and a write. A removal leaves a tombstone (the note's id and when) and
+  Clear all a `clearedAt`; a visit stamped before either is not recorded, and a title write
+  only changes an entry that is still there, so a removal or a Clear always sticks. Where Web
+  Locks are missing, and for the title written on `pagehide` (when the page may be gone
+  before a lock is granted), the change runs at once, unsynchronised. Tombstones older than
+  90 days are dropped, since no entry that old is kept anyway. Other tabs learn of a change
+  through the `storage` event.
 - Because expiry can't be detected, an entry this browser hasn't opened for 90 days is
-  pruned. A note someone else kept alive drops from the list too; opening its link brings it
-  back.
+  pruned, checked against the current time on every read, not only on writes.
 - The landing page shows the list in a section right below the hero ("Your recent notes"):
   six entries in two columns of hairline rows (one column on a phone), then Show all; a
-  remove button per entry, shown on hover and on keyboard focus and always on touch
-  screens; Clear all, which asks first. With no entries the page is exactly what it was.
+  remove button per entry, shown on hover and on keyboard focus and always on touch screens
+  (where it takes 38px of taps); Clear all, which asks first. The relative times refresh
+  every minute while the page is visible. With no entries the page is exactly what it was.
+- The focus follows the change: the question's Clear button when asked, Clear all again on
+  Cancel or Escape, the hero's "Start a new note" after Clear, the first newly shown note
+  after Show all, and after a removal the next note, else the previous one, else the hero's
+  action.
 - The section is a slot of a fixed height: the inline script in `index.html` that sets the
   theme also marks `<html>` with whether there are entries and how many rows they take,
   before the first paint, and the section reads the list with `useSyncExternalStore` and an
   empty server snapshot. A prerendered landing page draws the slot empty at its final size
-  and the client fills it in, so nothing moves.
+  and the client fills it in, so nothing moves. Once the client renders, the slot sizes
+  itself from the real list, hides when it is empty, and the mark on `<html>` is brought up
+  to date whenever the section subscribes and on every change.
 - Opening an entry runs the landing page's view transition from its row: the row grows into
   the note page, as a card does.
-- Tabs follow each other through the `storage` event. Where storage is denied the list is
-  empty and nothing throws.
+- Where storage is denied the list is empty and nothing throws.
 
 ## Why
 
 - localStorage keeps the playground's promise: no accounts, nothing about you on the server.
 - A title from the first line matches how jot already names a note (`document.title`).
+- One lock and a fresh read per change make concurrent tabs safe without a merge format;
+  tombstones cover the one case a lock can't order, a visit stamped before a removal but
+  written after it.
 - Pruning at 90 days never lists a deleted note: a note lives at least 90 days past this
   browser's last visit. Marking an entry "expired" from an empty room would also mark notes
   someone emptied.
@@ -58,3 +81,5 @@ from a new or emptied one.
   end-to-end test checks the reserved rows against the rendered ones.
 - The list may drop a note that is still alive, when others kept visiting it; it never keeps
   one that is gone.
+- In a browser without Web Locks, two tabs changing the list in the same instant can still
+  lose one change.

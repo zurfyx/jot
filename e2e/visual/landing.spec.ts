@@ -183,15 +183,17 @@ async function openLandingWithRecent(page: Page) {
       const now = Date.now();
       localStorage.setItem(
         'jot:recent',
-        JSON.stringify(
-          list.map(([id, title, excerpt, ago, example]) => ({
+        JSON.stringify({
+          entries: list.map(([id, title, excerpt, ago, example]) => ({
             id,
             title,
             excerpt,
             openedAt: now - ago,
             ...(example ? { example: true } : {}),
           })),
-        ),
+          removed: {},
+          clearedAt: 0,
+        }),
       );
     },
     RECENT as unknown as [string, string, string, number, boolean?][],

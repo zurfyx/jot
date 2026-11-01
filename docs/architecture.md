@@ -112,17 +112,23 @@ seeded, its editor stays mounted under the same React key while the address beco
 `/n/<id>`.
 
 **Recent notes** (D30). `recent.ts` (no Lexical or Yjs) keeps the notes this browser opened
-in localStorage (`jot:recent`, at most 20 `{ id, title, excerpt, openedAt, example? }`,
-newest first), prunes those not opened for 90 days, and never throws. `createRecentStore`
-takes its storage, clock, event target and `<html>` as arguments, so the unit tests pass
-fakes; the app uses the window's. Every write notifies subscribers, other tabs arrive
-through the `storage` event, and `<html>` gets `data-recent` with the rows the landing
-page shows (`--jot-recent-rows`, `--jot-recent-rows-wide`), which the inline script in
-`index.html` also sets before the first paint. `editor/useRecentVisit.ts` records a visit
-when a note page opens and, once the note has synced, its first line and the start of the
-rest through a recorder that writes at most every 2 s, flushed on `pagehide`, on
-`visibilitychange` to hidden and on unmount. The landing page's `RecentNotes` reads the
-list with `useSyncExternalStore` (an empty server snapshot), and opens a note through
+in localStorage (`jot:recent`: `{ entries, removed, clearedAt }`, at most 20 entries of
+`{ id, title, excerpt, openedAt, example? }`, newest first), prunes those not opened for 90
+days on every read, and never throws. `createRecentStore` takes its storage, clock, Web
+Locks, event target and `<html>` as arguments, so the unit tests pass fakes; the app uses
+the window's. Every change runs inside the Web Lock `jot:recent` on a fresh read (at once
+where locks are missing, or when asked to for `pagehide`); a removal leaves a tombstone and
+Clear all a `clearedAt`, and a visit stamped before either is dropped. Every change
+notifies subscribers, other tabs arrive through the `storage` event, and `<html>` gets
+`data-recent` with the rows the landing page shows (`--jot-recent-rows`,
+`--jot-recent-rows-wide`), which the inline script in `index.html` also sets before the
+first paint and every subscription brings up to date. `editor/useRecentVisit.ts` records a
+visit when a note page opens and, once the note has synced, marks the title stale on every
+content change; its recorder reads the first line and the start of the rest only when it
+writes (at most every 2 s), and is flushed on `visibilitychange` to hidden, on unmount and,
+without the lock, on `pagehide`. The landing page's `RecentNotes` reads the list with
+`useSyncExternalStore` (an empty server snapshot), hides its slot once hydrated if the list
+is empty, refreshes its times every minute while visible, and opens a note through
 `landing/open.ts` with its row as the card.
 
 **Migration from local drafts** (D23). An earlier version kept an unshared draft in

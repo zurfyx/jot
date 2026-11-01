@@ -21,22 +21,25 @@ interface Seed {
 /** Writes the list before any page script runs, relative to the page's clock. */
 async function seed(context: BrowserContext, entries: Seed[]) {
   await context.addInitScript((list: Seed[]) => {
-    if (sessionStorage.getItem('seeded') !== null) {
+    // Once per browser context: a second tab must not seed over the first's changes.
+    if (localStorage.getItem('e2e:seeded') !== null) {
       return;
     }
-    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('e2e:seeded', '1');
     const now = Date.now();
     localStorage.setItem(
       'jot:recent',
-      JSON.stringify(
-        list.map(({ id, title, excerpt = '', ago, example }) => ({
+      JSON.stringify({
+        entries: list.map(({ id, title, excerpt = '', ago, example }) => ({
           id,
           title,
           excerpt,
           openedAt: now - ago,
           ...(example ? { example: true } : {}),
         })),
-      ),
+        removed: {},
+        clearedAt: 0,
+      }),
     );
   }, entries);
 }
@@ -59,7 +62,15 @@ function rows(page: Page) {
 }
 
 async function stored(page: Page): Promise<{ id: string; title: string }[]> {
-  return page.evaluate(() => JSON.parse(localStorage.getItem('jot:recent') ?? '[]'));
+  return page.evaluate(
+    () => JSON.parse(localStorage.getItem('jot:recent') ?? '{"entries":[]}').entries,
+  );
+}
+
+function heroStart(page: Page) {
+  return page
+    .getByRole('region', { name: 'Just start typing.' })
+    .getByRole('button', { name: /^Start a new note/ });
 }
 
 async function typeNote(page: Page, title: string, rest: string) {
@@ -146,30 +157,40 @@ test('one note can be removed, and the section goes with the last', async ({ pag
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText('Note 2');
   expect((await stored(page)).map((entry) => entry.title)).toEqual(['Note 2']);
+  // The focus moves to the note that took its place.
+  await expect(rows(page).first().getByRole('link')).toBeFocused();
   await rows(page).first().hover();
   await rows(page)
     .first()
     .getByRole('button', { name: /^Remove/ })
     .click();
   await expect(section(page)).toBeHidden();
+  // With none left, to the hero's primary action.
+  await expect(heroStart(page)).toBeFocused();
 });
 
-test('Clear all asks first, and Cancel keeps the list', async ({ page, context }) => {
+test('Clear all asks first; Cancel and Escape keep the list', async ({ page, context }) => {
   await seed(context, sample(3));
   await page.goto('/');
-  await section(page).getByRole('button', { name: 'Clear all' }).click();
+  const clearAll = section(page).getByRole('button', { name: 'Clear all' });
+  const confirm = section(page).getByRole('button', { name: 'Clear', exact: true });
+  await clearAll.click();
   await expect(section(page)).toContainText('Clear all 3 recent notes?');
+  // The question takes the focus.
+  await expect(confirm).toBeFocused();
   await section(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(rows(page)).toHaveCount(3);
-  await section(page).getByRole('button', { name: 'Clear all' }).click();
-  // The question takes the focus; Escape cancels too.
-  await expect(section(page).getByRole('button', { name: 'Clear', exact: true })).toBeFocused();
+  await expect(clearAll).toBeFocused();
+  await clearAll.click();
+  await expect(confirm).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(section(page).getByRole('button', { name: 'Clear all' })).toBeVisible();
-  await section(page).getByRole('button', { name: 'Clear all' }).click();
-  await section(page).getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(clearAll).toBeFocused();
+  await expect(rows(page)).toHaveCount(3);
+  await clearAll.click();
+  await confirm.click();
   await expect(section(page)).toBeHidden();
-  expect(await page.evaluate(() => localStorage.getItem('jot:recent'))).toBeNull();
+  await expect(heroStart(page)).toBeFocused();
+  expect(await stored(page)).toEqual([]);
 });
 
 test('six show, then Show all', async ({ page, context }) => {
@@ -179,6 +200,9 @@ test('six show, then Show all', async ({ page, context }) => {
   await expect(rows(page).first()).toContainText('Note 1');
   await section(page).getByRole('button', { name: 'Show all 8' }).click();
   await expect(rows(page)).toHaveCount(8);
+  // The focus goes to the first note Show all revealed.
+  await expect(rows(page).nth(6).getByRole('link')).toBeFocused();
+  await expect(rows(page).nth(6)).toContainText('Note 7');
   await expect(section(page).getByRole('button', { name: /^Show all/ })).toHaveCount(0);
   // The section grows to hold them; nothing overlaps the next one.
   const list = await section(page).boundingBox();
@@ -214,6 +238,12 @@ test('the keyboard reaches every note and its remove button', async ({ page, con
   // The focus goes to the note that took its place.
   await expect(rows(page).nth(0).getByRole('link')).toBeFocused();
   await expect(rows(page).nth(0)).toContainText('Note 2');
+  // Removing the last row moves the focus to the one before it.
+  await rows(page).nth(1).getByRole('link').focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page).nth(0).getByRole('link')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/n\/[\w-]{22}$/);
 });
@@ -231,6 +261,23 @@ test('on a touch screen the remove button is always there', async ({ newContext 
     .first()
     .getByRole('button', { name: /^Remove/ });
   await expect(remove).toHaveCSS('opacity', '1');
+  // At least 32px of taps around a 26px button.
+  await remove.scrollIntoViewIfNeeded();
+  const box = (await remove.boundingBox())!;
+  expect(box.width).toBe(26);
+  const hits = await page.evaluate(
+    ({ x, y, width, height }) =>
+      [
+        [x - 3, y + height / 2],
+        [x + width + 3, y + height / 2],
+        [x + width / 2, y - 3],
+        [x + width / 2, y + height + 3],
+      ].map(([px, py]) =>
+        document.elementFromPoint(px!, py!)?.closest('button')?.getAttribute('aria-label'),
+      ),
+    box,
+  );
+  expect(hits).toEqual(Array(4).fill('Remove Note 1 from recent notes'));
   await remove.tap();
   await expect(rows(page)).toHaveCount(1);
 });
@@ -314,4 +361,54 @@ test('where storage is denied, the landing page and notes still work', async ({ 
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(section(page)).toBeHidden();
+});
+
+test('the notes are a list to assistive technology', async ({ page, context }) => {
+  await seed(context, sample(3));
+  await page.goto('/');
+  const list = section(page).getByRole('list');
+  await expect(list).toHaveAttribute('role', 'list');
+  await expect(list.getByRole('listitem')).toHaveCount(3);
+});
+
+test('the times move on while the page stays open', async ({ page }) => {
+  await page.clock.install();
+  await openNote(page, freshNoteId());
+  await page.goto('/');
+  await expect(rows(page).first()).toContainText('Just now');
+  await page.clock.fastForward(125_000);
+  await expect(rows(page).first()).toContainText('2 min ago');
+  // 90 days on, the note is pruned at the next refresh, without any write.
+  await page.clock.setSystemTime(Date.now() + 91 * DAY);
+  await page.clock.fastForward(61_000);
+  await expect(section(page)).toBeHidden();
+});
+
+test('a Clear in another tab sticks while a note stays open and is edited', async ({ context }) => {
+  await seed(context, sample(2));
+  const page = await context.newPage();
+  await page.goto('/');
+  await expect(rows(page)).toHaveCount(2);
+  // Open a third note from the landing page, in the same tab (history keeps the landing page).
+  await heroStart(page).click();
+  await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  await typeNote(page, 'Typed before the Clear', '');
+  // Another tab clears the list.
+  const other = await context.newPage();
+  await other.goto('/');
+  await expect(rows(other)).toHaveCount(3);
+  await section(other).getByRole('button', { name: 'Clear all' }).click();
+  await section(other).getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(section(other)).toBeHidden();
+  // Typing on, then leaving, writes its title but can't bring the note back.
+  await page.bringToFront();
+  await page.keyboard.type(' and after it');
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  // The slot reserved before the Clear is gone: no empty gap is left.
+  await expect(section(page)).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.hasAttribute('data-recent'))).toBe(
+    false,
+  );
+  expect(await stored(page)).toEqual([]);
 });
