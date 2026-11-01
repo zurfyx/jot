@@ -6,8 +6,10 @@ import { describe, expect, it } from 'vitest';
 /**
  * The colour tokens (D28). Their light values are StyleX variables
  * (tokens.stylex.ts); their dark values are in globals.css, where they apply
- * before the first paint; the landing page repeats both sets in its scopes
- * (themes.ts), re-pointing only the Night treatment's tokens in dark.
+ * before the first paint. The landing page repeats both sets in its scope,
+ * the light one in themes.ts and the dark one in globals.css (D31),
+ * re-pointing only the Night treatment's tokens in dark; the docs' scope has
+ * a dark set of its own there.
  */
 
 // Read as files: CSS imported in a test is left out by Vitest.
@@ -28,9 +30,23 @@ const light = tokens(
     read('./tokens.stylex.ts'),
   )?.[1],
 );
-const dark = tokens(
-  /:root\[data-theme='dark'\] \{([\s\S]*?)\n\}/.exec(read('../globals.css'))?.[1],
+const globals = read('../globals.css');
+/** The blocks of globals.css under `selector`, in order. */
+const blocks = (selector: string) =>
+  [...globals.matchAll(new RegExp(`^${selector} \\{([\\s\\S]*?)\\n\\}`, 'gm'))].map((match) =>
+    tokens(match[1]),
+  );
+const dark = blocks(":root\\[data-theme='dark'\\]")[0]!;
+const [landingDark, landingCardsDark] = blocks(
+  ":root\\[data-theme='dark'\\] \\[data-scope='landing'\\]",
 );
+const [docsDark] = blocks(":root\\[data-theme='dark'\\] \\[data-scope='docs'\\]");
+const group = (name: string) =>
+  tokens(
+    new RegExp(`export const ${name} = stylex\\.defineVars\\(\\{([\\s\\S]*?)\\n\\}\\);`).exec(
+      read('./tokens.stylex.ts'),
+    )?.[1],
+  );
 const theme = (name: string) =>
   tokens(
     new RegExp(
@@ -68,14 +84,23 @@ describe('the colour tokens', () => {
   });
 
   it("repeat in the landing page's dark scope, but for the Night treatment's own", () => {
-    const landingDark = theme('landingDark');
-    expect(Object.keys(landingDark).sort()).toEqual(Object.keys(dark).sort());
+    expect(landingDark).toBeDefined();
+    expect(Object.keys(landingDark!).sort()).toEqual(Object.keys(dark).sort());
     for (const name of Object.keys(dark)) {
       if (NIGHT.includes(name)) {
-        expect(landingDark[name], name).not.toBe(dark[name]);
+        expect(landingDark![name], name).not.toBe(dark[name]);
       } else {
-        expect(landingDark[name], name).toBe(dark[name]);
+        expect(landingDark![name], name).toBe(dark[name]);
       }
     }
+  });
+
+  it("give the landing page's cards and the docs dark values only for their own tokens", () => {
+    const landing = group('landing');
+    const docs = group('docs');
+    expect(Object.keys(landingCardsDark!).length).toBeGreaterThan(10);
+    expect(Object.keys(landingCardsDark!).sort()).toEqual(Object.keys(landing).sort());
+    expect(Object.keys(docsDark!).length).toBeGreaterThan(10);
+    expect(Object.keys(docsDark!).sort()).toEqual(Object.keys(docs).sort());
   });
 });

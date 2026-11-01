@@ -12,10 +12,14 @@
   "preview_urls": true,
   "assets": {
     "binding": "ASSETS",
-    // Unknown paths fall back to index.html; the client router decides.
-    "not_found_handling": "single-page-application",
-    // The Worker validates note ids before anything is served (D02).
-    "run_worker_first": ["/api/*", "/n/*"],
+    // The landing page and the docs are prerendered files (D31): /docs/blame
+    // is docs/blame/index.html, and /docs/blame/ redirects to /docs/blame.
+    "html_handling": "drop-trailing-slash",
+    // A path no file answers gets the prerendered 404 page, with a 404.
+    "not_found_handling": "404-page",
+    // The Worker validates note ids before anything is served (D02), and
+    // serves the note page's shell for /n/<id> and /new.
+    "run_worker_first": ["/api/*", "/n/*", "/new", "/new/"],
   },
   // One SQLite-backed Durable Object per note (D01).
   "durable_objects": {

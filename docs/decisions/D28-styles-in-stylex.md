@@ -20,8 +20,9 @@ pixel-identical and behave the same.
   (`--bg`), so plain CSS and inline styles read them too. The dark values sit in
   `globals.css` under `:root[data-theme='dark']`: `index.html` sets `data-theme` before the
   first paint, and only CSS (not a class added by the app's script) can apply before it. A
-  unit test keeps the two lists of tokens the same. The landing page's and the docs' scopes
-  are `createTheme` classes in `theme/themes.ts`.
+  unit test keeps the two lists of tokens the same. The landing page's light scope is a
+  `createTheme` class in `theme/themes.ts`; its dark set and the docs' sit in `globals.css`
+  too, on the root that carries `data-scope`, since those pages are prerendered (D31).
 - **Each page's CSS in its own chunk.** `scripts/vite-stylex.ts` runs StyleX's Babel plugin
   (on Babel 7, its own dependency) on each module, and the module imports its own rules as
   CSS, so Vite's CSS code splitting ships them with the module's chunk: the landing page

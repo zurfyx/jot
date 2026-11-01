@@ -4,15 +4,16 @@ import { expect, test } from '../helpers';
 import { entryScript, navigateInApp, ORIGIN, serveBuild } from './serve';
 
 /**
- * The production build in a browser (D28): the theme before the first paint,
- * lazy stylesheets that arrive late, and stylesheets that load in any order.
+ * The production build in a browser (D28, D31): the theme before the first
+ * paint, prerendered pages included, lazy stylesheets that arrive late, and
+ * stylesheets that load in any order.
  */
 
 test.use({ baseURL: ORIGIN });
 
-for (const [scheme, background] of [
-  ['dark', 'rgb(18, 19, 22)'],
-  ['light', 'rgb(255, 255, 255)'],
+for (const [scheme, background, landing] of [
+  ['dark', 'rgb(18, 19, 22)', 'rgb(13, 16, 32)'],
+  ['light', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)'],
 ] as const) {
   test(`the ${scheme} theme is on the page before any script runs`, async ({ newContext }) => {
     const context = await newContext({ colorScheme: scheme });
@@ -21,12 +22,18 @@ for (const [scheme, background] of [
     const server = await serveBuild(page, { hold: new RegExp(`/${entry}$`) });
     await page.goto('/', { waitUntil: 'commit' });
     // The stylesheet is in, the app's script is not: index.html's inline
-    // script has set data-theme, and the CSS alone paints the page.
+    // script has set data-theme, and the CSS alone paints the page, the
+    // prerendered landing page in its own colours ("Night" in dark).
     await expect
-      .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
+      .poll(() =>
+        page.evaluate(() => document.body && getComputedStyle(document.body).backgroundColor),
+      )
       .toBe(background);
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(scheme);
-    expect(await page.locator('#root').evaluate((root) => root.childElementCount)).toBe(0);
+    const prerendered = page.locator('[data-scope="landing"]');
+    await expect(prerendered.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(prerendered).toHaveCSS('background-color', landing);
+    expect(await page.evaluate(() => 'hydrated' in document.documentElement.dataset)).toBe(false);
     server.release();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await context.close();
@@ -36,8 +43,11 @@ for (const [scheme, background] of [
 test('a lazy page waits for its own stylesheet, however late it arrives', async ({ page }) => {
   await serveBuild(page, { delays: [[/\/assets\/DocsPage-[\w-]+\.css$/, 1500]] });
   // Records, at the moment the docs' heading is first in the document,
-  // whether their stylesheet had loaded.
-  await page.addInitScript(() => {
+  // whether their stylesheet had loaded. Reached from the landing page, the
+  // docs are a lazy chunk; opened directly, their prerendered page links the
+  // stylesheet in its head, which holds the first paint.
+  await page.goto('/');
+  await page.evaluate(() => {
     new MutationObserver((_, observer) => {
       if (document.querySelector('[data-testid="docs-main"] h1') !== null) {
         observer.disconnect();
@@ -47,7 +57,7 @@ test('a lazy page waits for its own stylesheet, however late it arrives', async 
       }
     }).observe(document, { childList: true, subtree: true });
   });
-  await page.goto('/docs');
+  await navigateInApp(page, '/docs');
   await expect(page.getByTestId('docs-main').getByRole('heading', { level: 1 })).toBeVisible();
   expect(
     await page.evaluate(() => (window as unknown as { __docsSheet: boolean }).__docsSheet),

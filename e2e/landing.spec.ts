@@ -29,10 +29,10 @@ test('the hero has its title, buttons and links', async ({ page }) => {
   await expect(page).toHaveTitle('jot · Just start typing');
   await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
   await expect(page.getByText('Live · Lexical + Yjs 14 playground')).toBeVisible();
-  const start = page.getByRole('button', { name: /^Start a new note/ });
+  const start = page.getByRole('link', { name: /^Start a new note/ });
   await expect(start).toHaveCount(2);
   await expect(start.first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'See the example' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'See the example' })).toBeVisible();
   await expect(page.getByLabel('Note link or code')).toHaveAttribute(
     'placeholder',
     'Or paste a note link to join it.',
@@ -77,7 +77,7 @@ test('the sections below the hero', async ({ page }) => {
 test('Start a new note opens a note', async ({ page }) => {
   await page.goto('/');
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   await expectNotePage(page);
@@ -175,7 +175,7 @@ for (const { testId, name, path, kind } of [
 test('See the example opens the example', async ({ page }) => {
   await recordPushes(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'See the example' }).click();
+  await page.getByRole('link', { name: 'See the example' }).click();
   await expectNotePage(page, 'example');
   expect(await pushes(page)).toEqual(['/new?example']);
 });
@@ -297,7 +297,7 @@ for (const trigger of ['new-note-card', 'start-button'] as const) {
     await loaded;
     if (trigger === 'start-button') {
       await page
-        .getByRole('button', { name: /^Start a new note/ })
+        .getByRole('link', { name: /^Start a new note/ })
         .first()
         .click();
     } else {
@@ -357,7 +357,7 @@ for (const trigger of ['new-note-card', 'example-card', 'start-button'] as const
       .evaluate((el) => (el as HTMLElement).offsetWidth);
     if (trigger === 'start-button') {
       await page
-        .getByRole('button', { name: /^Start a new note/ })
+        .getByRole('link', { name: /^Start a new note/ })
         .first()
         .click();
     } else {

@@ -81,7 +81,8 @@ const styles = stylex.create({
 /** Paste a jot link or a code, on one quiet line; says in place which note it opens. */
 export function JoinField() {
   const [value, setValue] = useState('');
-  const id = parseNoteInput(value, window.location.host);
+  // Nothing typed reads no address, so the page also renders without one (D31).
+  const id = value === '' ? null : parseNoteInput(value, window.location.host);
   const state = value.trim() === '' ? 'empty' : id === null ? 'invalid' : 'valid';
 
   const open = (event: FormEvent) => {

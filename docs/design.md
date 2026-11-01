@@ -12,8 +12,9 @@ Every colour is a StyleX variable in `src/client/theme/tokens.stylex.ts` (`defin
 light values), with its dark value in `globals.css` under `:root[data-theme='dark']`. The
 variables keep their literal names (`--bg`), so plain CSS reads them too. `<html data-theme>`
 picks the set: an inline script in `index.html` sets it before the first paint from the
-stored choice or `prefers-color-scheme`, so dark mode never flashes white. ⋯ → Dark theme and
-⌘K → Toggle theme flip and remember it.
+stored choice or `prefers-color-scheme`, so dark mode never flashes white, prerendered pages
+included; with no script at all, the prerendered pages follow `prefers-color-scheme` (D31).
+⋯ → Dark theme and ⌘K → Toggle theme flip and remember it.
 
 | Token                                    | Use                                                       |
 | ---------------------------------------- | --------------------------------------------------------- |

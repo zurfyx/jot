@@ -134,6 +134,9 @@ const UNLAYERED = [
   ':root,[data-theme=light]', // color-scheme
   '[data-theme=dark]', // color-scheme
   ':root[data-theme=dark]', // the dark token values, before the first paint
+  ':root[data-theme=dark] [data-scope=landing]', // the landing page's, prerendered (D31)
+  ':root[data-theme=dark] [data-scope=docs]', // the docs', prerendered (D31)
+  '[data-platform=apple] [data-shortcut=other],:root:not([data-platform=apple]) [data-shortcut=apple]', // the start shortcut's label
   'body',
   '@media (prefers-reduced-motion:reduce)',
   '::highlight(jot-ai-target)',
@@ -147,5 +150,6 @@ test('only the listed global rules are unlayered', () => {
     .flatMap(topLevel)
     // Layer blocks and statements, fonts and keyframes are not style rules.
     .filter((prelude) => !/^@(layer|font-face|keyframes)\b/.test(prelude));
-  expect(found.sort()).toEqual([...UNLAYERED].sort());
+  // The landing page's dark set is two blocks, its colours and its cards.
+  expect([...new Set(found)].sort()).toEqual([...UNLAYERED].sort());
 });

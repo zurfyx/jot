@@ -5,12 +5,20 @@ import 'virtual:stylex-order.css';
 import './globals.css';
 
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import { App } from './App';
 
-createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root')!;
+const app = (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 );
+// The landing page, the docs and the 404 page arrive prerendered (D31): React
+// takes over their HTML. A note's page starts from the empty shell.
+if (root.hasChildNodes()) {
+  hydrateRoot(root, app);
+} else {
+  createRoot(root).render(app);
+}

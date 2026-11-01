@@ -353,7 +353,7 @@ test('opening a note from the landing page, half way', async ({ context }) => {
   await page.goto('/');
   await settle(page);
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   await expect(page.locator('html[data-vt="held"]')).toBeAttached({ timeout: 15_000 });

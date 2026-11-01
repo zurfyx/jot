@@ -67,7 +67,7 @@ test('Start a new note opens a shared note at once, and a second window joins it
 }) => {
   await page.goto('/');
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   const id = await expectFreshNote(page);
@@ -129,7 +129,7 @@ test("a draft left by jot's earlier version moves into the next new note, once",
   await page.reload();
 
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   const id = await expectFreshNote(page);
@@ -179,7 +179,7 @@ test('a draft is claimed only when the note opens: a page left during a slow loa
   // The editor chunk never arrives.
   await page.route('**/src/client/editor/NotePage.tsx*', () => undefined);
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   await page.waitForTimeout(800);
@@ -204,7 +204,7 @@ test('with storage denied, /new and Start a new note still open a fresh note', a
   const first = await expectFreshNote(page);
   await page.goto('/');
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   expect(await expectFreshNote(page)).not.toBe(first);

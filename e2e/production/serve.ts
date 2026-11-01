@@ -1,33 +1,18 @@
-import { readFileSync, existsSync, statSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import type { BrowserContext, Page } from '@playwright/test';
 
 /**
- * The production build, served to the browser from dist/client by the test
- * itself (no server, no Worker): every request to ORIGIN is answered from the
- * built files, and paths without a file get index.html, as the Worker's
- * assets do. Note pages render, but their socket never connects.
+ * The production build, as Cloudflare serves it: `pnpm build`, then the built
+ * Worker and its static assets in wrangler dev (playwright.config.ts, D31),
+ * prerendered pages, 404 page and all. Tests may slow or hold some of its
+ * files on the way. Note pages render, but their socket never connects.
  */
-export const ORIGIN = 'http://jot.test';
+export const ORIGIN = `http://127.0.0.1:${Number(process.env.JOT_E2E_PORT ?? 5174) + 1}`;
 export const CLIENT = join(import.meta.dirname, '../../dist/client');
 
-const TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.woff2': 'font/woff2',
-  '.txt': 'text/plain; charset=utf-8',
-};
-
-export interface Hold {
-  /** Requests whose path matches are held until `release()`. */
-  pattern: RegExp;
-  release(): void;
-}
-
-/** Serves the build to `target`; `delays` hold matching files for so many ms. */
+/** Opens the build in `target`; `delays` slow matching files by so many ms, `hold` holds them. */
 export async function serveBuild(
   target: Page | BrowserContext,
   options: { delays?: [RegExp, number][]; hold?: RegExp } = {},
@@ -41,13 +26,6 @@ export async function serveBuild(
   });
   await target.route(`${ORIGIN}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path.startsWith('/api/')) {
-      await route.abort();
-      return;
-    }
-    const file = join(CLIENT, path);
-    const found = path !== '/' && existsSync(file) && statSync(file).isFile();
-    const body = readFileSync(found ? file : join(CLIENT, 'index.html'));
     if (options.hold?.test(path)) {
       await held;
     }
@@ -55,16 +33,12 @@ export async function serveBuild(
     if (delay !== undefined) {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
-    await route.fulfill({
-      status: 200,
-      body,
-      headers: { 'content-type': TYPES[extname(found ? file : 'index.html')] ?? 'text/plain' },
-    });
+    await route.continue();
   });
   return { release };
 }
 
-/** The entry script index.html loads. */
+/** The entry script the prerendered landing page loads. */
 export function entryScript(): string {
   const html = readFileSync(join(CLIENT, 'index.html'), 'utf8');
   const match = /<script type="module" crossorigin src="\/(assets\/index-[\w-]+\.js)"/.exec(html);

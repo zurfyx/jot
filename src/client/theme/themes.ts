@@ -1,11 +1,12 @@
 import * as stylex from '@stylexjs/stylex';
 
-import { colors, docs, landing } from './tokens.stylex';
+import { colors } from './tokens.stylex';
 
 /*
- * The scoped token sets (D07, D28): the landing page's and the docs' roots
- * put these on themselves. The app's own dark set is in globals.css, where it
- * applies before the first paint.
+ * The landing page's light token set (D07, D28): its root puts it on itself.
+ * Every dark set, the app's and the landing page's and the docs' scopes, is in
+ * globals.css, keyed to `data-theme`, where it applies before the first paint,
+ * prerendered pages included (D31).
  */
 
 /** The landing page's scope in light: its background is --landing-bg. */
@@ -42,74 +43,4 @@ export const landingLight = stylex.createTheme(colors, {
   '--blame-faded': '28%',
   '--blame-faded-opacity': '0.32',
   '--landing-bg': '#fff',
-});
-
-/** The landing page's scope in dark ("Night"): a bluer ink set. */
-export const landingDark = stylex.createTheme(colors, {
-  '--bg': '#0d1020',
-  '--ink': '#eef0f8',
-  '--body': '#d9dcea',
-  '--muted': '#a5abc3',
-  '--rule': '#262c48',
-  '--rule-strong': '#343b5c',
-  '--hover': '#1b2038',
-  '--accent': '#9db4ff',
-  '--select': '#26324f',
-  '--btn': '#eef0f8',
-  '--btn-ink': '#0d1020',
-  '--ok': '#5fd07d',
-  '--warn': '#e3b341',
-  '--bad': '#ff8a7a',
-  '--shadow': 'rgb(0 0 0 / 0.5)',
-  '--shadow-soft': 'rgb(0 0 0 / 0.4)',
-  '--scrim': 'rgb(0 0 0 / 0.4)',
-  '--scrollbar': 'rgb(236 238 241 / 0.2)',
-  '--peer-ink': '#121316',
-  '--peer-0': '#5fd07d',
-  '--peer-1': '#fb923c',
-  '--peer-2': '#b8a1fb',
-  '--peer-3': '#22d3ee',
-  '--peer-4': '#f472b6',
-  '--peer-5': '#facc15',
-  '--peer-6': '#7cb0fb',
-  '--peer-7': '#a3e635',
-  '--ai': 'var(--peer-2)',
-  '--ai-tint': 'color-mix(in srgb, var(--peer-2) 18%, transparent)',
-  '--blame-faded': '28%',
-  '--blame-faded-opacity': '0.32',
-  '--landing-bg': '#0d1020',
-});
-
-export const landingCardsDark = stylex.createTheme(landing, {
-  '--you': 'var(--peer-0)',
-  '--ana': 'var(--peer-1)',
-  '--card': '#151a2e',
-  '--card-rule': 'rgb(255 255 255 / 0.08)',
-  '--card-highlight': 'rgb(255 255 255 / 0.05)',
-  '--card-shadow-near': 'rgb(0 0 0 / 0.3)',
-  '--card-shadow-mid': 'rgb(0 0 0 / 0.5)',
-  '--card-shadow-far': 'rgb(0 0 0 / 0.6)',
-  '--card-shadow-lift': 'rgb(0 0 0 / 0.7)',
-  '--button-shadow': 'rgb(0 0 0 / 0.6)',
-  '--glow-opacity': '0.75',
-  '--code-bg': '#080a16',
-  '--code-ink': '#e7e9ee',
-  '--code-keyword': '#c4a1ff',
-  '--code-string': '#7ee2a0',
-  '--code-scrollbar': 'rgb(231 233 238 / 0.24)',
-});
-
-export const docsDark = stylex.createTheme(docs, {
-  '--docs-tint-you': 'color-mix(in srgb, var(--peer-0) 13%, var(--bg))',
-  '--docs-tint-ana': 'color-mix(in srgb, var(--peer-1) 12%, var(--bg))',
-  '--docs-tint-ai': 'color-mix(in srgb, var(--peer-2) 14%, var(--bg))',
-  '--docs-hl': 'color-mix(in srgb, var(--peer-2) 15%, transparent)',
-  '--docs-callout-bg': 'color-mix(in srgb, var(--accent) 6%, var(--bg))',
-  '--docs-callout-rule': 'color-mix(in srgb, var(--accent) 22%, var(--rule))',
-  '--docs-warn-bg': 'color-mix(in srgb, var(--warn) 10%, var(--bg))',
-  '--docs-warn-rule': 'color-mix(in srgb, var(--warn) 40%, var(--rule))',
-  '--docs-code-bg': '#17191d',
-  '--docs-code-keyword': '#c4a1ff',
-  '--docs-code-string': '#5fd07d',
-  '--docs-code-number': '#22d3ee',
 });

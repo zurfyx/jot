@@ -20,6 +20,53 @@ const SINGLE_PROCESS = !!process.env.JOT_E2E_SINGLE_PROCESS;
  */
 type ContextOptions = Parameters<Browser['newContext']>[0];
 
+/**
+ * The landing page, the docs and the 404 page arrive prerendered (D31): they
+ * show before React hydrates them, and a click on a button before then does
+ * nothing (a link still navigates, the browser's way). So a `goto` or
+ * `reload` that waits for the page to load (the default) waits for the app
+ * too: App marks <html> with `data-hydrated` once it runs. A response that is
+ * no app page (a 400) has no root to wait for. A test that holds the app's
+ * script back, or turns scripts off, asks for `commit` or `domcontentloaded`.
+ */
+function waitForApp(page: Page): void {
+  const patched = page as Page & { jotWaits?: true };
+  if (patched.jotWaits) {
+    return;
+  }
+  patched.jotWaits = true;
+  const ready = () =>
+    page.waitForFunction(
+      () =>
+        document.getElementById('root') === null || 'hydrated' in document.documentElement.dataset,
+      undefined,
+      { timeout: 15_000 },
+    );
+  const goto = page.goto.bind(page);
+  page.goto = async (url, options) => {
+    const response = await goto(url, options);
+    if ((options?.waitUntil ?? 'load') === 'load') {
+      await ready();
+    }
+    return response;
+  };
+  const reload = page.reload.bind(page);
+  page.reload = async (options) => {
+    const response = await reload(options);
+    if ((options?.waitUntil ?? 'load') === 'load') {
+      await ready();
+    }
+    return response;
+  };
+}
+
+/** Every page of `context`, open now or later, waits for the app (above). */
+function waitingForApp(context: BrowserContext): BrowserContext {
+  context.pages().forEach(waitForApp);
+  context.on('page', waitForApp);
+  return context;
+}
+
 interface Fixtures {
   otherContext: BrowserContext;
   /**
@@ -33,13 +80,17 @@ export const test = SINGLE_PROCESS
   ? base.extend<Fixtures>({
       context: async ({ playwright, contextOptions }, use) => {
         const browser = await playwright.chromium.launch({ args: ['--single-process'] });
-        const context = await browser.newContext(contextOptions);
+        const context = waitingForApp(await browser.newContext(contextOptions));
         await use(context);
         await browser.close();
       },
+      page: async ({ page }, use) => {
+        waitForApp(page);
+        await use(page);
+      },
       otherContext: async ({ playwright, contextOptions }, use) => {
         const browser = await playwright.chromium.launch({ args: ['--single-process'] });
-        const context = await browser.newContext(contextOptions);
+        const context = waitingForApp(await browser.newContext(contextOptions));
         await use(context);
         await browser.close();
       },
@@ -48,21 +99,30 @@ export const test = SINGLE_PROCESS
         await use(async (options) => {
           const browser = await playwright.chromium.launch({ args: ['--single-process'] });
           browsers.push(browser);
-          return browser.newContext({ ...contextOptions, ...options });
+          return waitingForApp(await browser.newContext({ ...contextOptions, ...options }));
         });
         await Promise.all(browsers.map((browser) => browser.close()));
       },
     })
   : base.extend<Fixtures>({
+      context: async ({ context }, use) => {
+        await use(waitingForApp(context));
+      },
+      page: async ({ page }, use) => {
+        waitForApp(page);
+        await use(page);
+      },
       otherContext: async ({ browser, contextOptions }, use) => {
-        const context = await browser.newContext(contextOptions);
+        const context = waitingForApp(await browser.newContext(contextOptions));
         await use(context);
         await context.close();
       },
       newContext: async ({ browser, contextOptions }, use) => {
         const contexts: BrowserContext[] = [];
         await use(async (options) => {
-          const context = await browser.newContext({ ...contextOptions, ...options });
+          const context = waitingForApp(
+            await browser.newContext({ ...contextOptions, ...options }),
+          );
           contexts.push(context);
           return context;
         });

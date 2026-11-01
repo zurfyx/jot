@@ -1,7 +1,10 @@
 import { writeRawNote } from '../raw-client';
 import { GERARD, expect, freshNoteId, pageFor, rest, shoot, test } from './setup';
 
-/** The edges: a read-only note and a malformed link. (The full note is in status.spec.ts.) */
+/**
+ * The edges: a read-only note, a malformed link and the 404 page. (The full
+ * note is in status.spec.ts.)
+ */
 
 test('a read-only note', async ({ context, baseURL }) => {
   const id = freshNoteId();
@@ -23,8 +26,9 @@ test('a malformed note link', async ({ page }) => {
   await shoot(page, 'invalid-link');
 });
 
-test('an unknown path goes home', async ({ page }) => {
+test('an unknown path is the 404 page', async ({ page }) => {
   await page.goto('/no/such/page');
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText("This page doesn't exist.");
+  await rest(page);
+  await shoot(page, 'not-found');
 });
