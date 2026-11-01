@@ -14,6 +14,7 @@ import { pushLegacyCopies } from './legacy';
 import { createNoteSession, type NoteSession } from './session';
 import { ShareButton } from './ShareButton';
 import { StatusPill } from './StatusPill';
+import { useRecentVisit } from './useRecentVisit';
 import { useEditable, useSignal } from './useSignal';
 import { colors, motion } from '../theme/tokens.stylex';
 
@@ -216,6 +217,7 @@ function NoteBody({ session }: { session: NoteSession }) {
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
   const empty = useEmptyAndTitle(session);
+  useRecentVisit(session);
   const editable = useEditable(session.editor);
 
   useEffect(() => {

@@ -63,6 +63,7 @@ How expensive is this to get wrong?
 | [D24](D24-previews-on-workers-dev.md)                   | Branch Previews on rovira.workers.dev, noindex, own Durable Objects           | LOW    | `DECIDED` |
 | [D25](D25-older-layout-notes-stay-read-only.md)         | Notes in an older `@lexical/y` layout stay read only; no conversion           | MED    | `DECIDED` |
 | [D29](D29-one-app-schema-version.md)                    | One app schema version for every note, raised when older jot can't keep it    | MED    | `DECIDED` |
+| [D30](D30-recent-notes-in-the-browser.md)               | Recently opened notes in localStorage, on the landing page; pruned at 90 days | LOW    | `DECIDED` |
 
 ## Superseded
 

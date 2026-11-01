@@ -123,3 +123,118 @@ test('the whole page', async ({ page }) => {
   await expect(page.getByTestId('example-card')).toContainText('Send the agenda');
   await shoot(page, 'landing-whole', { fullPage: true });
 });
+
+/**
+ * Your recent notes (D30), as a returning visitor sees them: eight notes,
+ * the example among them, all opened within the week so their times read the
+ * same in every run.
+ */
+const MINUTE = 60_000;
+const RECENT = [
+  [
+    'k3Jd9xQm2pLwTr5vB8nYcA',
+    'Q4 planning notes',
+    'Ship recent notes, then the docs inspector. Ana owns the relay alarms.',
+    12 * MINUTE,
+  ],
+  [
+    'Vt7bN2cRf8ZaHe3kP0sWqQ',
+    'Team offsite, May 14',
+    'Plan for the day. Everyone can edit; share the link to invite.',
+    3 * 60 * MINUTE,
+    true,
+  ],
+  [
+    'Hq4sW9eLm1TyUo6jD2xFrg',
+    'Lisbon trip',
+    'Flights on the 14th. Book the tram tour and the fado dinner.',
+    26 * 60 * MINUTE,
+  ],
+  [
+    'Rp6mA3kDx5GuLi9cN7zVhw',
+    'Yjs 14 migration checklist',
+    'Attributions in blame, layout 1 moves, drop the old provider.',
+    2 * 1440 * MINUTE,
+  ],
+  [
+    'Zc8nE1jYw4ObMa2tR5uKeA',
+    'Standup, Tuesday',
+    'Gerard: sync diff landed. Ana: Durable Object eviction tests.',
+    4 * 1440 * MINUTE,
+  ],
+  ['Mb2xT7qWe9RsYu4iO1pLkg', 'Untitled note', '', 5 * 1440 * MINUTE],
+  [
+    'Pf5gH8jKl3ZxCv6bN9mQwA',
+    'Pancake recipe',
+    '2 cups flour, 1 tbsp sugar, a pinch of salt.',
+    6 * 1440 * MINUTE,
+  ],
+  [
+    'Wd1sA4fGh7JkL0zXc3vBnQ',
+    'Reading list',
+    'Local-first software, the Yjs 14 notes, CRDTs for text.',
+    6 * 1440 * MINUTE + 60 * MINUTE,
+  ],
+] as const;
+
+async function openLandingWithRecent(page: Page) {
+  await page.addInitScript(
+    (list) => {
+      const now = Date.now();
+      localStorage.setItem(
+        'jot:recent',
+        JSON.stringify(
+          list.map(([id, title, excerpt, ago, example]) => ({
+            id,
+            title,
+            excerpt,
+            openedAt: now - ago,
+            ...(example ? { example: true } : {}),
+          })),
+        ),
+      );
+    },
+    RECENT as unknown as [string, string, string, number, boolean?][],
+  );
+  await openLanding(page);
+}
+
+function recent(page: Page) {
+  return page.getByTestId('recent-notes');
+}
+
+/** The section with a margin, so the times and buttons at its right edge show whole. */
+async function shootRecent(page: Page, name: string) {
+  const section = recent(page);
+  await section.scrollIntoViewIfNeeded();
+  const box = (await section.boundingBox())!;
+  const margin = 12;
+  await shoot(page, name, {
+    clip: {
+      x: box.x - margin,
+      y: box.y - margin,
+      width: box.width + 2 * margin,
+      height: box.height + 2 * margin,
+    },
+  });
+}
+
+test('your recent notes', async ({ page }) => {
+  await openLandingWithRecent(page);
+  await shoot(page, 'landing-recent-first-screen');
+  await shootRecent(page, 'landing-recent');
+});
+
+test('your recent notes: hovered, all of them, and clearing', async ({ page }) => {
+  await openLandingWithRecent(page);
+  const section = recent(page);
+  await section.scrollIntoViewIfNeeded();
+  await section.getByTestId('recent-note').nth(2).hover();
+  await shootRecent(page, 'landing-recent-hovered');
+  await rest(page);
+  await section.getByRole('button', { name: 'Show all 8' }).click();
+  await shootRecent(page, 'landing-recent-all');
+  await section.getByRole('button', { name: 'Clear all' }).click();
+  await rest(page);
+  await shootRecent(page, 'landing-recent-clear');
+});

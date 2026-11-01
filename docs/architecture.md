@@ -111,6 +111,20 @@ action navigates there, and `/new` replaces itself with it. `examples.ts` gives
 seeded, its editor stays mounted under the same React key while the address becomes
 `/n/<id>`.
 
+**Recent notes** (D30). `recent.ts` (no Lexical or Yjs) keeps the notes this browser opened
+in localStorage (`jot:recent`, at most 20 `{ id, title, excerpt, openedAt, example? }`,
+newest first), prunes those not opened for 90 days, and never throws. `createRecentStore`
+takes its storage, clock, event target and `<html>` as arguments, so the unit tests pass
+fakes; the app uses the window's. Every write notifies subscribers, other tabs arrive
+through the `storage` event, and `<html>` gets `data-recent` with the rows the landing
+page shows (`--jot-recent-rows`, `--jot-recent-rows-wide`), which the inline script in
+`index.html` also sets before the first paint. `editor/useRecentVisit.ts` records a visit
+when a note page opens and, once the note has synced, its first line and the start of the
+rest through a recorder that writes at most every 2 s, flushed on `pagehide`, on
+`visibilitychange` to hidden and on unmount. The landing page's `RecentNotes` reads the
+list with `useSyncExternalStore` (an empty server snapshot), and opens a note through
+`landing/open.ts` with its row as the card.
+
 **Migration from local drafts** (D23). An earlier version kept an unshared draft in
 `jot:draft` and, until the relay confirmed it, a shared note's copy in `jot:pending:<id>`
 (localStorage, `{ id, state }` with the Yjs state in base64). `newNotePath()`, called when a
@@ -326,8 +340,8 @@ only on a note page (`loadNote.ts`). The landing page prefetches that chunk when
 a person points at or focuses a start action, or holds ⌘ or Ctrl. Its start actions open a
 fresh `/n/<id>` (the example ones `/new?example`) through `landing/open.ts`: it loads the
 editor chunk, then navigates inside `document.startViewTransition`, so a cold start never
-freezes the page. The card (the clicked one, or the New note card for the button and the
-keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
+freezes the page. The card (the clicked one, a recent note's row, or the New note card for
+the button and the keys), when it is on screen, carries `view-transition-name: jot-note` in the old state and
 `#root` carries it in the new one, both with a StyleX `viewTransitionClass` that styles the
 pair (`<html>` gets one too, for the page's own `root` group): the group animates from
 the card's box to the page's in 450ms; its `::view-transition-image-pair` is the sheet,

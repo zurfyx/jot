@@ -22,6 +22,39 @@
           (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
       })();
+      // Reserve the recent notes' rows before the first paint, so nothing moves when the
+      // list fills in (D30). It counts as src/client/recent.ts parses: well-formed ids,
+      // one entry each, opened in the last 90 days, at most 20; six rows show.
+      (function () {
+        var count = 0;
+        try {
+          var list = JSON.parse(localStorage.getItem('jot:recent') || '[]');
+          var seen = {};
+          var now = Date.now();
+          for (var i = 0; Array.isArray(list) && i < list.length && count < 20; i++) {
+            var entry = list[i];
+            if (
+              entry &&
+              typeof entry.id === 'string' &&
+              /^[A-Za-z0-9_-]{21}[AQgw]$/.test(entry.id) &&
+              !seen[entry.id] &&
+              typeof entry.openedAt === 'number' &&
+              isFinite(entry.openedAt) &&
+              now - entry.openedAt <= 7776000000
+            ) {
+              seen[entry.id] = true;
+              count++;
+            }
+          }
+        } catch (e) {}
+        if (count > 0) {
+          var rows = Math.min(count, 6);
+          var root = document.documentElement;
+          root.setAttribute('data-recent', '');
+          root.style.setProperty('--jot-recent-rows', String(rows));
+          root.style.setProperty('--jot-recent-rows-wide', String(Math.ceil(rows / 2)));
+        }
+      })();
     </script>
   </head>
   <body>

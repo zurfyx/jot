@@ -187,6 +187,20 @@ styles in `section.styles.ts`, relational markers in `markers.stylex.ts`). Conte
   the three author colours drifts behind them. The fan sways at rest, spreads on hover, and
   the hovered note lifts and shows "Open ↗". The new note and the example are links; the
   recipe is decoration.
+- **"Your recent notes"** (D30), only when this browser has opened notes: the violet
+  eyebrow, then rows of 60px separated by hairlines, as the questions are, in two columns
+  (one under 760px), filled down the first column first. A row is the note's title in
+  semibold, the start of its text in `--muted` under it (both cut with an ellipsis), and
+  when it was last opened on the right ("12 min ago", "Yesterday", "Oct 2"; "Example · 3 h
+  ago" for the example). Hovering a row underlines its title and swaps the time for a round
+  remove button; keyboard focus inside the row does the same, and on touch screens the
+  button is always there beside the time. Six rows show; a foot line says "Only in this
+  browser", with Show all (when there are more) and Clear all, which turns the line into
+  "Clear all 8 recent notes?" with Clear in `--bad` and Cancel. The section's height is
+  fixed by the rows it shows: `index.html` puts `data-recent` and the row counts on
+  `<html>` before the first paint, and one global rule hides the slot without them, so a
+  prerendered page and the first client paint lay out the same and an empty list leaves
+  the page as it was.
 - **"Try it in two windows":** two mini browser windows play the flow (a note starts, its
   link pill slides across, the second window opens it, both type with each other's carets)
   over a three-step line that fills as it plays.
@@ -245,8 +259,9 @@ them off and shows the final state.
   and the tabs stay put.
 - **Opening a note** from the landing page loads the editor chunk first, then runs a view
   transition: the clicked card (the New note card for "Start a new note" and the keys, the
-  example card for the example) grows from where it sits into the note page in 450ms with
-  `cubic-bezier(0.2, 0, 0, 1)`, straightening and losing its rounded corners on the way.
+  example card for the example, a recent note's row) grows from where it sits into the
+  note page in 450ms with `cubic-bezier(0.2, 0, 0, 1)`, straightening and losing its
+  rounded corners on the way.
   Both pictures fill the growing sheet, on the page colour (cover, anchored top centre),
   and cross-fade in its first 20%, while it is still near card size, so the scaled-up card
   never shows through the page; the rest of the landing page fades out in 300ms. Under reduced motion it is a 150ms cross-fade.

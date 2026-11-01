@@ -51,6 +51,11 @@
   --landing-bg: #0d1020;
 }
 
+/* The recent notes' slot (D30) takes its place only when index.html found entries before the first paint: StyleX can't style an element from an attribute on <html>. */
+:root:not([data-recent]) [data-recent-slot] {
+  display: none;
+}
+
 /* Element defaults (type selectors no class can stand for), in a layer every StyleX class beats. */
 @layer reset {
   /* Every element and pseudo-element: no class can reach them all. */

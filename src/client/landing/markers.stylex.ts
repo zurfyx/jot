@@ -17,3 +17,6 @@ export const exampleMarker = stylex.defineMarker();
 
 /** A feature tab: hovering it darkens its title. */
 export const tabMarker = stylex.defineMarker();
+
+/** A recent note's row: hovering or focusing inside shows its remove button. */
+export const recentMarker = stylex.defineMarker();

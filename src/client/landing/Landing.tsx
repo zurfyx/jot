@@ -14,6 +14,8 @@ import { useThemeName } from '../theme';
 import { landingCardsDark, landingDark, landingLight } from '../theme/themes';
 import { colors, fonts, landing, motion } from '../theme/tokens.stylex';
 import { TwoWindows } from './TwoWindows';
+import { notePath } from '../../shared/ids';
+import { RecentNotes } from './RecentNotes';
 
 const GITHUB_URL = 'https://github.com/zurfyx/jot';
 const LEXICAL_URL = 'https://lexical.dev';
@@ -450,6 +452,9 @@ export function Landing() {
   const startNew = () => void openNote(newNotePath, newCard.current);
   const openExample = () => void openNote(EXAMPLE_PATH, exampleCard.current);
   const shortcut = startShortcutLabel(platform());
+  // A recent note grows from its row into the note page, as a card does.
+  const openRecent = (entry: { id: string }, row: HTMLElement | null) =>
+    void openNote(notePath(entry.id), row);
   // The landing page's own token set: "Clean" in light, "Night" in dark (D07).
   const scope = useThemeName() === 'dark' ? [landingDark, landingCardsDark] : landingLight;
 
@@ -569,6 +574,7 @@ export function Landing() {
             />
           </section>
 
+          <RecentNotes onOpen={openRecent} />
           <TwoWindows />
           <EngineTabs />
 

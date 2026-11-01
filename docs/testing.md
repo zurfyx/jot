@@ -124,6 +124,15 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - a click on the blank page: below the text it aims at the end of the note (a note
   without blocks too), beside a line at the nearest point inside it, above the title
   into the first line, and the point stays inside even a box narrower than its insets;
+- recent notes (D30): a visit goes to the top and keeps the title it had, at most 20 notes
+  with the oldest dropped, the example's label survives a reopen; titles fall back to
+  "Untitled note", collapse whitespace and are clipped on a word; a removed note isn't
+  re-added by a title update; remove and clear; notes not opened for 90 days are pruned;
+  malformed storage, bad or repeated ids read as nothing; denied or full storage never
+  throws; `<html>` carries the rows the landing page reserves; another tab's write arrives
+  through the `storage` event (other keys ignored, a cleared storage counted); the list is
+  the same object until storage changes; title updates write at once, then at most every
+  2 s with the latest, and a flush writes the pending one; the relative times;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations (`/new` and the example's route), the two-windows
@@ -184,6 +193,19 @@ Durable Objects, over real WebSockets.
   cross-fade over by a quarter (card picture at 0, page at 1), and
   under reduced motion only a 150ms cross-fade with no card named; and the switch to the note page, inside the transition, takes under 750 ms (it waits for the note page's root, marked from its first render, with a 1.5 s limit); under reduced motion
   nothing animates and the final states show; and it loads without the editor chunk;
+- recent notes (D30): with none the section takes no space and `<html>` has no mark; a note
+  opened from "Start a new note" is listed as "Untitled note" at once, and back on the
+  landing page it shows its first line, the start of its text and "Just now", linking to
+  its page; a reload keeps the title typed last; the example says "Example · Just now";
+  clicking a row opens the note; removing one (its button hidden until hover) and the last
+  hides the section; Clear all asks, Cancel and Escape keep the list, Clear empties it and
+  the storage; six show, then Show all shows eight inside the section; a note opened 91
+  days ago is gone; from the keyboard, focus in a row shows its remove button, Enter on it
+  removes the note and the focus moves to the next one, whose Enter opens it; on a touch
+  screen the button is always shown and a tap removes; a second tab follows a note opened,
+  retitled and the list cleared without a reload; with the app's script held, `<html>`
+  already carries the rows, and the empty slot has the filled one's height; and with
+  localStorage throwing, the landing page and a new note still work;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;
@@ -309,8 +331,8 @@ check the StyleX output (D28):
   marker left; the note page's and the docs' own rules are in their chunks, and few rules
   are moved to the entry;
 - only the listed global rules (color-scheme, the dark tokens, `<body>`, reduced motion,
-  `::highlight()`, a table selection's `::selection`, the inspector's code) sit outside a
-  layer, since unlayered CSS beats every component style;
+  `::highlight()`, a table selection's `::selection`, the inspector's code, the recent
+  notes' slot) sit outside a layer, since unlayered CSS beats every component style;
 - the entry stylesheet puts `reset` and every `stylex.p<priority>` layer in priority order
   before its first rule, and every layer any stylesheet uses is in that order;
 - in dark and in light, the theme's background is on the page before the app's script runs
@@ -335,7 +357,8 @@ and dark, at 1440x900 and 390x844.
 - the landing page, under reduced motion so its loops rest on their final states: the hero,
   the fan hovered and with each card lifted (three different pictures), the two windows at the end of their story,
   each feature tab, the developers section, the questions, the ending, the footer and the
-  whole page;
+  whole page; and with eight recent notes (D30), the first screen, the section, a row
+  hovered, Show all and Clear all's question;
 - a note: empty; with every block and format (headings, the three lists with a checked
   to-do, a quote, a code block, a table, a link, bold, italic, underline, strikethrough and
   inline code); the dock, Aa, Aa's link field, ⋯, Note info, the AI model setting, ⌘K,

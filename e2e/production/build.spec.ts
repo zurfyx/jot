@@ -139,6 +139,7 @@ const UNLAYERED = [
   '::highlight(jot-ai-target)',
   '.jot-table-selection ::selection',
   '.insp-editor :not(pre)>code:not([class])', // docs/docs.css
+  ':root:not([data-recent]) [data-recent-slot]', // the recent notes' slot, before the first paint
 ];
 
 test('only the listed global rules are unlayered', () => {
