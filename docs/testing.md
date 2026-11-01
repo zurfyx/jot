@@ -372,6 +372,11 @@ The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
   link (`/n/public` and the shell's own path included), 200 and the empty shell for a note,
   `/new` and `/new?example`, which open a fresh note in the browser, and
   `noindex, nofollow` on `/n/*` and `/api/*`;
+- recent notes on the prerendered landing page (`recent.spec.ts`, D30): with a stored list
+  of 3 or 8 notes and the app's script held back, the HTML has the section's slot and no
+  rows, and the head script has reserved its height; once the page hydrates the rows fill
+  that slot with the same box, nothing below it moves, and no warning is logged, at 1440
+  and 390 px; with no list the slot takes no space;
 - no jump on load (`nojump.spec.ts`): every prerendered page, captured whole, is the same
   picture with scripts off and right after it hydrates, in light and dark at 1440 and 390
   px, and the landing page under reduced motion too (its illustrations rest on their end

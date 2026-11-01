@@ -70,7 +70,7 @@ async function stored(page: Page): Promise<{ id: string; title: string }[]> {
 function heroStart(page: Page) {
   return page
     .getByRole('region', { name: 'Just start typing.' })
-    .getByRole('button', { name: /^Start a new note/ });
+    .getByRole('link', { name: /^Start a new note/ });
 }
 
 async function typeNote(page: Page, title: string, rest: string) {
@@ -93,7 +93,7 @@ test('with no recent notes the section takes no space', async ({ page }) => {
 test('a note you open shows on the landing page with its first line', async ({ page }) => {
   await page.goto('/');
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
@@ -353,7 +353,7 @@ test('where storage is denied, the landing page and notes still work', async ({ 
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(section(page)).toBeHidden();
   await page
-    .getByRole('button', { name: /^Start a new note/ })
+    .getByRole('link', { name: /^Start a new note/ })
     .first()
     .click();
   await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
