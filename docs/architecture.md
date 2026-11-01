@@ -389,13 +389,18 @@ build time; a note's page is not. `main.tsx` hydrates a root that has children
 choice (`setPrerenderPath`; `useLocationPath` reads it as its server snapshot, the browser
 its own address), so the first render in the browser must be the same: what depends on
 the browser runs in effects, animations render their opening frame and start after load,
+the landing page's illustrations (the fan's example card, the two windows and their steps)
+hold their moving frames and their still end frame side by side (`landing/MotionFrames.tsx`,
+`display: contents` wrappers), and `globals.css` shows the still one under
+`prefers-reduced-motion: reduce`, so reduced motion shows the end from the first paint,
 the live inspector mounts after hydration (its loading frame is what the HTML has), and
 the note page and the inspector are never in the prerender's bundle (`import.meta.env.SSR`).
 What depends on the device is CSS: the landing page's and the docs' roots carry
 `data-scope`, and `globals.css` gives them their dark token sets under `data-theme`; the
 start shortcut renders both labels, and `index.html`'s pre-paint script marks Apple
 platforms (`data-platform`) for CSS to show ⌘ rather than Ctrl. Start a new note and See
-the example are links to `/new` and `/new?example`, so they work before hydration. App
+the example are links to `/new` and `/new?example`, so they work before hydration, each
+`rel="nofollow"`, since following one creates a note. App
 marks `<html>` with `data-hydrated` once it runs; tests wait for it.
 
 Every public page's head comes from one list, `heads.ts` (the landing page's head in

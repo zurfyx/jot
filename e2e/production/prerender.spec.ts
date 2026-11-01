@@ -76,8 +76,14 @@ test('the landing page is in the HTML, buttons, links and all', async ({ request
     expect(text).toContain(words);
   }
   const html = await (await request.get('/')).text();
-  expect(html).toContain('href="/new"');
-  expect(html).toContain('href="/new?example"');
+  // Every link that opens a new note is a real link, and no crawler follows it.
+  const starts = [...html.matchAll(/<a\b[^>]*href="\/new(?:\?example)?"[^>]*>/g)].map(
+    ([tag]) => tag,
+  );
+  expect(starts.length).toBe(7);
+  for (const tag of starts) {
+    expect(tag).toContain('rel="nofollow"');
+  }
 });
 
 /** Console errors and warnings, and uncaught errors, from `page`. */

@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { colors, landing, motion } from '../theme/tokens.stylex';
 import { By, Caret, LinkIcon, type Who, who } from './bits';
+import { MotionFrames } from './MotionFrames';
 import { useOnScreen, useReducedMotion } from './motion';
 import { section } from './section.styles';
 
@@ -285,9 +286,6 @@ const PILL = [null, styles.pillShown, styles.pillAcross, styles.pillDone, styles
 export function TwoWindows() {
   const element = useRef<HTMLElement>(null);
   const phase = usePhase(useReducedMotion(), useOnScreen(element));
-  const step = stepOfPhase(phase);
-  const opened = phase >= 3;
-  const together = phase >= FINAL_PHASE;
 
   return (
     <section
@@ -300,87 +298,111 @@ export function TwoWindows() {
         Start a note. Share it. Type together.
       </h2>
 
-      <div
-        {...stylex.props(styles.windows)}
-        data-phase={phase}
-        role="img"
-        aria-label="A note starts in one window, its link is shared, and a second window opens it. Both type at once."
-      >
-        <div {...stylex.props(styles.window)}>
-          <div {...stylex.props(styles.bar)}>
-            <i {...stylex.props(styles.dot)} />
-            <i {...stylex.props(styles.dot)} />
-            <i {...stylex.props(styles.dot)} />
-            <span {...stylex.props(styles.address)}>jot.rovira.sh/n/k3Jd9xQ2…</span>
-          </div>
-          <div {...stylex.props(styles.body)}>
-            <h4 {...stylex.props(styles.heading)}>
-              Plan for Thursday
-              {!opened && <Caret />}
-            </h4>
-            {opened ? (
-              <>
-                <p {...stylex.props(styles.text)}>
-                  <By who="ana">Bring the projector</By>
-                  <Caret who="ana" name="Ana" />
-                </p>
-                {together && (
-                  <p {...stylex.props(styles.text)}>
-                    <By who="you">Book the room</By>
-                    <Caret />
-                  </p>
-                )}
-              </>
-            ) : (
-              <p {...stylex.props(styles.text, styles.muted)}>Anyone with the link can edit.</p>
-            )}
-          </div>
+      {/* Under reduced motion the story rests on its end, from the first paint (D31). */}
+      <MotionFrames
+        block
+        moving={<Windows phase={phase} />}
+        still={<Windows phase={FINAL_PHASE} />}
+      />
+      <MotionFrames
+        block
+        moving={<Steps step={stepOfPhase(phase)} />}
+        still={<Steps step={stepOfPhase(FINAL_PHASE)} />}
+      />
+    </section>
+  );
+}
+
+/** The two windows at one phase of the story. */
+function Windows({ phase }: { phase: number }) {
+  const opened = phase >= 3;
+  const together = phase >= FINAL_PHASE;
+  return (
+    <div
+      {...stylex.props(styles.windows)}
+      data-phase={phase}
+      role="img"
+      aria-label="A note starts in one window, its link is shared, and a second window opens it. Both type at once."
+    >
+      <div {...stylex.props(styles.window)}>
+        <div {...stylex.props(styles.bar)}>
+          <i {...stylex.props(styles.dot)} />
+          <i {...stylex.props(styles.dot)} />
+          <i {...stylex.props(styles.dot)} />
+          <span {...stylex.props(styles.address)}>jot.rovira.sh/n/k3Jd9xQ2…</span>
         </div>
-
-        <span {...stylex.props(styles.pill, PILL[phase])}>
-          <LinkIcon xstyle={styles.pillIcon} /> jot.rovira.sh/n/k3Jd9x…
-        </span>
-
-        <div {...stylex.props(styles.window, styles.second, opened && styles.secondOpen)}>
-          <div {...stylex.props(styles.bar)}>
-            <i {...stylex.props(styles.dot)} />
-            <i {...stylex.props(styles.dot)} />
-            <i {...stylex.props(styles.dot)} />
-            <span {...stylex.props(styles.address)}>
-              {opened ? 'jot.rovira.sh/n/k3Jd9xQ2…' : 'New tab'}
-            </span>
-          </div>
-          <div {...stylex.props(styles.body)}>
-            {opened ? (
-              <>
-                <h4 {...stylex.props(styles.heading)}>Plan for Thursday</h4>
+        <div {...stylex.props(styles.body)}>
+          <h4 {...stylex.props(styles.heading)}>
+            Plan for Thursday
+            {!opened && <Caret />}
+          </h4>
+          {opened ? (
+            <>
+              <p {...stylex.props(styles.text)}>
+                <By who="ana">Bring the projector</By>
+                <Caret who="ana" name="Ana" />
+              </p>
+              {together && (
                 <p {...stylex.props(styles.text)}>
-                  <By who="ana">Bring the projector</By>
-                  <Caret who="ana" name="Ana" />
+                  <By who="you">Book the room</By>
+                  <Caret />
                 </p>
-                {together && (
-                  <p {...stylex.props(styles.text)}>
-                    <By who="you">Book the room</By>
-                    <Caret who="you" name="You" />
-                  </p>
-                )}
-              </>
-            ) : (
-              <p {...stylex.props(styles.text, styles.muted)}>Paste the link…</p>
-            )}
-          </div>
+              )}
+            </>
+          ) : (
+            <p {...stylex.props(styles.text, styles.muted)}>Anyone with the link can edit.</p>
+          )}
         </div>
       </div>
 
-      <ol {...stylex.props(styles.steps)} data-testid="how-steps">
-        {STEPS.map((item, index) => (
-          <Step key={item.title} who={item.who} on={index <= step}>
-            <b {...stylex.props(styles.stepTitle)}>{item.title}</b>
-            <span {...stylex.props(styles.stepText)}>{item.text}</span>
-          </Step>
-        ))}
-      </ol>
-    </section>
+      <span {...stylex.props(styles.pill, PILL[phase])}>
+        <LinkIcon xstyle={styles.pillIcon} /> jot.rovira.sh/n/k3Jd9x…
+      </span>
+
+      <div {...stylex.props(styles.window, styles.second, opened && styles.secondOpen)}>
+        <div {...stylex.props(styles.bar)}>
+          <i {...stylex.props(styles.dot)} />
+          <i {...stylex.props(styles.dot)} />
+          <i {...stylex.props(styles.dot)} />
+          <span {...stylex.props(styles.address)}>
+            {opened ? 'jot.rovira.sh/n/k3Jd9xQ2…' : 'New tab'}
+          </span>
+        </div>
+        <div {...stylex.props(styles.body)}>
+          {opened ? (
+            <>
+              <h4 {...stylex.props(styles.heading)}>Plan for Thursday</h4>
+              <p {...stylex.props(styles.text)}>
+                <By who="ana">Bring the projector</By>
+                <Caret who="ana" name="Ana" />
+              </p>
+              {together && (
+                <p {...stylex.props(styles.text)}>
+                  <By who="you">Book the room</By>
+                  <Caret who="you" name="You" />
+                </p>
+              )}
+            </>
+          ) : (
+            <p {...stylex.props(styles.text, styles.muted)}>Paste the link…</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The three steps, filled up to `step`. */
+function Steps({ step }: { step: number }) {
+  return (
+    <ol {...stylex.props(styles.steps)} data-testid="how-steps">
+      {STEPS.map((item, index) => (
+        <Step key={item.title} who={item.who} on={index <= step}>
+          <b {...stylex.props(styles.stepTitle)}>{item.title}</b>
+          <span {...stylex.props(styles.stepText)}>{item.text}</span>
+        </Step>
+      ))}
+    </ol>
   );
 }
 

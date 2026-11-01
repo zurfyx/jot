@@ -8,7 +8,9 @@ import { ORIGIN } from './serve';
 
 /**
  * No jump on load (D31): each prerendered page looks the same with scripts
- * off as right after it hydrates, in light and dark, at 1440 and 390 px.
+ * off as right after it hydrates, in light and dark, at 1440 and 390 px, and
+ * the landing page under reduced motion too, where its illustrations rest on
+ * their end from the first paint (landing/MotionFrames.tsx).
  *
  * What only exists with scripts is left out on purpose:
  * - time: the hydrated page's clock is held, so the landing page's
@@ -100,22 +102,33 @@ for (const colorScheme of ['light', 'dark'] as const) {
     { width: 1440, height: 900 },
     { width: 390, height: 844 },
   ]) {
-    test(`the prerendered pages don't move as they hydrate (${colorScheme}, ${viewport.width} px)`, async ({
-      newContext,
-    }, testInfo) => {
-      test.setTimeout(120_000);
-      const options: ContextOptions = { colorScheme, viewport, deviceScaleFactor: 1 };
-      for (const path of PAGES) {
-        const without = await open(newContext, options, false, path);
-        const hydrated = await open(newContext, options, true, path);
-        if (!without.equals(hydrated)) {
-          // Both pictures, side by side in test-results/, to see what moved.
-          const name = path.replace(/\W+/g, '-');
-          writeFileSync(testInfo.outputPath(`${name}-without-scripts.png`), without);
-          writeFileSync(testInfo.outputPath(`${name}-hydrated.png`), hydrated);
+    for (const [reducedMotion, paths] of [
+      ['no-preference', PAGES],
+      ['reduce', ['/']],
+    ] as const) {
+      const motion = reducedMotion === 'reduce' ? ', reduced motion' : '';
+      test(`the prerendered pages don't move as they hydrate (${colorScheme}, ${viewport.width} px${motion})`, async ({
+        newContext,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const options: ContextOptions = {
+          colorScheme,
+          viewport,
+          reducedMotion,
+          deviceScaleFactor: 1,
+        };
+        for (const path of paths) {
+          const without = await open(newContext, options, false, path);
+          const hydrated = await open(newContext, options, true, path);
+          if (!without.equals(hydrated)) {
+            // Both pictures, side by side in test-results/, to see what moved.
+            const name = path.replace(/\W+/g, '-');
+            writeFileSync(testInfo.outputPath(`${name}-without-scripts.png`), without);
+            writeFileSync(testInfo.outputPath(`${name}-hydrated.png`), hydrated);
+          }
+          expect(without.equals(hydrated), `${path} moved as it hydrated`).toBe(true);
         }
-        expect(without.equals(hydrated), `${path} moved as it hydrated`).toBe(true);
-      }
-    });
+      });
+    }
   }
 }

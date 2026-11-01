@@ -460,7 +460,7 @@ test('nothing moves under reduced motion; the final states show', async ({ page 
   const example = page.getByTestId('example-card');
   await expect(example).toContainText('with demos');
   await expect(example).toContainText('Send the agenda');
-  await expect(page.getByTestId('how-steps').locator('li.is-on')).toHaveCount(3);
+  await expect(page.getByTestId('how-steps').locator('li.is-on:visible')).toHaveCount(3);
 
   // The tabs don't advance on their own.
   const tabs = page.getByRole('tablist', { name: 'Features' });

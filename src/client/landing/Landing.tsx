@@ -684,10 +684,18 @@ export function Landing() {
             <span {...stylex.props(styles.footItem)}>© 2026 Gerard Rovira · MIT License</span>
           </div>
           <FooterColumn title="Product">
-            <FooterLink href={NEW_NOTE_PATH} onClick={(event) => plainClick(startNew)(event)}>
+            <FooterLink
+              href={NEW_NOTE_PATH}
+              rel="nofollow"
+              onClick={(event) => plainClick(startNew)(event)}
+            >
               New note
             </FooterLink>
-            <FooterLink href={EXAMPLE_PATH} onClick={(event) => plainClick(openExample)(event)}>
+            <FooterLink
+              href={EXAMPLE_PATH}
+              rel="nofollow"
+              onClick={(event) => plainClick(openExample)(event)}
+            >
               Example
             </FooterLink>
           </FooterColumn>

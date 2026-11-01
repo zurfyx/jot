@@ -199,6 +199,24 @@
     font-family: var(--mono);
   }
 
+  /* The landing page's illustrations hold a moving and a still frame (landing/MotionFrames.tsx): the wrappers add no box. */
+  [data-motion] {
+    display: contents;
+  }
+
+  /* Which frame shows, from the first paint: the still one under reduced motion (D31). */
+  @media (prefers-reduced-motion: reduce) {
+    [data-motion='moving'] {
+      display: none;
+    }
+  }
+
+  @media not (prefers-reduced-motion: reduce) {
+    [data-motion='still'] {
+      display: none;
+    }
+  }
+
   /* Element default: buttons start bare. */
   button {
     font: inherit;

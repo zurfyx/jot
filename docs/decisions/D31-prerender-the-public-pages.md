@@ -43,14 +43,18 @@ is private (D17) and is all script.
 - **The first render is the browser's first render.** What depends on the browser runs in
   effects (storage, media queries, locks, sockets, models, time, randomness); animations
   render their opening frame and start after load. What depends on the device goes
-  through CSS: the landing page's and the docs' dark token sets moved from `createTheme`
+  through CSS: the landing page's illustrations render their moving frames and their still
+  end frame side by side, and CSS shows the still one under reduced motion, so it is there
+  from the first paint rather than after hydration; the landing page's and the docs' dark
+  token sets moved from `createTheme`
   classes to `globals.css`, keyed to `data-theme` like the app's own (D28); the start
   shortcut's label is both labels, and `index.html`'s pre-paint script marks Apple
   platforms for CSS to pick one. Without scripts, the prerendered head's `<noscript>`
   style gives the dark sets to a system in dark mode.
 - **Primary actions are links.** Start a new note and See the example are `<a href>` to
   `/new` and `/new?example`, so they work before hydration and without scripts; a plain
-  click still opens the note in place with its view transition.
+  click still opens the note in place with its view transition. Every link to `/new` is
+  `rel="nofollow"`: following one creates a note.
 - The main Geist font is preloaded on prerendered pages.
 
 ## Why no framework

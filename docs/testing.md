@@ -362,7 +362,8 @@ The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
 
 - `/` and every docs page are HTML with their real text, title, description, canonical URL,
   Open Graph and Twitter tags, JSON-LD and the Geist preload, and their preview image is
-  served; the landing page's start actions are links to `/new` and `/new?example`;
+  served; the landing page's start actions are links to `/new` and `/new?example`, every
+  one `rel="nofollow"`;
 - they hydrate without a single console warning or error, in light with motion and in
   dark with reduced motion, and so does the 404 page, for any path and for an unknown docs
   page;
@@ -373,7 +374,8 @@ The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
   `noindex, nofollow` on `/n/*` and `/api/*`;
 - no jump on load (`nojump.spec.ts`): every prerendered page, captured whole, is the same
   picture with scripts off and right after it hydrates, in light and dark at 1440 and 390
-  px. Left out on purpose, and listed in the spec: time (the hydrated page's clock is held
+  px, and the landing page under reduced motion too (its illustrations rest on their end
+  from the first paint). Left out on purpose, and listed in the spec: time (the hydrated page's clock is held
   and CSS motion is off in both, so the landing page's animations stay on their opening
   frame), the live inspector (its chunk is held, so its loading frame stays) and the
   shortcut's ⌘ label on Apple platforms.
