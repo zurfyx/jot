@@ -7,8 +7,10 @@ Status: `DECIDED`
 - The Worker adds `X-Robots-Tag: noindex, nofollow` to every response for `/n/*` and
   `/api/*`, including 400s, 404s, 426s and the 101 WebSocket upgrade. `wrangler.jsonc`
   already runs the Worker first for both paths, so no response there skips it.
-- `public/robots.txt` disallows `/n/` and `/api/` for every user agent.
-- The landing page carries neither and stays indexable.
+- `robots.txt`, which the Worker answers (D32), disallows `/n/`, `/api/` and `/new` for
+  every user agent: `/new` and `/new?example` create a note, and every link to them on the
+  landing page is `rel="nofollow"` (D31).
+- The landing page and the docs carry neither and stay indexable.
 
 ## Why
 

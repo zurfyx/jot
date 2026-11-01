@@ -71,6 +71,18 @@ describe('the prerender (D31)', () => {
     expect(readFileSync(join(client, 'n/shell.html'), 'utf8')).toContain(
       'jot needs JavaScript to edit notes.',
     );
+    // And what crawlers and assistants read (D32).
+    expect(readFileSync(join(client, 'sitemap.xml'), 'utf8')).toContain(
+      '<loc>https://jot.rovira.sh/docs/blame</loc>',
+    );
+    expect(readFileSync(join(client, 'llms.txt'), 'utf8')).toContain(
+      '(https://jot.rovira.sh/docs/blame.md)',
+    );
+    expect(readFileSync(join(client, 'docs/blame.md'), 'utf8')).toContain('# Blame and history');
+    expect(readFileSync(join(client, 'llms-full.txt'), 'utf8')).toContain('# Blame and history');
+    expect(readFileSync(join(client, '_headers'), 'utf8')).toContain(
+      '/docs/blame.md\n  Content-Type: text/markdown; charset=utf-8',
+    );
   });
 
   it('fails the build when a page throws while it renders', { timeout: 60_000 }, () => {

@@ -540,7 +540,7 @@ test('notes stay out of search engines and the landing page does not', async ({ 
   expect(robots.status()).toBe(200);
   const lines = (await robots.text()).split('\n');
   expect(lines).toEqual(
-    expect.arrayContaining(['User-agent: *', 'Disallow: /n/', 'Disallow: /api/']),
+    expect.arrayContaining(['User-agent: *', 'Disallow: /n/', 'Disallow: /api/', 'Disallow: /new']),
   );
 });
 

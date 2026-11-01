@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { build } from 'vite';
 
+import { type DocsEntry, llmsFullTxt, llmsTxt, markdownPath, sitemapXml } from './discovery.ts';
+import { htmlToMarkdown } from './markdown.ts';
 import { stylex } from './vite-stylex.ts';
 
 /**
@@ -59,6 +61,11 @@ interface Prerender {
   PAGE_HEADS: readonly PageHead[];
   LANDING_HEAD: PageHead;
   NOT_FOUND_TITLE: string;
+  DOCS_PAGES: readonly { slug: string; title: string; blurb: string; group: string }[];
+  DOCS_GROUPS: readonly string[];
+  docsPath(slug: string): string;
+  SITE_NAME: string;
+  siteUrl(path: string): string;
 }
 
 /** A root's text, tags dropped and entities read, for checking what a page says. */
@@ -251,6 +258,8 @@ async function main(): Promise<void> {
 
   const fontPreload = `<link rel="preload" href="/assets/${font}" as="font" type="font/woff2" crossorigin />`;
   const files: [string, string][] = [];
+  /** Each public page's rendered root, for the Markdown copies. */
+  const bodies = new Map<string, string>();
 
   for (const head of app.PAGE_HEADS) {
     const tags = app.headTags(head);
@@ -265,6 +274,7 @@ async function main(): Promise<void> {
     const links = head.path === '/' ? '' : docsLinks;
     const body = await app.renderPage(head.path);
     checkRoot(head.path, body, head.card.heading);
+    bodies.set(head.path, body);
     const file = head.path === '/' ? 'index.html' : `${head.path.slice(1)}/index.html`;
     files.push([
       file,
@@ -294,11 +304,65 @@ async function main(): Promise<void> {
       .replace('<div id="root"></div>', `<noscript>${notice}</noscript><div id="root"></div>`),
   ]);
 
+  // What crawlers and assistants read (D32): the sitemap, and every docs page
+  // as Markdown, converted from its prerendered article, with the index and
+  // the full text.
+  const site = { name: app.SITE_NAME, summary: app.LANDING_HEAD.description, url: app.siteUrl };
+  files.push([
+    'sitemap.xml',
+    sitemapXml(app.PAGE_HEADS.map((head) => app.headTags(head).canonical)),
+  ]);
+  const docs: { page: DocsEntry; markdown: string }[] = app.DOCS_PAGES.map((entry) => {
+    const page = {
+      path: app.docsPath(entry.slug),
+      title: entry.title,
+      description: entry.blurb,
+      group: entry.group,
+    };
+    const body = bodies.get(page.path);
+    if (body === undefined) {
+      throw new Error(`prerender: ${page.path} has no head to render it with.`);
+    }
+    const markdown = htmlToMarkdown(body, (element) => element.tag === 'article', {
+      base: app.siteUrl('/'),
+    });
+    if (!markdown.includes(`# ${entry.title}`) && entry.slug !== '') {
+      throw new Error(`prerender: ${page.path}'s Markdown has no "# ${entry.title}".`);
+    }
+    files.push([markdownPath(page.path).slice(1), markdown]);
+    return { page, markdown };
+  });
+  files.push([
+    'llms.txt',
+    llmsTxt(
+      site,
+      docs.map(({ page }) => page),
+      app.DOCS_GROUPS,
+    ),
+  ]);
+  files.push(['llms-full.txt', llmsFullTxt(site, docs)]);
+
   for (const [file, html] of files) {
     const path = join(CLIENT, file);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, html);
   }
+  // Their types, in UTF-8, named file by file: a pattern would also give an
+  // unknown path's 404 page (HTML) the Markdown type.
+  const types = files.flatMap(([file]) => {
+    const type = file.endsWith('.md')
+      ? 'text/markdown'
+      : file.endsWith('.txt')
+        ? 'text/plain'
+        : null;
+    return type === null ? [] : [`/${file}\n  Content-Type: ${type}; charset=utf-8`];
+  });
+  const headersFile = join(CLIENT, '_headers');
+  const headers = existsSync(headersFile) ? await readFile(headersFile, 'utf8') : '';
+  await writeFile(
+    headersFile,
+    `${headers.trimEnd()}\n\n# What assistants read (D32), written by scripts/prerender.ts.\n${types.join('\n')}\n`,
+  );
   console.log(`prerender: ${files.map(([file]) => file).join(', ')}`);
 }
 

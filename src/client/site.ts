@@ -5,7 +5,9 @@
  * in heads.ts, so the landing page's bundle carries neither.
  */
 
-export const SITE_URL = 'https://jot.rovira.sh';
+import { SITE_URL } from '../shared/site';
+
+export { SITE_URL };
 export const SITE_NAME = 'jot';
 
 export interface PageHead {

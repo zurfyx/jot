@@ -3,11 +3,16 @@ import { Suspense } from 'react';
 import { renderPage as renderApp, renderToHtml } from '../../src/client/prerender';
 
 export {
+  DOCS_GROUPS,
+  DOCS_PAGES,
+  docsPath,
   headTags,
   LANDING_HEAD,
   NOT_FOUND_TITLE,
   PAGE_HEADS,
   renderNoScriptNotice,
+  SITE_NAME,
+  siteUrl,
 } from '../../src/client/prerender';
 
 /**

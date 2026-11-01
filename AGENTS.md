@@ -26,7 +26,7 @@ pnpm format:check     # Prettier
 pnpm test             # Vitest: unit (Node) + workers (workerd, real SQLite)
 pnpm e2e              # Playwright against its own dev server on :5174
 pnpm e2e:docker       # Playwright in CI's image, with the visual suite (screenshots)
-pnpm build            # client assets + Worker bundle in dist/, then the prerendered pages (D31)
+pnpm build            # client assets + Worker bundle in dist/, then the prerendered pages (D31), the sitemap and llms.txt (D32)
 pnpm og-images        # redraw the link-preview cards in public/og/ (after a page's title or description changes)
 pnpm exec wrangler deploy --dry-run   # after pnpm build: checks the deploy bundle
 pnpm bump-lexical <pr-or-sha>         # then pnpm install
