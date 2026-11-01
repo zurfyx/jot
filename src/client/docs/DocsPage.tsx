@@ -4,6 +4,7 @@ import { type ComponentType, useEffect, useState } from 'react';
 import { applyHead } from '../head';
 import { headFor } from '../heads';
 import { useHydratedMark } from '../hydrated';
+import { claimHead } from '../syncHead';
 import NotFound from '../NotFound';
 import { colors } from '../theme/tokens.stylex';
 import { Ai, Blame, Size } from './content/features';
@@ -39,6 +40,7 @@ export default function DocsPage({ slug }: { slug: string }) {
   useEffect(() => {
     const head = headFor(docsPath(slug));
     if (head !== undefined) {
+      claimHead();
       applyHead(head);
     }
   }, [slug]);

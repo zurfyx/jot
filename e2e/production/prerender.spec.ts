@@ -309,3 +309,143 @@ test('a note has none of the public tags, and the landing page gets its head bac
   await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
   await expect.poll(() => headOf(page)).toEqual(landing);
 });
+
+/**
+ * Records when the page first reports an error (React reports a mismatch as a
+ * recoverable error) and when <html> first gets `data-hydrated`.
+ */
+async function recordTimes(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const times = { error: -1, message: '', hydrated: -1 };
+    (window as unknown as { __times: typeof times }).__times = times;
+    const error = (message: string) => {
+      if (times.error < 0) {
+        times.error = performance.now();
+        times.message = message;
+      }
+    };
+    addEventListener('error', (event) => error(String(event.message)));
+    const log = console.error.bind(console);
+    console.error = (...args: unknown[]) => {
+      error(args.map(String).join(' '));
+      log(...args);
+    };
+    // <html> may not exist yet: watch the whole document for the attribute.
+    new MutationObserver(() => {
+      if (times.hydrated < 0 && document.documentElement?.dataset.hydrated !== undefined) {
+        times.hydrated = performance.now();
+      }
+    }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-hydrated'] });
+  });
+}
+
+for (const [path, from, to] of [
+  ['/', 'Just start <br/>', 'Just begin <br/>'],
+  ['/docs/blame', '>Blame and history</h1>', '>Blame and histories</h1>'],
+  ['/no/such/page', '>404</p>', '>405</p>'],
+  ['/docs/nope', '>404</p>', '>405</p>'],
+] as const) {
+  test(`${path} is marked hydrated only after React has checked all of it, on a slow CPU`, async ({
+    page,
+  }) => {
+    // A page eight times slower, as a low-end phone: hydration takes long.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 });
+    await recordTimes(page);
+    // The HTML says something the browser's first render won't.
+    await page.route(
+      (url) => url.pathname === path,
+      async (route) => {
+        const response = await route.fetch();
+        const html = await response.text();
+        expect(html).toContain(from);
+        await route.fulfill({ response, body: html.replace(from, to) });
+      },
+    );
+    await page.goto(path);
+    const times = await page.evaluate(
+      () =>
+        (window as unknown as { __times: { error: number; message: string; hydrated: number } })
+          .__times,
+    );
+    expect(times.message, 'the mismatch is reported').toMatch(/#418|hydrat/i);
+    expect(times.error, 'before the page is marked hydrated').toBeLessThanOrEqual(times.hydrated);
+  });
+}
+
+/** Holds the head module back until `release()`. */
+async function holdHeadModule(page: Page): Promise<() => void> {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(/\/assets\/head-[\w-]+\.js$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  return release;
+}
+
+test('a head that arrives after the page moved on is dropped', async ({ page }) => {
+  await page.routeWebSocket(/.*/, () => {});
+  await page.goto('/');
+  const landing = await headOf(page);
+  await page
+    .getByRole('link', { name: /^Start a new note/ })
+    .first()
+    .click();
+  await expect(page.getByTestId('editor')).toBeVisible();
+  const release = await holdHeadModule(page);
+  // Home again: its title at once, the rest of its head still loading...
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
+  await expect(page).toHaveTitle('jot · Just start typing');
+  // ...when the app moves on to the note again.
+  await page.goForward();
+  await expect(page.getByTestId('editor')).toBeVisible();
+  await expect.poll(() => page.title()).toContain('· jot');
+  const note = await headOf(page);
+  release();
+  await page.waitForTimeout(1000);
+  // The landing page's head arrived late, and was dropped.
+  expect(await headOf(page)).toEqual(note);
+  expect(note.canonical).toBeNull();
+  // Back home, the head is whole.
+  await page.goBack();
+  await expect.poll(() => headOf(page)).toEqual(landing);
+});
+
+test('offline, the app keeps a sensible head and tries again when back online', async ({
+  page,
+  context,
+}) => {
+  const found = problems(page);
+  await page.routeWebSocket(/.*/, () => {});
+  await page.goto('/');
+  const landing = await headOf(page);
+  const start = page.getByRole('link', { name: /^Start a new note/ }).first();
+  // The editor's chunk loads on intent, before the network goes.
+  await start.hover();
+  await page.waitForLoadState('networkidle');
+  await context.setOffline(true);
+  await start.click();
+  await expect(page.getByTestId('editor')).toBeVisible();
+  // The note has none of the landing page's tags, without the head module.
+  const note = await headOf(page);
+  expect(note.canonical).toBeNull();
+  expect(note.meta).toEqual([]);
+  expect(note.structured).toEqual([]);
+  // Home, still offline: the head module can't load, but the title is right.
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
+  await expect(page).toHaveTitle('jot · Just start typing');
+  await page.waitForTimeout(500);
+  // Back online, the next move home brings the whole head.
+  await context.setOffline(false);
+  await page.goForward();
+  await expect(page.getByTestId('editor')).toBeVisible();
+  await page.goBack();
+  await expect.poll(() => headOf(page)).toEqual(landing);
+  // Nothing went uncaught (an offline note logs its failed socket; nothing else).
+  expect(found.filter((line) => line.startsWith('pageerror'))).toEqual([]);
+});

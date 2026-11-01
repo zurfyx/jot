@@ -25,8 +25,9 @@ type ContextOptions = Parameters<Browser['newContext']>[0];
  * show before React hydrates them, and a click on a button before then does
  * nothing (a link still navigates, the browser's way). So a `goto` or
  * `reload` that waits for the page to load (the default) waits for the app
- * too: App marks <html> with `data-hydrated` once it runs. A response that is
- * no app page (a 400) has no root to wait for. A test that holds the app's
+ * too: <html> gets `data-hydrated` once the page's own content has hydrated
+ * (src/client/hydrated.ts). A response that is no app page (a 400) has no
+ * root to wait for. A test that holds the app's
  * script back, or turns scripts off, asks for `commit` or `domcontentloaded`.
  */
 function waitForApp(page: Page): void {

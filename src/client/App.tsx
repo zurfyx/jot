@@ -23,8 +23,10 @@ export function App() {
   const exampleId = useExampleId();
   const invalid = route.name === 'note' && !isNoteId(route.id);
 
-  // The page is live; the docs' lazy page marks itself once it has hydrated (D31).
-  useHydratedMark(route.name !== 'docs');
+  // A note's page is live once App has rendered (it is never prerendered). The
+  // prerendered pages, the landing page, the docs and the 404 page, mark
+  // themselves once their own boundary has hydrated (D31).
+  useHydratedMark(route.name === 'note' || route.name === 'new' || route.name === 'example');
 
   useEffect(() => {
     // A note's head has none of a public page's tags (D31); its page sets the title.

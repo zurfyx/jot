@@ -53,10 +53,8 @@ function read(): string | null {
 
 /** The id of the example `/new?example` opens; null on any other route. */
 export function useExampleId(): string | null {
-  // No page the prerender renders is the example (D31).
-  return useSyncExternalStore(subscribeLocation, read, () =>
-    typeof window === 'undefined' ? null : read(),
-  );
+  // No page the prerender renders, or the browser hydrates, is the example (D31).
+  return useSyncExternalStore(subscribeLocation, read, () => null);
 }
 
 /** Whether this tab created example `id` (and so runs its demo). */

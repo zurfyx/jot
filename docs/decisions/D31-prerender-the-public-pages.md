@@ -95,7 +95,7 @@ the build takes a second longer for the server build and the render.
 - A new public page gets its head in `heads.ts`, a card from `pnpm og-images`, and its path
   prerendered from the same list.
 - A click on a button before hydration does nothing (a link still navigates); the tests
-  wait for `data-hydrated` on `<html>`, which App sets once the page has committed, and
-  the docs' lazy page itself once its own chunk has hydrated.
+  wait for `data-hydrated` on `<html>`, which each prerendered page sets from inside its
+  own boundary once it has hydrated, and App for a note's page.
 - The dev server prerenders nothing: `pnpm dev` is the single-page app it was. The
   production build's tests run against `wrangler dev` on the built Worker.

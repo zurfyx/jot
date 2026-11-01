@@ -299,17 +299,18 @@ export function TwoWindows() {
       </h2>
 
       {/* Under reduced motion the story rests on its end, from the first paint (D31). */}
-      <MotionFrames
-        block
-        moving={<Windows phase={phase} />}
-        still={<Windows phase={FINAL_PHASE} />}
-      />
-      <MotionFrames
-        block
-        moving={<Steps step={stepOfPhase(phase)} />}
-        still={<Steps step={stepOfPhase(FINAL_PHASE)} />}
-      />
+      <MotionFrames block moving={<Story phase={phase} />} still={<Story phase={FINAL_PHASE} />} />
     </section>
+  );
+}
+
+/** The story at one phase: the two windows, then the steps it has reached. */
+function Story({ phase }: { phase: number }) {
+  return (
+    <>
+      <Windows phase={phase} />
+      <Steps step={stepOfPhase(phase)} />
+    </>
   );
 }
 

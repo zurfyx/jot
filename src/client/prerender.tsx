@@ -5,9 +5,9 @@ import { App } from './App';
 import { NoScriptNotice } from './NotFound';
 import { setPrerenderPath } from './router';
 
-export { headTags } from './head';
+export { headTags, LANDING_HEAD } from './head';
 export { PAGE_HEADS } from './heads';
-export { LANDING_HEAD, NOT_FOUND_TITLE } from './site';
+export { NOT_FOUND_TITLE } from './site';
 
 /**
  * The prerender's entry (scripts/prerender.ts, D31). Nothing here runs in the

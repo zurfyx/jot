@@ -1,6 +1,7 @@
 import * as stylex from '@stylexjs/stylex';
-import { type ReactNode, useEffect } from 'react';
+import { useEffect } from 'react';
 
+import { useHydratedMark } from './hydrated';
 import { syncHead } from './syncHead';
 import { colors, fonts } from './theme/tokens.stylex';
 
@@ -13,42 +14,35 @@ export default function NotFound() {
   useEffect(() => {
     syncHead('not-found');
   }, []);
+  // The 404 page has hydrated, inside its own boundary (D31).
+  useHydratedMark(true);
 
   return (
-    <Message kicker="404" title="This page doesn't exist.">
-      The link may be mistyped, or the page may have moved.
-    </Message>
+    <main {...stylex.props(styles.page)}>
+      <p {...stylex.props(styles.code)}>404</p>
+      <h1 {...stylex.props(styles.title)}>This page doesn't exist.</h1>
+      <p {...stylex.props(styles.text)}>The link may be mistyped, or the page may have moved.</p>
+      <a href="/" {...stylex.props(styles.home)}>
+        Go to jot
+      </a>
+    </main>
   );
 }
 
 /**
  * What a note's shell shows inside <noscript> (scripts/prerender.ts): a note
- * is edited live, in the browser. It shares the 404 page's styles, which ship
- * in the entry stylesheet the shell links.
+ * is edited live, in the browser. It has the 404 page's look, and its styles,
+ * which ship in the entry stylesheet the shell links. Only the prerender
+ * renders it, so it adds nothing to the app's bundle.
  */
 export function NoScriptNotice() {
   return (
-    <Message kicker="jot" title="jot needs JavaScript to edit notes.">
-      Turn JavaScript on and reload this page. The home page and the docs work without it.
-    </Message>
-  );
-}
-
-/** A page with one message: a kicker, a heading, a line, and a link home. */
-function Message({
-  kicker,
-  title,
-  children,
-}: {
-  kicker: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
     <main {...stylex.props(styles.page)}>
-      <p {...stylex.props(styles.code)}>{kicker}</p>
-      <h1 {...stylex.props(styles.title)}>{title}</h1>
-      <p {...stylex.props(styles.text)}>{children}</p>
+      <p {...stylex.props(styles.code)}>jot</p>
+      <h1 {...stylex.props(styles.title)}>jot needs JavaScript to edit notes.</h1>
+      <p {...stylex.props(styles.text)}>
+        Turn JavaScript on and reload this page. The home page and the docs work without it.
+      </p>
       <a href="/" {...stylex.props(styles.home)}>
         Go to jot
       </a>

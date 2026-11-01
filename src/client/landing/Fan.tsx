@@ -449,20 +449,10 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
             <li {...stylex.props(styles.text)}>
               <By who="ai">Morning: roadmap review</By>
               {/* Under reduced motion the words are typed, from the first paint (D31). */}
-              <MotionFrames
-                moving={
-                  <>
-                    <By who="you">{typed}</By>
-                    <Caret />
-                  </>
-                }
-                still={
-                  <>
-                    <By who="you">{TYPED}</By>
-                    <Caret />
-                  </>
-                }
-              />
+              <By who="you">
+                <MotionFrames moving={typed} still={TYPED} />
+              </By>
+              <Caret />
             </li>
             <li {...stylex.props(styles.text)}>
               <By who="ai">Afternoon: hack session</By>

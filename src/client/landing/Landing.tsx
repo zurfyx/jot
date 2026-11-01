@@ -17,6 +17,7 @@ import { JoinField } from './JoinField';
 import { classifyTarget, landingKeyAction, startShortcutLabel } from './keys';
 import { NEW_NOTE_PATH, newNotePath } from '../notes';
 import { EXAMPLE_PATH, openNote, plainClick } from './open';
+import { useHydratedMark } from '../hydrated';
 import { syncHead } from '../syncHead';
 import { section } from './section.styles';
 import { landingLight } from '../theme/themes';
@@ -478,6 +479,8 @@ export function Landing() {
   useEffect(() => {
     syncHead('landing');
   }, []);
+  // The landing page has hydrated (D31).
+  useHydratedMark(true);
 
   // The page behind the landing page (overscroll, the view transition's
   // backdrop) takes its colour while it is mounted. <body> is outside React,

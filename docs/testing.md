@@ -367,12 +367,18 @@ The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
 - they hydrate without a single console warning or error, in light with motion and in
   dark with reduced motion, and so does the 404 page, for any path and for an unknown docs
   page; with the docs' chunk held back 1.5 s, the wait for `data-hydrated` still covers the
-  docs' own hydration, and a mismatch injected into their HTML is caught;
+  docs' own hydration, and a mismatch injected into their HTML is caught; on a CPU slowed
+  eight times, a mismatch injected into `/`, a docs page, the 404 page or an unknown docs
+  page is reported before `data-hydrated` appears;
 - moving from `/docs/blame` to `/docs/ai` in the app brings the head `/docs/ai` has when
   loaded (title, description, canonical, Open Graph, Twitter, JSON-LD); an unknown docs
   page reached in the app has the 404 page's (`noindex`, no canonical), and back restores
   it; a note opened from the landing page has none of the public tags, and back on the
-  landing page its head is the one it loads with;
+  landing page its head is the one it loads with; with the head module held back, going
+  home and on to the note again leaves the note's head when the module arrives, and home
+  again brings the whole landing head; offline, a note (from a prefetched editor) gets its
+  head without the module, home keeps the right title with nothing uncaught, and back online
+  the next move home brings the whole head;
 - with scripts off, `/new`, `/new?example` and a note show that jot needs JavaScript to
   edit notes, and the link home opens the landing page; with scripts on, a note shows no
   notice;

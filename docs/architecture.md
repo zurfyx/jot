@@ -402,8 +402,9 @@ start shortcut renders both labels, and `index.html`'s pre-paint script marks Ap
 platforms (`data-platform`) for CSS to show ⌘ rather than Ctrl. Start a new note and See
 the example are links to `/new` and `/new?example`, so they work before hydration, each
 `rel="nofollow"`, since following one creates a note. `<html>` gets `data-hydrated` once
-the page has committed (`hydrated.ts`): from App for every page but the docs, whose lazy
-page marks it once its own chunk has hydrated; tests wait for it.
+the page's content has hydrated (`hydrated.ts`): each prerendered page marks it from inside
+its own boundary (the landing page, the docs once their chunk has hydrated, the 404 page),
+App marks a note's page; tests wait for it.
 
 Every public page's head comes from one list, `heads.ts` (the landing page's head in
 `site.ts`, one per docs page from `docs/pages.ts`): its title, description, canonical URL
@@ -412,9 +413,12 @@ on jot.rovira.sh, link-preview image (`public/og/`) and type. The prerender writ
 (`WebSite` on `/`, `TechArticle` on a docs page), from `headTags` (`head.ts`); when the app
 moves to another page without a reload, `applyHead` puts the same tags in place: the
 landing page's, a docs page's, the 404 page's (`noindex`, no canonical) or a note's (none of
-them). The docs import it; the landing page, the 404 page and a note reach it through
-`syncHead.ts`, which loads `head.ts` only when the head isn't already theirs (a page loaded
-directly has its own), so it stays out of the entry chunk. The 404 page is `noindex`.
+them). The docs import it. The landing page, the 404 page and a note use `syncHead.ts`,
+in the entry chunk: a note's head and the 404 page's need no data, so it drops a public
+page's tags itself; the landing page's title it sets at once, and its other tags come from
+`head.ts`, loaded only when they aren't already in place. Each page claims the head as it
+shows (`claimHead`), so a `head.ts` that arrives after the app has moved on is dropped; if it
+fails to load (offline), the title stays right and the next move home tries again. The 404 page is `noindex`.
 
 ## Build and deploy
 

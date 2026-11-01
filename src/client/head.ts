@@ -1,4 +1,5 @@
-import { LANDING_HEAD, NOT_FOUND_TITLE, type PageHead, SITE_NAME, siteUrl } from './site';
+import { LANDING_DESCRIPTION, LANDING_TITLE, type PageHead, SITE_NAME, siteUrl } from './site';
+import { resetHead } from './syncHead';
 
 /**
  * A public page's head (D31), one way for both sides: the prerender writes
@@ -6,6 +7,16 @@ import { LANDING_HEAD, NOT_FOUND_TITLE, type PageHead, SITE_NAME, siteUrl } from
  * place when the app moves to another page without a reload, so the head
  * always matches the page.
  */
+
+export const LANDING_HEAD: PageHead = {
+  path: '/',
+  title: LANDING_TITLE,
+  description: LANDING_DESCRIPTION,
+  card: { kicker: 'jot', heading: 'Just start typing.' },
+  tint: 'you',
+  image: '/og/index.png',
+  type: 'website',
+};
 
 export interface MetaTag {
   attr: 'name' | 'property';
@@ -64,27 +75,13 @@ export function headTags(head: PageHead): HeadTags {
   };
 }
 
-/** The tags a page's head carries for search engines and link previews, besides its title. */
-const MANAGED =
-  'link[rel="canonical"], meta[property^="og:"], meta[name^="twitter:"], meta[name="robots"], script[type="application/ld+json"]';
-
 /**
- * Puts a page's head in place: a public page's tags, the 404 page's
- * (`noindex`, no canonical), or a note's (none of them, and its title left to
- * the note page). The entry chunk reaches it through syncHead.ts, on demand.
+ * Puts a public page's head in place: its title, description and every tag
+ * `headTags` gives it. The 404 page's and a note's are syncHead.ts's.
  */
-export function applyHead(page: PageHead | 'landing' | 'not-found' | 'note'): void {
-  const head = page === 'landing' ? LANDING_HEAD : page;
-  const tags = typeof head === 'object' ? headTags(head) : null;
-  if (tags !== null) {
-    document.title = tags.title;
-  } else if (head === 'not-found') {
-    document.title = NOT_FOUND_TITLE;
-  }
-  document
-    .querySelector('meta[name="description"]')
-    ?.setAttribute('content', tags?.description ?? LANDING_HEAD.description);
-  document.head.querySelectorAll(MANAGED).forEach((element) => element.remove());
+export function applyHead(head: PageHead): void {
+  const tags = headTags(head);
+  resetHead(tags.title, tags.description);
   const add = (name: string, attributes: Record<string, string>, text?: string) => {
     const element = document.createElement(name);
     for (const [key, value] of Object.entries(attributes)) {
@@ -95,13 +92,9 @@ export function applyHead(page: PageHead | 'landing' | 'not-found' | 'note'): vo
     }
     document.head.append(element);
   };
-  if (tags !== null) {
-    add('link', { rel: 'canonical', href: tags.canonical });
-    for (const { attr, key, content } of tags.meta) {
-      add('meta', { [attr]: key, content });
-    }
-    add('script', { type: 'application/ld+json' }, JSON.stringify(tags.structured));
-  } else if (head === 'not-found') {
-    add('meta', { name: 'robots', content: 'noindex' });
+  add('link', { rel: 'canonical', href: tags.canonical });
+  for (const { attr, key, content } of tags.meta) {
+    add('meta', { [attr]: key, content });
   }
+  add('script', { type: 'application/ld+json' }, JSON.stringify(tags.structured));
 }

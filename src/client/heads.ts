@@ -1,5 +1,6 @@
 import { DOCS_PAGES, docsPath } from './docs/pages';
-import { LANDING_HEAD, type PageHead } from './site';
+import { LANDING_HEAD } from './head';
+import type { PageHead } from './site';
 
 /**
  * Every public page's head (D31): the landing page's and one per docs page,
