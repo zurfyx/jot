@@ -118,15 +118,18 @@ days on every read, and never throws. `createRecentStore` takes its storage, clo
 Locks, event target and `<html>` as arguments, so the unit tests pass fakes; the app uses
 the window's. Every change runs inside the Web Lock `jot:recent` on a fresh read (at once
 where locks are missing, or when asked to for `pagehide`); a removal leaves a tombstone and
-Clear all a `clearedAt`, and a visit stamped before either is dropped. Every change
+Clear all a `clearedAt`, a visit stamped before either is dropped, and every write merges
+with the stored state read just before it, keeping the newer of each. A title carries the
+time it was read (`titledAt`), and an older read never replaces it. Every change
 notifies subscribers, other tabs arrive through the `storage` event, and `<html>` gets
 `data-recent` with the rows the landing page shows (`--jot-recent-rows`,
 `--jot-recent-rows-wide`), which the inline script in `index.html` also sets before the
 first paint and every subscription brings up to date. `editor/useRecentVisit.ts` records a
 visit when a note page opens and, once the note has synced, marks the title stale on every
 content change; its recorder reads the first line and the start of the rest only when it
-writes (at most every 2 s), and is flushed on `visibilitychange` to hidden, on unmount and,
-without the lock, on `pagehide`. The landing page's `RecentNotes` reads the list with
+writes (at most every 2 s), keeps a change pending until its write lands, and is flushed on
+`visibilitychange` to hidden, on unmount and, without the lock, on `pagehide`. A subscriber
+that throws is logged and skipped. The landing page's `RecentNotes` reads the list with
 `useSyncExternalStore` (an empty server snapshot), hides its slot once hydrated if the list
 is empty, refreshes its times every minute while visible, and opens a note through
 `landing/open.ts` with its row as the card.

@@ -34,11 +34,19 @@ from a new or emptied one.
   the stored state inside it, applies itself and writes it back, so two tabs never
   interleave a read and a write. A removal leaves a tombstone (the note's id and when) and
   Clear all a `clearedAt`; a visit stamped before either is not recorded, and a title write
-  only changes an entry that is still there, so a removal or a Clear always sticks. Where Web
-  Locks are missing, and for the title written on `pagehide` (when the page may be gone
-  before a lock is granted), the change runs at once, unsynchronised. Tombstones older than
-  90 days are dropped, since no entry that old is kept anyway. Other tabs learn of a change
-  through the `storage` event.
+  only changes an entry that is still there. Every write also re-reads storage just before
+  it writes and keeps the newer `clearedAt` and tombstones of the two, dropping any entry
+  they cover. A title carries the time it was read from the note (`titledAt`), and a write
+  of an older read is dropped, so a title write that waited for the lock never replaces a
+  newer one. A change stays pending in its tab until its write lands, so the page hiding
+  while a write waits still writes the latest title.
+- Where Web Locks are missing, and for the title written on `pagehide` (when the page may be
+  gone before a lock is granted), the change runs at once, without the lock. It still
+  merges with what storage holds a moment before it writes, so a Clear or a removal that
+  has landed sticks; only one landing in the same instant, between that read and the
+  write, can be lost. Tombstones older than the last Clear or than 90 days are dropped, and
+  at most the newest 100 are kept. Other tabs learn of a change through the `storage`
+  event.
 - Because expiry can't be detected, an entry this browser hasn't opened for 90 days is
   pruned, checked against the current time on every read, not only on writes.
 - The landing page shows the list in a section right below the hero ("Your recent notes"):
@@ -66,8 +74,8 @@ from a new or emptied one.
 - localStorage keeps the playground's promise: no accounts, nothing about you on the server.
 - A title from the first line matches how jot already names a note (`document.title`).
 - One lock and a fresh read per change make concurrent tabs safe without a merge format;
-  tombstones cover the one case a lock can't order, a visit stamped before a removal but
-  written after it.
+  tombstones and title times cover what a lock can't order: a visit or a title read before
+  a change but written after it, and the lock-free `pagehide` write.
 - Pruning at 90 days never lists a deleted note: a note lives at least 90 days past this
   browser's last visit. Marking an entry "expired" from an empty room would also mark notes
   someone emptied.
@@ -81,5 +89,5 @@ from a new or emptied one.
   end-to-end test checks the reserved rows against the rendered ones.
 - The list may drop a note that is still alive, when others kept visiting it; it never keeps
   one that is gone.
-- In a browser without Web Locks, two tabs changing the list in the same instant can still
-  lose one change.
+- Without the lock (a browser without Web Locks, or `pagehide`), two tabs changing the list
+  in the same instant can still lose one change, a Clear included.

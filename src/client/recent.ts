@@ -50,6 +50,8 @@ export interface RecentNote {
   excerpt: string;
   /** When this browser last opened it (ms since the epoch). */
   openedAt: number;
+  /** When the title was read from the note: an older title write never replaces it. */
+  titledAt?: number;
   /** The example note this browser started (D20). */
   example?: true;
 }
@@ -133,7 +135,7 @@ export function parseRecent(raw: string | null, now: number): RecentState {
     if (typeof item !== 'object' || item === null) {
       continue;
     }
-    const { id, title, excerpt, openedAt, example } = item as Record<string, unknown>;
+    const { id, title, excerpt, openedAt, titledAt, example } = item as Record<string, unknown>;
     if (
       typeof id !== 'string' ||
       !isNoteId(id) ||
@@ -151,6 +153,7 @@ export function parseRecent(raw: string | null, now: number): RecentState {
       title: typeof title === 'string' && title.trim() !== '' ? clip(title, TITLE_MAX) : UNTITLED,
       excerpt: typeof excerpt === 'string' ? clip(excerpt, EXCERPT_MAX) : '',
       openedAt,
+      ...(isTime(titledAt) ? { titledAt } : {}),
       ...(example === true ? { example: true as const } : {}),
     });
   }
@@ -179,12 +182,16 @@ export interface RecentStore {
   read(): RecentNote[];
   /** A visit now: the note moves to the top, keeping the title it had. */
   recordOpen(id: string, options?: { example?: boolean }): Promise<void>;
-  /** A new title and excerpt for a listed note; one that was removed stays removed. */
+  /**
+   * A new title and excerpt for a listed note, read at `stamp` (default now):
+   * one that was removed stays removed, and a title read earlier than the
+   * stored one is dropped.
+   */
   updateTitle(
     id: string,
     firstLine: string,
     rest: string,
-    options?: { sync?: boolean },
+    options?: { sync?: boolean; stamp?: number },
   ): Promise<void>;
   remove(id: string): Promise<void>;
   clear(): Promise<void>;
@@ -201,6 +208,10 @@ export function createRecentStore(env: RecentEnv): RecentStore {
   const listeners = new Set<() => void>();
   let cachedRaw: string | null | undefined;
   let cached: RecentState = EMPTY_STATE;
+  let lastStamp = -Infinity;
+
+  /** A time for a title read, strictly increasing in this tab. */
+  const nextStamp = () => (lastStamp = Math.max(env.now(), lastStamp + 0.001));
 
   const rawValue = (): string | null => {
     try {
@@ -245,26 +256,49 @@ export function createRecentStore(env: RecentEnv): RecentStore {
   const notify = () => {
     hint();
     for (const listener of [...listeners]) {
-      listener();
+      // One failing subscriber neither stops the others nor fails the change.
+      try {
+        listener();
+      } catch (error) {
+        console.error('jot: a recent notes subscriber failed', error);
+      }
     }
   };
 
+  /**
+   * Writes `next`, merged with what storage holds at this moment: the newest
+   * Clear and removals of both win, and no entry from before them is written.
+   * So a write computed from an older read (lock-free, on `pagehide`) can't
+   * undo a Clear or a removal that landed meanwhile.
+   */
   const write = (next: RecentState) => {
-    const removed = Object.entries(next.removed)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, TOMBSTONES_MAX);
     try {
       const storage = env.storage();
-      if (next.entries.length === 0 && removed.length === 0 && next.clearedAt === 0) {
+      const stored = parseRecent(storage.getItem(RECENT_KEY), env.now());
+      const clearedAt = Math.max(next.clearedAt, stored.clearedAt);
+      const merged: Record<string, number> = { ...stored.removed };
+      for (const [id, at] of Object.entries(next.removed)) {
+        merged[id] = Math.max(at, merged[id] ?? -Infinity);
+      }
+      const entries = next.entries
+        .filter(
+          (entry) => entry.openedAt > clearedAt && entry.openedAt > (merged[entry.id] ?? -Infinity),
+        )
+        .slice(0, RECENT_MAX);
+      const removed = Object.entries(merged)
+        // A tombstone the Clear covers, or one a newer visit outlived, says nothing more.
+        .filter(
+          ([id, at]) =>
+            at > clearedAt && !entries.some((entry) => entry.id === id && entry.openedAt > at),
+        )
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, TOMBSTONES_MAX);
+      if (entries.length === 0 && removed.length === 0 && clearedAt === 0) {
         storage.removeItem(RECENT_KEY);
       } else {
         storage.setItem(
           RECENT_KEY,
-          JSON.stringify({
-            entries: next.entries.slice(0, RECENT_MAX),
-            removed: Object.fromEntries(removed),
-            clearedAt: next.clearedAt,
-          }),
+          JSON.stringify({ entries, removed: Object.fromEntries(removed), clearedAt }),
         );
       }
     } catch {
@@ -280,7 +314,9 @@ export function createRecentStore(env: RecentEnv): RecentStore {
     change: (current: RecentState) => RecentState | null,
     options: { sync?: boolean } = {},
   ): Promise<void> => {
+    let applied = false;
     const apply = () => {
+      applied = true;
       const next = change(state());
       if (next !== null) {
         write(next);
@@ -293,24 +329,32 @@ export function createRecentStore(env: RecentEnv): RecentStore {
       return Promise.resolve();
     }
     try {
-      return locks.request(RECENT_LOCK, apply).catch(() => apply());
+      // Only a lock that was never granted falls back to changing at once.
+      return locks.request(RECENT_LOCK, apply).catch(() => {
+        if (!applied) {
+          apply();
+        }
+      });
     } catch {
       apply();
       return Promise.resolve();
     }
   };
 
-  const updateTitle: RecentStore['updateTitle'] = (id, firstLine, rest, options) => {
+  const updateTitle: RecentStore['updateTitle'] = (id, firstLine, rest, options = {}) => {
     const title = titleOf(firstLine);
     const excerpt = clip(rest, EXCERPT_MAX);
+    const stamp = options.stamp ?? nextStamp();
     return mutate((current) => {
       const index = current.entries.findIndex((entry) => entry.id === id);
       const entry = current.entries[index];
-      if (entry === undefined || (entry.title === title && entry.excerpt === excerpt)) {
+      // Removed meanwhile, or a newer title already landed (a pagehide write
+      // that overtook this one while it waited for the lock).
+      if (entry === undefined || (entry.titledAt ?? -Infinity) >= stamp) {
         return null;
       }
       const entries = [...current.entries];
-      entries[index] = { ...entry, title, excerpt };
+      entries[index] = { ...entry, title, excerpt, titledAt: stamp };
       return { ...current, entries };
     }, options);
   };
@@ -341,6 +385,7 @@ export function createRecentStore(env: RecentEnv): RecentStore {
           title: known?.title ?? UNTITLED,
           excerpt: known?.excerpt ?? '',
           openedAt,
+          ...(known?.titledAt !== undefined ? { titledAt: known.titledAt } : {}),
           ...(example ? { example: true as const } : {}),
         };
         const removed = { ...current.removed };
@@ -384,7 +429,11 @@ export function createRecentStore(env: RecentEnv): RecentStore {
       };
     },
     titleRecorder(id, readNote, intervalMs = TITLE_THROTTLE_MS) {
-      let pending = false;
+      // Changes seen, and the latest change a write has landed for: a change
+      // stays pending until its write lands, so a flush while an earlier
+      // write still waits for the lock (pagehide) writes again.
+      let changes = 0;
+      let landed = 0;
       let lastWrite = -Infinity;
       let timer: ReturnType<typeof setTimeout> | null = null;
       const flush = (options: { sync?: boolean } = {}) => {
@@ -392,17 +441,26 @@ export function createRecentStore(env: RecentEnv): RecentStore {
           clearTimeout(timer);
           timer = null;
         }
-        if (!pending) {
+        if (changes === landed) {
           return;
         }
-        pending = false;
+        const seen = changes;
         lastWrite = env.now();
+        const stamp = nextStamp();
         const [firstLine, rest] = readNote();
-        void updateTitle(id, firstLine, rest, options);
+        const done = () => {
+          landed = Math.max(landed, seen);
+        };
+        if (options.sync) {
+          void updateTitle(id, firstLine, rest, { sync: true, stamp });
+          done();
+        } else {
+          void updateTitle(id, firstLine, rest, { stamp }).then(done);
+        }
       };
       return {
         changed() {
-          pending = true;
+          changes += 1;
           if (timer !== null) {
             return;
           }

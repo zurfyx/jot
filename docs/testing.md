@@ -137,9 +137,14 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   storage changes. With fake Web Locks: two tabs' visits at once both stay, every write
   happens inside the lock, a title write racing another tab's Clear can't bring the note
   back, changes still apply without locks or when a lock request throws or rejects, and a
-  sync (`pagehide`) write doesn't wait for a held lock. The title recorder reads the note
-  only when it writes: at once, then at most every 2 s with the latest text, and on a
-  flush; a flush with nothing pending reads nothing. The relative times;
+  sync (`pagehide`) write doesn't wait for a held lock. A title write queued behind the lock
+  never replaces a newer `pagehide` write, and with the recorder a write still waiting for
+  the lock leaves `pagehide` something to write; a lock-free write that read before another
+  tab's Clear or removal doesn't undo it. At most the newest 100 tombstones are kept. A
+  subscriber that throws stops neither the others nor the change, which runs once. The
+  title recorder reads the note only when it writes: at once, then at most every 2 s with
+  the latest text, and on a flush; a flush with nothing pending reads nothing. The relative
+  times;
 - the landing page's keys: ⌘↵ and Ctrl+Enter, which keys count as printable, fields, and
   space always left to scrolling, and the shortcut label per platform;
 - the landing page's destinations (`/new` and the example's route), the two-windows
@@ -218,7 +223,8 @@ Durable Objects, over real WebSockets.
   cleared without a reload; a Clear in another tab sticks while a note stays open and is
   edited, and going back leaves no empty slot and no mark on `<html>`; with the app's
   script held, `<html>` already carries the rows, and the empty slot has the filled one's
-  height; and with localStorage throwing, the landing page and a new note still work;
+  height; `index.html`'s count skips a removed entry, one from before the last Clear, an
+  expired one, a duplicate and a bad id, as the app does (both reserve the same rows); and with localStorage throwing, the landing page and a new note still work;
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;

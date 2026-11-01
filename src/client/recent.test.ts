@@ -375,6 +375,44 @@ describe('the recent notes list', () => {
   });
 });
 
+describe('the stored tombstones', () => {
+  it('keep the newest 100 removals', async () => {
+    const { store, storage } = setup();
+    const ids = Array.from({ length: 105 }, () => generateNoteId());
+    for (const id of ids) {
+      tick();
+      await store.recordOpen(id);
+      tick();
+      await store.remove(id);
+    }
+    const removed = storedState(storage)!.removed;
+    expect(Object.keys(removed)).toHaveLength(100);
+    expect(Object.keys(removed).sort()).toEqual(ids.slice(5).sort());
+  });
+});
+
+describe('subscribers', () => {
+  it('one that throws neither stops the others nor makes the change run twice', async () => {
+    const storage = new MemoryStorage();
+    let writes = 0;
+    storage.onWrite = () => {
+      writes += 1;
+    };
+    const { store } = setup({ storage });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const after = vi.fn();
+    store.subscribe(() => {
+      throw new Error('broken subscriber');
+    });
+    store.subscribe(after);
+    await store.recordOpen(generateNoteId());
+    expect(writes).toBe(1);
+    expect(after).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledTimes(1);
+    error.mockRestore();
+  });
+});
+
 describe('changes from several tabs', () => {
   it('run one at a time inside the Web Lock, each on a fresh read', async () => {
     const storage = new MemoryStorage();
@@ -446,6 +484,73 @@ describe('changes from several tabs', () => {
     void store.updateTitle(x, 'Written on pagehide', '', { sync: true });
     expect(store.read()[0]?.title).toBe('Written on pagehide');
     release();
+  });
+});
+
+describe('title writes that overtake each other', () => {
+  it('a queued title write never replaces a newer pagehide write', async () => {
+    const locks = new FakeLocks();
+    const { store } = setup({ locks });
+    const x = generateNoteId();
+    await store.recordOpen(x);
+    // Something holds the lock; a title write queues behind it.
+    let release = () => {};
+    void locks.request('jot:recent', () => new Promise<void>((resolve) => (release = resolve)));
+    const queued = store.updateTitle(x, 'Older queued', '');
+    tick();
+    // The page hides: the newer title is written at once, without the lock.
+    await store.updateTitle(x, 'Latest pagehide', '', { sync: true });
+    expect(store.read()[0]?.title).toBe('Latest pagehide');
+    release();
+    await queued;
+    expect(store.read()[0]?.title).toBe('Latest pagehide');
+  });
+
+  it('the recorder: a write queued behind the lock leaves pagehide something to write', async () => {
+    const locks = new FakeLocks();
+    const { store } = setup({ locks });
+    const x = generateNoteId();
+    await store.recordOpen(x);
+    let release = () => {};
+    void locks.request('jot:recent', () => new Promise<void>((resolve) => (release = resolve)));
+    let text = 'Older queued';
+    const recorder = store.titleRecorder(x, () => [text, '']);
+    // The first change writes at once, but the write waits for the lock.
+    recorder.changed();
+    expect(store.read()[0]?.title).toBe(UNTITLED);
+    // pagehide with no newer change still writes: the queued write hasn't landed.
+    recorder.flush({ sync: true });
+    expect(store.read()[0]?.title).toBe('Older queued');
+    // And with a newer change, pagehide writes it, and the queued write can't undo it.
+    text = 'Latest pagehide';
+    recorder.changed();
+    recorder.flush({ sync: true });
+    expect(store.read()[0]?.title).toBe('Latest pagehide');
+    release();
+    await microtasks();
+    expect(store.read()[0]?.title).toBe('Latest pagehide');
+  });
+
+  it("a lock-free write that read before another tab's Clear doesn't undo it", async () => {
+    const storage = new MemoryStorage();
+    const a = setup({ storage, locks: null });
+    const b = setup({ storage, locks: null });
+    const x = generateNoteId();
+    await a.store.recordOpen(x);
+    tick();
+    // While tab A reads for its pagehide write, tab B clears (both without locks).
+    storage.onNextRead = () => void b.store.clear();
+    await a.store.updateTitle(x, 'Written on pagehide', '', { sync: true });
+    expect(a.store.read()).toEqual([]);
+    expect(storedState(storage)!.clearedAt).toBe(clock);
+    // Nor a removal.
+    clock += 10;
+    await a.store.recordOpen(x);
+    tick();
+    storage.onNextRead = () => void b.store.remove(x);
+    await a.store.updateTitle(x, 'Again', '', { sync: true });
+    expect(a.store.read()).toEqual([]);
+    expect(storedState(storage)!.removed[x]).toBe(clock);
   });
 });
 

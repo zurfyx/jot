@@ -412,3 +412,70 @@ test('a Clear in another tab sticks while a note stays open and is edited', asyn
   );
   expect(await stored(page)).toEqual([]);
 });
+
+test("index.html's reservation skips removed and cleared entries as recent.ts does", async ({
+  page,
+}) => {
+  const [kept1, kept2, removedOne, beforeClear, expired] = sample(5);
+  await page.addInitScript(
+    ({ ids, day }) => {
+      const now = Date.now();
+      const entry = (id: string, title: string, ago: number) => ({
+        id,
+        title,
+        excerpt: '',
+        openedAt: now - ago,
+      });
+      localStorage.setItem(
+        'jot:recent',
+        JSON.stringify({
+          entries: [
+            entry(ids[0]!, 'Kept 1', 60_000),
+            entry(ids[1]!, 'Kept 2', 120_000),
+            // Removed after it was opened: a tombstone outranks it.
+            entry(ids[2]!, 'Removed', 180_000),
+            // Opened before the last Clear.
+            entry(ids[3]!, 'Before the Clear', 20 * 60_000),
+            entry(ids[4]!, 'Expired', 91 * day),
+            entry(ids[0]!, 'Duplicate', 30_000),
+            { id: 'public', title: 'Bad id', openedAt: now },
+          ],
+          removed: { [ids[2]!]: now - 170_000 },
+          clearedAt: now - 10 * 60_000,
+        }),
+      );
+    },
+    { ids: [kept1!.id, kept2!.id, removedOne!.id, beforeClear!.id, expired!.id], day: DAY },
+  );
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route(/\/src\/client\/main\.tsx/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  void page.goto('/');
+  await page.waitForFunction(() => document.documentElement.hasAttribute('data-recent'));
+  const hint = await page.evaluate(() => {
+    const style = document.documentElement.style;
+    return [
+      style.getPropertyValue('--jot-recent-rows'),
+      style.getPropertyValue('--jot-recent-rows-wide'),
+    ];
+  });
+  // Two entries survive: two rows on a phone, one in two columns.
+  expect(hint).toEqual(['2', '1']);
+  release();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(rows(page).nth(0)).toContainText('Kept 1');
+  await expect(rows(page).nth(1)).toContainText('Kept 2');
+  // The app agrees with the head script: its own rows match the reservation.
+  const vars = await page.evaluate(() => {
+    const style = document.documentElement.style;
+    return [
+      style.getPropertyValue('--jot-recent-rows'),
+      style.getPropertyValue('--jot-recent-rows-wide'),
+    ];
+  });
+  expect(vars).toEqual(['2', '1']);
+  expect((await section(page).boundingBox())!.height).toBe(8 + 32 + 60 + 44);
+});
