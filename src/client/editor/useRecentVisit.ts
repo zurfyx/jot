@@ -10,9 +10,10 @@ import { useSignal } from './useSignal';
  * Keeps this note in the browser's recent notes (D30): the visit is recorded
  * when the page opens, and once the note has synced its first line becomes
  * the title. A change to the note's content only marks the title stale; the
- * text is read when the throttle lets a write through (at most every 2 s),
- * when the page is hidden or closed, and when you leave it. Selection-only
- * updates (caret moves, a peer's caret) are ignored.
+ * text is read when a write runs (the throttle lets one through at most every
+ * 2 s; the page hidden or closed, or left, flushes one), inside the lock, so
+ * a write that waited writes the latest text. Selection-only updates (caret
+ * moves, a peer's caret) are ignored.
  */
 export function useRecentVisit(session: NoteSession): void {
   const synced = useSignal(session.everSynced);
@@ -27,19 +28,29 @@ export function useRecentVisit(session: NoteSession): void {
       return;
     }
     const { editor } = session;
-    const recorder = recentNotes.titleRecorder(session.noteId, () =>
-      editor.getEditorState().read(() => {
-        const [first, ...rest] = $getRoot().getChildren();
-        let excerpt = '';
-        for (const node of rest) {
-          excerpt = `${excerpt} ${node.getTextContent()}`;
-          if (excerpt.length > 200) {
-            break;
+    // Called when a write runs, which may be after the page left (a write
+    // that waited for the lock): the last text read stands in if the editor
+    // can't be read any more.
+    let last: [string, string] = ['', ''];
+    const readNote = (): [string, string] => {
+      try {
+        last = editor.getEditorState().read(() => {
+          const [first, ...rest] = $getRoot().getChildren();
+          let excerpt = '';
+          for (const node of rest) {
+            excerpt = `${excerpt} ${node.getTextContent()}`;
+            if (excerpt.length > 200) {
+              break;
+            }
           }
-        }
-        return [first?.getTextContent() ?? '', excerpt];
-      }),
-    );
+          return [first?.getTextContent() ?? '', excerpt];
+        });
+      } catch {
+        // The editor is gone: keep what it last said.
+      }
+      return last;
+    };
+    const recorder = recentNotes.titleRecorder(session.noteId, readNote);
     recorder.changed();
     const unregister = editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
       if (dirtyElements.size > 0 || dirtyLeaves.size > 0) {

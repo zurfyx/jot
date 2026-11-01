@@ -50,13 +50,6 @@ export interface RecentNote {
   excerpt: string;
   /** When this browser last opened it (ms since the epoch). */
   openedAt: number;
-  /**
-   * Which tab wrote the title, and its number in that tab's sequence: a tab's
-   * older title write never replaces its newer one. Across tabs the last write
-   * wins (they read the same synced note), so no clock is compared.
-   */
-  titledBy?: string;
-  titleSeq?: number;
   /** The example note this browser started (D20). */
   example?: true;
 }
@@ -83,16 +76,6 @@ export interface RecentEnv {
   events: EventTarget | null;
   /** <html>, which carries the hint the landing page sizes its slot by. */
   root: Pick<HTMLElement, 'setAttribute' | 'removeAttribute' | 'style'> | null;
-  /** This tab's id as a title writer; random when left out. */
-  writer?: string;
-}
-
-function randomWriter(): string {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  }
 }
 
 /** Collapses whitespace and cuts `text` to `max` characters on a word, with an ellipsis. */
@@ -150,10 +133,7 @@ export function parseRecent(raw: string | null, now: number): RecentState {
     if (typeof item !== 'object' || item === null) {
       continue;
     }
-    const { id, title, excerpt, openedAt, titledBy, titleSeq, example } = item as Record<
-      string,
-      unknown
-    >;
+    const { id, title, excerpt, openedAt, example } = item as Record<string, unknown>;
     if (
       typeof id !== 'string' ||
       !isNoteId(id) ||
@@ -171,7 +151,6 @@ export function parseRecent(raw: string | null, now: number): RecentState {
       title: typeof title === 'string' && title.trim() !== '' ? clip(title, TITLE_MAX) : UNTITLED,
       excerpt: typeof excerpt === 'string' ? clip(excerpt, EXCERPT_MAX) : '',
       openedAt,
-      ...(typeof titledBy === 'string' && isTime(titleSeq) ? { titledBy, titleSeq } : {}),
       ...(example === true ? { example: true as const } : {}),
     });
   }
@@ -185,7 +164,8 @@ export function reservedRows(count: number): [number, number] {
   return [shown, Math.ceil(shown / 2)];
 }
 
-export type TitleOutcome = 'written' | 'superseded' | 'skipped';
+/** A note's first line and the text after it, as the editor has them now. */
+export type ReadNote = () => [firstLine: string, rest: string];
 
 export interface TitleRecorder {
   /** The note changed: its text is read, and written, when the throttle allows. */
@@ -203,17 +183,12 @@ export interface RecentStore {
   /** A visit now: the note moves to the top, keeping the title it had. */
   recordOpen(id: string, options?: { example?: boolean }): Promise<void>;
   /**
-   * A new title and excerpt for a listed note, `seq` in this tab's sequence
-   * (default: the next). Resolves to `written`; `superseded` when this tab
-   * already wrote a newer one; or `skipped` (the note isn't listed, or
-   * storage refused the write).
+   * The title and excerpt of a listed note, read from the note by `read` when
+   * the write runs (inside the lock), never when it is queued: a write that
+   * waited always writes the latest text. Resolves to whether the note now
+   * has that title; false when it isn't listed or storage refused the write.
    */
-  updateTitle(
-    id: string,
-    firstLine: string,
-    rest: string,
-    options?: { sync?: boolean; seq?: number },
-  ): Promise<TitleOutcome>;
+  updateTitle(id: string, read: ReadNote, options?: { sync?: boolean }): Promise<boolean>;
   remove(id: string): Promise<void>;
   clear(): Promise<void>;
   /** Subscribing also brings <html>'s hint up to date. */
@@ -222,17 +197,13 @@ export interface RecentStore {
    * Title updates for one open note: `read` gives its first line and the text
    * after it, and is called at most once per `intervalMs`.
    */
-  titleRecorder(id: string, read: () => [string, string], intervalMs?: number): TitleRecorder;
+  titleRecorder(id: string, read: ReadNote, intervalMs?: number): TitleRecorder;
 }
 
 export function createRecentStore(env: RecentEnv): RecentStore {
   const listeners = new Set<() => void>();
   let cachedRaw: string | null | undefined;
   let cached: RecentState = EMPTY_STATE;
-  /** This tab, as the writer of a title, and its title writes in order. */
-  const writer = env.writer ?? randomWriter();
-  let lastSeq = 0;
-  const nextSeq = () => ++lastSeq;
 
   const rawValue = (): string | null => {
     try {
@@ -367,11 +338,8 @@ export function createRecentStore(env: RecentEnv): RecentStore {
     }
   };
 
-  const updateTitle: RecentStore['updateTitle'] = async (id, firstLine, rest, options = {}) => {
-    const title = titleOf(firstLine);
-    const excerpt = clip(rest, EXCERPT_MAX);
-    const seq = options.seq ?? nextSeq();
-    let outcome: TitleOutcome = 'skipped';
+  const updateTitle: RecentStore['updateTitle'] = async (id, readNote, options = {}) => {
+    let landed = false;
     await mutate(
       (current) => {
         const index = current.entries.findIndex((entry) => entry.id === id);
@@ -379,22 +347,24 @@ export function createRecentStore(env: RecentEnv): RecentStore {
         if (entry === undefined) {
           return null;
         }
-        // This tab already wrote a newer title (a pagehide write that
-        // overtook this one while it waited for the lock).
-        if (entry.titledBy === writer && (entry.titleSeq ?? 0) >= seq) {
-          outcome = 'superseded';
+        // Read now, inside the lock: whatever waited, this is the latest text.
+        const [firstLine, rest] = readNote();
+        const title = titleOf(firstLine);
+        const excerpt = clip(rest, EXCERPT_MAX);
+        if (entry.title === title && entry.excerpt === excerpt) {
+          landed = true;
           return null;
         }
         const entries = [...current.entries];
-        entries[index] = { ...entry, title, excerpt, titledBy: writer, titleSeq: seq };
+        entries[index] = { ...entry, title, excerpt };
         return { ...current, entries };
       },
       options,
       (ok) => {
-        outcome = ok ? 'written' : 'skipped';
+        landed = ok;
       },
     );
-    return outcome;
+    return landed;
   };
 
   const onStorage = (event: Event) => {
@@ -423,9 +393,6 @@ export function createRecentStore(env: RecentEnv): RecentStore {
           title: known?.title ?? UNTITLED,
           excerpt: known?.excerpt ?? '',
           openedAt,
-          ...(known?.titledBy !== undefined
-            ? { titledBy: known.titledBy, titleSeq: known.titleSeq }
-            : {}),
           ...(example ? { example: true as const } : {}),
         };
         const removed = { ...current.removed };
@@ -469,9 +436,10 @@ export function createRecentStore(env: RecentEnv): RecentStore {
       };
     },
     titleRecorder(id, readNote, intervalMs = TITLE_THROTTLE_MS) {
-      // Changes seen, and the latest change a write has landed for: a change
-      // stays pending until its write lands, so a flush while an earlier
-      // write still waits for the lock (pagehide) writes again.
+      // Changes seen, and the latest one a landed write has read: a change
+      // stays pending until a write that read it lands, so a flush while an
+      // earlier write waits for the lock (pagehide), or one that found the note
+      // unlisted, writes again.
       let changes = 0;
       let landed = 0;
       let lastWrite = -Infinity;
@@ -484,15 +452,15 @@ export function createRecentStore(env: RecentEnv): RecentStore {
         if (changes === landed) {
           return;
         }
-        const seen = changes;
         lastWrite = env.now();
-        const seq = nextSeq();
-        const [firstLine, rest] = readNote();
-        // Landed only when written, or overtaken by this tab's newer write;
-        // a skipped write leaves the change pending for the next flush.
-        void updateTitle(id, firstLine, rest, { sync: options.sync, seq }).then((outcome) => {
-          if (outcome !== 'skipped') {
-            landed = Math.max(landed, seen);
+        let read = landed;
+        const readNow: ReadNote = () => {
+          read = changes;
+          return readNote();
+        };
+        void updateTitle(id, readNow, options).then((ok) => {
+          if (ok) {
+            landed = Math.max(landed, read);
           }
         });
       };

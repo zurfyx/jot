@@ -119,17 +119,18 @@ Locks, event target and `<html>` as arguments, so the unit tests pass fakes; the
 the window's. Every change runs inside the Web Lock `jot:recent` on a fresh read (at once
 where locks are missing, or when asked to for `pagehide`); a removal leaves a tombstone and
 Clear all a `clearedAt`, a visit stamped before either is dropped, and every write merges
-with the stored state read just before it, keeping the newer of each. A title carries its
-writer, a random id per tab, and that tab's sequence number (`titledBy`, `titleSeq`): a
-tab's older write never replaces its newer one, and across tabs the last write wins. Every change
+with the stored state read just before it, keeping the newer of each. A title write takes
+a getter and reads the note when it runs, inside the lock, so a write that waited writes
+the latest text; across tabs the last write wins. Every change
 notifies subscribers, other tabs arrive through the `storage` event, and `<html>` gets
 `data-recent` with the rows the landing page shows (`--jot-recent-rows`,
 `--jot-recent-rows-wide`), which the inline script in `index.html` also sets before the
 first paint and every subscription brings up to date. `editor/useRecentVisit.ts` records a
 visit when a note page opens and, once the note has synced, marks the title stale on every
-content change; its recorder reads the first line and the start of the rest only when it
-writes (at most every 2 s), keeps a change pending until its write lands or the same tab's
-newer write overtakes it, and is flushed on
+content change; its recorder hands the store a getter for the first line and the start of
+the rest, read only when a write runs (at most every 2 s, falling back to the last text
+read once the editor is gone), keeps a change pending until a write that read it lands,
+and is flushed on
 `visibilitychange` to hidden, on unmount and, without the lock, on `pagehide`. A subscriber
 that throws is logged and skipped. The landing page's `RecentNotes` reads the list with
 `useSyncExternalStore` (an empty server snapshot), hides its slot once hydrated if the list
