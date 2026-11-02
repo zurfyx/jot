@@ -8,9 +8,16 @@ function subscribe(onChange: () => void): () => void {
   return () => media.removeEventListener('change', onChange);
 }
 
-/** Whether the person asked for reduced motion; follows changes live. */
+/**
+ * Whether the person asked for reduced motion; follows changes live. A
+ * prerendered page renders with motion, and hydrates into the person's choice.
+ */
 export function useReducedMotion(): boolean {
-  return useSyncExternalStore(subscribe, () => window.matchMedia(QUERY).matches);
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(QUERY).matches,
+    () => false,
+  );
 }
 
 /**
@@ -19,10 +26,11 @@ export function useReducedMotion(): boolean {
  */
 export function useOnScreen(element: RefObject<Element | null>): boolean {
   const [inView, setInView] = useState(true);
-  const [visible, setVisible] = useState(() => document.visibilityState !== 'hidden');
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const onVisibility = () => setVisible(document.visibilityState !== 'hidden');
+    onVisibility();
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);

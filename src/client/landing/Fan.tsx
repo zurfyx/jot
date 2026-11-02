@@ -5,6 +5,7 @@ import { prefetchNotePage } from '../loadNote';
 import { colors, fonts, landing } from '../theme/tokens.stylex';
 import { Avatars, By, Caret, Check, OpenIcon, who } from './bits';
 import { cardMarker, exampleMarker, fanMarker } from './markers.stylex';
+import { MotionFrames } from './MotionFrames';
 import { useOnScreen, useReducedMotion } from './motion';
 import { NEW_NOTE_PATH } from '../notes';
 import { EXAMPLE_PATH, plainClick } from './open';
@@ -344,6 +345,19 @@ function useTypingTick(reduced: boolean, running: boolean): number {
   return reduced ? ANA_AT : tick;
 }
 
+/** Ana's to-do on the example card, the loop's last step. */
+function AnaLine() {
+  return (
+    <p {...stylex.props(styles.text)}>
+      <By who="ana">
+        <Check />
+        Send the agenda
+      </By>
+      <Caret who="ana" name="Ana" />
+    </p>
+  );
+}
+
 type FanProps = {
   newCard: RefObject<HTMLAnchorElement | null>;
   exampleCard: RefObject<HTMLAnchorElement | null>;
@@ -414,6 +428,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
             exampleMarker,
           )}
           href={EXAMPLE_PATH}
+          rel="nofollow"
           aria-label="Open the example"
           onClick={plainClick(onExample)}
           data-testid="example-card"
@@ -433,7 +448,10 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
           <ul {...stylex.props(styles.list)}>
             <li {...stylex.props(styles.text)}>
               <By who="ai">Morning: roadmap review</By>
-              <By who="you">{typed}</By>
+              {/* Under reduced motion the words are typed, from the first paint (D31). */}
+              <By who="you">
+                <MotionFrames moving={typed} still={TYPED} />
+              </By>
               <Caret />
             </li>
             <li {...stylex.props(styles.text)}>
@@ -446,15 +464,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
             <Check done />
             Book the room
           </p>
-          {anaHere && (
-            <p {...stylex.props(styles.text)}>
-              <By who="ana">
-                <Check />
-                Send the agenda
-              </By>
-              <Caret who="ana" name="Ana" />
-            </p>
-          )}
+          <MotionFrames block moving={anaHere && <AnaLine />} still={<AnaLine />} />
           <span {...stylex.props(styles.open)} aria-hidden="true">
             Open <OpenIcon xstyle={styles.openIcon} />
           </span>
@@ -464,6 +474,7 @@ export function Fan({ newCard, exampleCard, onNew, onExample }: FanProps) {
           ref={newCard}
           {...stylex.props(styles.card, styles.link, styles.new, cardMarker)}
           href={NEW_NOTE_PATH}
+          rel="nofollow"
           aria-label="Open a new note"
           onClick={plainClick(onNew)}
           data-testid="new-note-card"

@@ -61,6 +61,14 @@
           root.style.setProperty('--jot-recent-rows-wide', String(Math.ceil(rows / 2)));
         }
       })();
+      // Mark Apple platforms, whose shortcuts read ⌘ rather than Ctrl (landing/keys.ts).
+      (function () {
+        var data = navigator.userAgentData;
+        var platform = (data && data.platform) || navigator.platform || navigator.userAgent;
+        if (/Mac|iPhone|iPad|iPod/i.test(platform)) {
+          document.documentElement.dataset.platform = 'apple';
+        }
+      })();
     </script>
   </head>
   <body>

@@ -1,13 +1,10 @@
 import { useSyncExternalStore } from 'react';
 
 /**
-<<<<<<< HEAD
- * A small router: `/`, `/new` (a local draft), `/new?example` (the example
- * note), `/n/<id>` and `/docs/<slug>`. History API only, no library.
-=======
  * A small router: `/`, `/new` (redirects to a fresh note), `/new?example`
- * (the example note) and `/n/<id>`. History API only, no library.
->>>>>>> 49e8271 (Give a new note its shareable link at once)
+ * (the example note), `/n/<id>` and `/docs/<slug>`. History API only, no
+ * library. The prerender (scripts/prerender.ts) renders a path of its choice
+ * with no browser around it (D31).
  */
 
 const NAVIGATE_EVENT = 'jot:navigate';
@@ -25,9 +22,21 @@ function currentPath(): string {
   return window.location.pathname + window.location.search;
 }
 
+/** The path the prerender is rendering; the browser reads its own address. */
+let prerenderPath = '/';
+
+export function setPrerenderPath(path: string): void {
+  prerenderPath = path;
+}
+
+/** The path a server render, or the browser's hydration of one, starts from. */
+export function serverPath(): string {
+  return typeof window === 'undefined' ? prerenderPath : currentPath();
+}
+
 /** The current path and query, e.g. `/new?example`. */
 export function useLocationPath(): string {
-  return useSyncExternalStore(subscribeLocation, currentPath);
+  return useSyncExternalStore(subscribeLocation, currentPath, serverPath);
 }
 
 export function navigate(path: string): void {

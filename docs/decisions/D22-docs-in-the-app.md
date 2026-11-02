@@ -4,9 +4,8 @@ Status: `DECIDED`
 
 ## Decision
 
-- `/docs` and `/docs/<slug>` are routes of the same single-page app, served by the same
-  Worker (unknown paths already fall back to `index.html`). There is no second site, build
-  or deploy.
+- `/docs` and `/docs/<slug>` are routes of the same app, served by the same Worker and
+  prerendered by the same build (D31). There is no second site, build or deploy.
 - Pages are React components in `src/client/docs/`, loaded as their own chunk. The landing
   page never imports them, and the docs never import Lexical or Yjs except through the live
   inspector, which loads lazily on its page.

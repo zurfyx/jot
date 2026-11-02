@@ -6,13 +6,16 @@ const PORT = Number(process.env.JOT_E2E_PORT ?? 5174);
 // 127.0.0.1 (the Playwright container in CI), Vite can bind one while Node's WebSocket
 // in e2e/raw-client.ts dials the other.
 const ORIGIN = `http://127.0.0.1:${PORT}`;
+// The production build, served by wrangler dev: the built Worker, its static
+// assets and the prerendered pages (D31). Its origin is in e2e/production/serve.ts.
+const PRODUCTION_PORT = PORT + 1;
 
 // The visual suite compares screenshots taken in the Playwright image CI runs in
 // (scripts/e2e-docker.sh runs it locally, and sets JOT_E2E_VISUAL); elsewhere
 // fonts and antialiasing differ, so a plain `pnpm e2e` on a laptop leaves it out.
 const VISUAL = !!process.env.CI || !!process.env.JOT_E2E_VISUAL;
 const VISUAL_DIR = /e2e\/visual\//;
-// The production build, served from dist/client by the tests themselves (D28).
+// The production build's tests (D28, D31), against wrangler dev.
 const PRODUCTION_DIR = /e2e\/production\//;
 
 const visualProjects = (['light', 'dark'] as const).flatMap((colorScheme) =>
@@ -63,19 +66,28 @@ export default defineConfig({
       // JOT_E2E_SINGLE_PROCESS (sandboxed shells): see e2e/helpers.ts.
       use: { ...devices['Desktop Chrome'] },
     },
-    { name: 'production-build', testMatch: /e2e\/production\/build\.setup\.ts$/ },
     {
       name: 'production',
       testMatch: /e2e\/production\/.*\.spec\.ts$/,
-      dependencies: ['production-build'],
       use: { ...devices['Desktop Chrome'] },
     },
     ...(VISUAL ? visualProjects : []),
   ],
-  webServer: {
-    command: `pnpm exec vite --host 127.0.0.1 --port ${PORT} --strictPort`,
-    url: ORIGIN,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: `pnpm exec vite --host 127.0.0.1 --port ${PORT} --strictPort`,
+      url: ORIGIN,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      // pnpm build, then the built Worker in workerd, as Cloudflare runs it,
+      // with its Durable Objects stored apart from the dev server's.
+      command: `pnpm build && pnpm exec wrangler dev --ip 127.0.0.1 --port ${PRODUCTION_PORT} --log-level warn --persist-to node_modules/.cache/jot-production-state`,
+      url: `http://127.0.0.1:${PRODUCTION_PORT}/robots.txt`,
+      env: { WRANGLER_SEND_METRICS: 'false' },
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+    },
+  ],
 });

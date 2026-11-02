@@ -6,6 +6,14 @@ export { NoteRoom } from './room';
 
 const SOCKET_ROUTE = /^\/api\/n\/([^/]+)\/ws$/;
 const NOTE_ROUTE = /^\/n\/([^/]+)\/?$/;
+const NEW_ROUTE = /^\/new\/?$/;
+/** The 404 page's own file, which the assets would otherwise serve with a 200. */
+const NOT_FOUND_ROUTE = /^\/404(?:\.html)?$/;
+/**
+ * The note page's shell, the client-only document (scripts/prerender.ts,
+ * D31). It sits under /n/, where a request for it is a malformed note link.
+ */
+const SHELL = '/n/shell';
 
 /** Notes and the API stay out of search engines; the landing page does not (D17). */
 const ROBOTS_HEADER = 'X-Robots-Tag';
@@ -42,6 +50,19 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
+/**
+ * The note page's shell: the client router renders the page. The dev server
+ * prerenders nothing, and its index.html is the shell itself.
+ */
+async function shell(request: Request, env: Env, url: URL): Promise<Response> {
+  const built = await env.ASSETS.fetch(new Request(new URL(SHELL, url), request));
+  if (built.status !== 404) {
+    return built;
+  }
+  await built.body?.cancel();
+  return env.ASSETS.fetch(new Request(new URL('/', url), request));
+}
+
 async function route(request: Request, env: Env, url: URL): Promise<Response> {
   const socket = SOCKET_ROUTE.exec(url.pathname);
   if (socket !== null) {
@@ -63,8 +84,18 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
     if (!isNoteId(note[1] ?? '')) {
       return badRequest('Not a note link.');
     }
-    // The SPA: the client router renders the note.
-    return env.ASSETS.fetch(new Request(new URL('/', url), request));
+    return shell(request, env, url);
+  }
+
+  if (NEW_ROUTE.test(url.pathname)) {
+    // A fresh note (D23) or the example: the client picks its id.
+    return shell(request, env, url);
+  }
+
+  if (NOT_FOUND_ROUTE.test(url.pathname)) {
+    // The 404 page, with its status (D31).
+    const page = await env.ASSETS.fetch(new Request(new URL('/404', url), request));
+    return new Response(page.body, { status: 404, headers: page.headers });
   }
 
   if (url.pathname.startsWith('/api/')) {

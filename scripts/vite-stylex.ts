@@ -208,6 +208,14 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
+/** Whether a hook runs for a server build: the Worker's, or the prerender's. */
+function isServer(context: unknown): boolean {
+  return (
+    (context as { environment?: { config: { consumer: string } } }).environment?.config.consumer ===
+    'server'
+  );
+}
+
 export function stylex({ rootDir, srcDir = 'src' }: { rootDir: string; srcDir?: string }): Plugin {
   const compiled = new Map<string, Compiled>();
   const priorities = new Set<number>();
@@ -286,11 +294,8 @@ export function stylex({ rootDir, srcDir = 'src' }: { rootDir: string; srcDir?: 
       server = devServer;
     },
     async buildStart() {
-      // The Worker's build has no styles to order.
-      if (
-        (this as { environment?: { config: { consumer: string } } }).environment?.config
-          .consumer === 'server'
-      ) {
+      // The Worker's build, and the prerender's (D31), have no styles to order.
+      if (isServer(this)) {
         return;
       }
       for (const file of sourceFiles(join(rootDir, srcDir))) {
@@ -340,6 +345,12 @@ export function stylex({ rootDir, srcDir = 'src' }: { rootDir: string; srcDir?: 
       };
     },
     generateBundle(_options, bundle) {
+      // A server build renders the same class names (the same compile), and
+      // the prerendered pages link the client's stylesheets (D31): whatever
+      // CSS it holds is never served, so it places no rules.
+      if (isServer(this)) {
+        return;
+      }
       const sheets = Object.values(bundle).filter(
         (file) => file.type === 'asset' && file.fileName.endsWith('.css'),
       );

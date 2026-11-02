@@ -31,8 +31,9 @@ Status: `DECIDED`
   always target production.
 - **Noindex.** Cloudflare sets `X-Robots-Tag: noindex` on every workers.dev Preview
   response, static assets included, replacing any value the Worker sent. jot adds nothing
-  of its own: the Worker runs first only for `/n/*` and `/api/*`, which are already
-  `noindex, nofollow` everywhere (D17), and never sees the landing page or the assets. A
+  of its own: the Worker runs first only for `/n/*`, `/api/*` and `/new` (D31), and the
+  first two are already `noindex, nofollow` everywhere (D17); it never sees the landing
+  page, the docs or the assets. A
   Preview on a custom domain would not get Cloudflare's header; it would need a host rule
   in `public/_headers` for the assets.
 

@@ -12,24 +12,31 @@ browser                                   Cloudflare
 
 ## Worker (`src/worker/index.ts`)
 
-One Worker with static assets (D01). `wrangler.jsonc` runs the Worker first for `/api/*` and
-`/n/*`; everything else is an asset, with unknown paths falling back to `index.html`.
+One Worker with static assets (D01). `wrangler.jsonc` runs the Worker first for `/api/*`,
+`/n/*` and `/new`; everything else is an asset. The landing page and the docs are
+prerendered files (D31): `/` is `index.html` and `/docs/blame` is `docs/blame/index.html`,
+`/docs/blame/` redirects to `/docs/blame` (`html_handling: "drop-trailing-slash"`), and a
+path no file answers gets the prerendered `404.html` with a 404 (`not_found_handling:
+"404-page"`), an unknown docs page included.
 
 | Route               | Behaviour                                                         |
 | ------------------- | ----------------------------------------------------------------- |
-| `GET /n/:id`        | Valid id: the SPA (`index.html`). Otherwise 400.                  |
+| `GET /n/:id`        | Valid id: the note page's shell (`n/shell.html`). Otherwise 400.  |
+| `GET /new`          | The shell: the client picks the new note (and `?example`).        |
+| `GET /404`          | The 404 page, with a 404.                                         |
 | `GET /api/n/:id/ws` | Valid id and a WebSocket upgrade: forwarded to the note's object. |
 |                     | Invalid id: 400. No upgrade: 426.                                 |
 | `/api/*` otherwise  | 404                                                               |
-| anything else       | static assets                                                     |
+| anything else       | static assets; no file: `404.html`, 404                           |
 
 A valid id is 22 base64url characters encoding 128 bits, and nothing else: there are no
 fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note` header.
 
 Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade included,
 carries `X-Robots-Tag: noindex, nofollow`, and `public/robots.txt` disallows `/n/` and
-`/api/` (D17). The landing page carries neither and stays indexable. On a Preview,
-Cloudflare marks every response `noindex` (D24).
+`/api/` (D17). The shell sits under `/n/`, so a request for it is a malformed note link.
+The landing page and the docs carry neither and stay indexable; the 404 page says
+`noindex`. On a Preview, Cloudflare marks every response `noindex` (D24).
 
 ## NoteRoom (`src/worker/room.ts`)
 
@@ -101,8 +108,8 @@ depend on `@lexical/react` (which would pull in `@lexical/yjs` and Yjs 13).
 
 **Routes** (`router.ts`, History API only): `/` the landing page, `/new` a redirect to a
 fresh note, `/new?example` a new example note, `/n/<id>` a note, `/docs` and `/docs/<slug>`
-the docs. The Worker serves the SPA for `/n/<id>`; `/new` and `/docs` fall back to it as
-assets. `notes.ts` and `examples.ts` (no Lexical
+the docs, anything else (an unknown docs page too) the 404 page (`NotFound.tsx`). A
+malformed note link reached in the app goes home. `notes.ts` and `examples.ts` (no Lexical
 or Yjs, so the landing page can import them) hold the page side of starting notes (D23) and
 examples. `newNotePath()` picks a fresh id in the browser and returns `/n/<id>`; every start
 action navigates there, and `/new` replaces itself with it. `examples.ts` gives
@@ -377,10 +384,58 @@ theme of its own over jot's, so its blocks take the article's smaller sizes.
 There is no Yjs 14 IndexedDB provider yet, so a note's offline edits live in memory
 until the socket reconnects (D13).
 
+**Prerendering** (D31). The landing page, every docs page and the 404 page are HTML at
+build time; a note's page is not. `main.tsx` hydrates a root that has children
+(`hydrateRoot`) and renders into an empty one. The prerender renders `App` at a path of its
+choice (`setPrerenderPath`; `useLocationPath` reads it as its server snapshot, the browser
+its own address), so the first render in the browser must be the same: what depends on
+the browser runs in effects, animations render their opening frame and start after load,
+the landing page's illustrations (the fan's example card, the two windows and their steps)
+hold their moving frames and their still end frame side by side (`landing/MotionFrames.tsx`,
+`display: contents` wrappers), and `globals.css` shows the still one under
+`prefers-reduced-motion: reduce`, so reduced motion shows the end from the first paint,
+the live inspector mounts after hydration (its loading frame is what the HTML has), and
+the note page and the inspector are never in the prerender's bundle (`import.meta.env.SSR`).
+What depends on the device is CSS: the landing page's and the docs' roots carry
+`data-scope`, and `globals.css` gives them their dark token sets under `data-theme`; the
+start shortcut renders both labels, and `index.html`'s pre-paint script marks Apple
+platforms (`data-platform`) for CSS to show ⌘ rather than Ctrl. Start a new note and See
+the example are links to `/new` and `/new?example`, so they work before hydration, each
+`rel="nofollow"`, since following one creates a note. `<html>` gets `data-hydrated` once
+the page's content has hydrated (`hydrated.ts`): each prerendered page marks it from inside
+its own boundary (the landing page, the docs once their chunk has hydrated, the 404 page),
+App marks a note's page; tests wait for it.
+
+Every public page's head comes from one list, `heads.ts` (the landing page's head in
+`site.ts`, one per docs page from `docs/pages.ts`): its title, description, canonical URL
+on jot.rovira.sh, link-preview image (`public/og/`) and type. The prerender writes them as
+`<title>`, the description, `<link rel=canonical>`, Open Graph and Twitter tags and JSON-LD
+(`WebSite` on `/`, `TechArticle` on a docs page), from `headTags` (`head.ts`); when the app
+moves to another page without a reload, `applyHead` puts the same tags in place: the
+landing page's, a docs page's, the 404 page's (`noindex`, no canonical) or a note's (none of
+them). The docs import it. The landing page, the 404 page and a note use `syncHead.ts`,
+in the entry chunk: a note's head and the 404 page's need no data, so it drops a public
+page's tags itself; the landing page's title it sets at once, and its other tags come from
+`head.ts`, loaded only when they aren't already in place. Each page claims the head as it
+shows (`claimHead`), so a `head.ts` that arrives after the app has moved on is dropped; if it
+fails to load (offline), the title stays right and the next move home tries again. The 404 page is `noindex`.
+
 ## Build and deploy
 
-`@cloudflare/vite-plugin` builds the client and the Worker together (`dist/client`,
-`dist/jot`); `wrangler` reads the built config. Cloudflare Workers Builds, connected to the
+`pnpm build` runs `vite build`, where `@cloudflare/vite-plugin` builds the client and the
+Worker together (`dist/client`, `dist/jot`), then `scripts/prerender.ts` (D31): a server
+build of `src/client/prerender.tsx` (Vite's SSR build, with the same StyleX plugin, so the
+same class names) renders each public page with React's `prerender` into the built
+`index.html`, with its head, the main Geist font preloaded, a docs page's chunk and
+stylesheet linked (from the client build's manifest, which it then removes) and a
+`<noscript>` style that gives the dark token sets to a system in dark mode when no script
+runs. It writes `index.html`, `docs/index.html`, `docs/<slug>/index.html` and `404.html`,
+and keeps the built shell as `n/shell.html`, with a `<noscript>` notice (`NoScriptNotice`,
+which shares the 404 page's styles) that jot needs JavaScript to edit notes. Any error
+React reports while rendering, or a page without its heading, fails the build. `wrangler` reads the built config. The
+link-preview cards are not built: `pnpm og-images` (`scripts/og-images.ts`) draws them in
+Chromium from `heads.ts` and they are committed, each PNG carrying the hash of its card
+(`scripts/og.ts`). Cloudflare Workers Builds, connected to the
 repository, deploys every push to `main` to jot.rovira.sh (`wrangler deploy`) and every
 other branch as a Worker Preview at `<preview-name>-jot.rovira.workers.dev`
 (`wrangler preview`), with its own Durable Object namespace, where Cloudflare marks every

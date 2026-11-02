@@ -17,9 +17,10 @@ import { JoinField } from './JoinField';
 import { classifyTarget, landingKeyAction, startShortcutLabel } from './keys';
 import { NEW_NOTE_PATH, newNotePath } from '../notes';
 import { EXAMPLE_PATH, openNote, plainClick } from './open';
+import { useHydratedMark } from '../hydrated';
+import { syncHead } from '../syncHead';
 import { section } from './section.styles';
-import { useThemeName } from '../theme';
-import { landingCardsDark, landingDark, landingLight } from '../theme/themes';
+import { landingLight } from '../theme/themes';
 import { colors, fonts, landing, motion } from '../theme/tokens.stylex';
 import { TwoWindows } from './TwoWindows';
 import { notePath } from '../../shared/ids';
@@ -449,29 +450,37 @@ const styles = stylex.create({
   },
 });
 
-function platform(): string {
-  const data = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
-  return data?.platform || navigator.platform || navigator.userAgent;
+/**
+ * The start shortcut's label, both ways: index.html's pre-paint script marks
+ * Apple platforms on <html>, and globals.css shows the one that applies, so
+ * the prerendered page has the right one from its first paint (D31).
+ */
+function ShortcutLabel() {
+  return (
+    <>
+      <span data-shortcut="apple">{startShortcutLabel('MacIntel')}</span>
+      <span data-shortcut="other">{startShortcutLabel('Linux')}</span>
+    </>
+  );
 }
 
 export function Landing() {
   const newCard = useRef<HTMLAnchorElement>(null);
   const exampleCard = useRef<HTMLAnchorElement>(null);
-  const heroStart = useRef<HTMLButtonElement>(null);
+  const heroStart = useRef<HTMLAnchorElement>(null);
   const startNew = () => void openNote(newNotePath, newCard.current);
   const openExample = () => void openNote(EXAMPLE_PATH, exampleCard.current);
-  const shortcut = startShortcutLabel(platform());
   // A recent note grows from its row into the note page, as a card does.
   const openRecent = (entry: { id: string }, row: HTMLElement | null) =>
     void openNote(notePath(entry.id), row);
   // When the last recent note goes, the focus moves to the hero's primary action.
   const focusHeroStart = useCallback(() => heroStart.current?.focus(), []);
-  // The landing page's own token set: "Clean" in light, "Night" in dark (D07).
-  const scope = useThemeName() === 'dark' ? [landingDark, landingCardsDark] : landingLight;
 
   useEffect(() => {
-    document.title = 'jot · Just start typing';
+    syncHead('landing');
   }, []);
+  // The landing page has hydrated (D31).
+  useHydratedMark(true);
 
   // The page behind the landing page (overscroll, the view transition's
   // backdrop) takes its colour while it is mounted. <body> is outside React,
@@ -510,25 +519,31 @@ export function Landing() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const startButton = (ref?: RefObject<HTMLButtonElement | null>) => (
-    <button
+  // The start actions are links (to /new and the example's route), so they
+  // work before the page hydrates and with no script at all (D31). Each
+  // opens a new note, so no crawler should follow them (nofollow).
+  const startButton = (ref?: RefObject<HTMLAnchorElement | null>) => (
+    <a
       ref={ref}
-      type="button"
-      {...stylex.props(styles.button, styles.primary)}
+      href={NEW_NOTE_PATH}
+      rel="nofollow"
+      {...stylex.props(styles.link, styles.button, styles.primary)}
       aria-keyshortcuts="Meta+Enter Control+Enter"
-      onClick={startNew}
+      onClick={(event) => plainClick(startNew)(event)}
       onPointerEnter={prefetchNotePage}
       onFocus={prefetchNotePage}
     >
       Start a new note{' '}
       <kbd {...stylex.props(styles.primaryKey)} aria-hidden="true">
-        {shortcut}
+        <ShortcutLabel />
       </kbd>
-    </button>
+    </a>
   );
 
   return (
-    <div {...stylex.props(styles.landing, scope)}>
+    // The landing page's own token set: "Clean" in light, "Night" in dark
+    // (D07), which globals.css applies to `data-scope="landing"` (D31).
+    <div data-scope="landing" {...stylex.props(styles.landing, landingLight)}>
       <div {...stylex.props(styles.inner)}>
         <header {...stylex.props(styles.top)}>
           <a {...stylex.props(styles.link, styles.wordmark)} href="/" aria-label="jot, home">
@@ -565,16 +580,17 @@ export function Landing() {
               </p>
               <div {...stylex.props(styles.actions)}>
                 {startButton(heroStart)}
-                <button
-                  type="button"
-                  {...stylex.props(styles.button, styles.secondary)}
-                  onClick={openExample}
+                <a
+                  href={EXAMPLE_PATH}
+                  rel="nofollow"
+                  {...stylex.props(styles.link, styles.button, styles.secondary)}
+                  onClick={(event) => plainClick(openExample)(event)}
                   onPointerEnter={prefetchNotePage}
                   onFocus={prefetchNotePage}
                 >
                   <SparkleIcon xstyle={styles.sparkle} />
                   See the example
-                </button>
+                </a>
               </div>
               <JoinField />
             </div>
@@ -671,10 +687,18 @@ export function Landing() {
             <span {...stylex.props(styles.footItem)}>© 2026 Gerard Rovira · MIT License</span>
           </div>
           <FooterColumn title="Product">
-            <FooterLink href={NEW_NOTE_PATH} onClick={(event) => plainClick(startNew)(event)}>
+            <FooterLink
+              href={NEW_NOTE_PATH}
+              rel="nofollow"
+              onClick={(event) => plainClick(startNew)(event)}
+            >
               New note
             </FooterLink>
-            <FooterLink href={EXAMPLE_PATH} onClick={(event) => plainClick(openExample)(event)}>
+            <FooterLink
+              href={EXAMPLE_PATH}
+              rel="nofollow"
+              onClick={(event) => plainClick(openExample)(event)}
+            >
               Example
             </FooterLink>
           </FooterColumn>

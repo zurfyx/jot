@@ -80,10 +80,13 @@ test('the nav, Previous and Next move between pages without a reload', async ({ 
   expect(await page.evaluate(() => (window as Window & { stayed?: boolean }).stayed)).toBe(true);
 });
 
-test('an unknown docs page goes to the docs home', async ({ page }) => {
+test('an unknown docs page is the 404 page, with a link home', async ({ page }) => {
   await page.goto('/docs/nope');
-  await expect(page).toHaveURL(/\/docs$/);
-  await expect(heading(page)).toHaveText('Learn collaborative Lexical');
+  await expect(page).toHaveURL(/\/docs\/nope$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText("This page doesn't exist.");
+  await expect(page).toHaveTitle('Page not found · jot');
+  await page.getByRole('link', { name: 'Go to jot' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Just start typing.' })).toBeVisible();
 });
 
 test("the landing page's docs links open the docs", async ({ page }) => {

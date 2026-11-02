@@ -1,9 +1,11 @@
 import * as stylex from '@stylexjs/stylex';
 import { type ComponentType, useEffect, useState } from 'react';
 
-import { redirect } from '../router';
-import { useThemeName } from '../theme';
-import { docsDark } from '../theme/themes';
+import { applyHead } from '../head';
+import { headFor } from '../heads';
+import { useHydratedMark } from '../hydrated';
+import { claimHead } from '../syncHead';
+import NotFound from '../NotFound';
 import { colors } from '../theme/tokens.stylex';
 import { Ai, Blame, Size } from './content/features';
 import { ContentInYjs, Offline, Presence } from './content/concepts';
@@ -32,15 +34,18 @@ export default function DocsPage({ slug }: { slug: string }) {
   const page = findDocsPage(slug);
   const Content = CONTENT[slug];
   const [menuOpen, setMenuOpen] = useState(false);
-  const theme = useThemeName();
 
+  // The whole head follows the page, also when the app moves between pages
+  // without a reload (D31); an unknown page is NotFound's.
   useEffect(() => {
-    if (page === undefined) {
-      redirect('/docs');
-      return;
+    const head = headFor(docsPath(slug));
+    if (head !== undefined) {
+      claimHead();
+      applyHead(head);
     }
-    document.title = page.slug === '' ? 'jot docs' : `${page.title} · jot docs`;
-  }, [page]);
+  }, [slug]);
+  // This lazy page has hydrated (or rendered): the page is live (D31).
+  useHydratedMark(true);
 
   // A new page closes the narrow-screen menu.
   const [shownSlug, setShownSlug] = useState(slug);
@@ -50,12 +55,14 @@ export default function DocsPage({ slug }: { slug: string }) {
   }
 
   if (page === undefined || Content === undefined) {
-    return null;
+    // A docs page that doesn't exist is the 404 page (D31), as in 404.html.
+    return <NotFound />;
   }
   const { previous, next } = neighbours(slug);
 
   return (
-    <div {...stylex.props(styles.root, theme === 'dark' && docsDark)}>
+    // The docs' dark token set applies to `data-scope="docs"` (globals.css, D31).
+    <div data-scope="docs" {...stylex.props(styles.root)}>
       <header {...stylex.props(styles.head)}>
         <a href="/" {...stylex.props(styles.brand)}>
           jot<em {...stylex.props(styles.brandDocs)}>docs</em>

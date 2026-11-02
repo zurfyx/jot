@@ -1,13 +1,39 @@
 import * as stylex from '@stylexjs/stylex';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useSyncExternalStore } from 'react';
 
 import { Code } from '../Code';
 import { frame } from '../inspectorFrame';
 import { LEXICAL_Y_WIRE_FORMAT, SNIPPETS } from '../sources';
 import { B, C, DocLink, H2, Li, Ol, P, PageHeader, Source, Ul } from '../ui';
 
-// Lexical and Yjs load only when this page is opened.
-const Inspector = lazy(() => import('../Inspector'));
+// Lexical and Yjs load only when this page is opened, and only in the
+// browser: the prerender's bundle never holds them (D31).
+const Inspector = lazy(
+  import.meta.env.SSR ? () => new Promise<never>(() => {}) : () => import('../Inspector'),
+);
+
+const subscribeNever = () => () => {};
+
+/**
+ * The live inspector, in the browser only. The prerendered page, and its
+ * hydration, show the loading frame; a page reached in the app starts
+ * loading the inspector at once.
+ */
+function LiveInspector() {
+  const inBrowser = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+  const loading = <div aria-hidden="true" {...stylex.props(frame.box, frame.loading)} />;
+  return inBrowser ? (
+    <Suspense fallback={loading}>
+      <Inspector />
+    </Suspense>
+  ) : (
+    loading
+  );
+}
 
 export function ContentInYjs() {
   return (
@@ -19,9 +45,7 @@ export function ContentInYjs() {
         tables, become nested nodes. Type in the editor and watch the root change; hover a line or a
         row to pair them.
       </P>
-      <Suspense fallback={<div aria-hidden="true" {...stylex.props(frame.box, frame.loading)} />}>
-        <Inspector />
-      </Suspense>
+      <LiveInspector />
       <H2>Reading the tree</H2>
       <Ul>
         <Li>

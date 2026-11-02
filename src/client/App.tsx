@@ -2,9 +2,12 @@ import { lazy, Suspense, useEffect } from 'react';
 
 import { isNoteId } from '../shared/ids';
 import { useExampleId } from './examples';
+import { syncHead } from './syncHead';
+import { useHydratedMark } from './hydrated';
 import { Landing } from './landing/Landing';
 import { loadNotePage } from './loadNote';
 import { newNotePath } from './notes';
+import NotFound from './NotFound';
 import { matchRoute, redirect, useLocationPath } from './router';
 
 // The editor, Lexical and Yjs load only on a note page, so the landing page stays light.
@@ -18,11 +21,23 @@ let redirecting = false;
 export function App() {
   const route = matchRoute(useLocationPath());
   const exampleId = useExampleId();
-  const invalid = route.name === 'missing' || (route.name === 'note' && !isNoteId(route.id));
+  const invalid = route.name === 'note' && !isNoteId(route.id);
+
+  // A note's page is live once App has rendered (it is never prerendered). The
+  // prerendered pages, the landing page, the docs and the 404 page, mark
+  // themselves once their own boundary has hydrated (D31).
+  useHydratedMark(route.name === 'note' || route.name === 'new' || route.name === 'example');
 
   useEffect(() => {
-    // Unknown paths and malformed note links go home (the Worker already
-    // answers 400 for a malformed /n/ link loaded directly).
+    // A note's head has none of a public page's tags (D31); its page sets the title.
+    if (route.name === 'note' || route.name === 'new' || route.name === 'example') {
+      syncHead('note');
+    }
+  }, [route.name]);
+
+  useEffect(() => {
+    // Malformed note links go home (the Worker already answers 400 for a
+    // malformed /n/ link loaded directly).
     if (invalid) {
       redirect('/');
     }
@@ -61,6 +76,16 @@ export function App() {
     return (
       <Suspense fallback={null}>
         <NotePage key={route.id} id={route.id} />
+      </Suspense>
+    );
+  }
+  if (route.name === 'missing') {
+    // 404.html, the Worker's answer to any path no page matches (D31). A docs
+    // page that doesn't exist shows it too, from inside the docs' Suspense
+    // boundary, so the 404 page has the same boundary to hydrate either way.
+    return (
+      <Suspense fallback={null}>
+        <NotFound />
       </Suspense>
     );
   }

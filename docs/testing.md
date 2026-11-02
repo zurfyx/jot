@@ -166,6 +166,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   deterministic and reads back as Markdown, the registry maps clients to people whose runs
   jot's content map attributes, and the in-tab peer writes as its own client and follows the
   note without echoes.
+- the link-preview cards (D31, `scripts/og.test.ts`): every public page has its own
+  1200×630 PNG under `public/og/`, carrying the hash of the card drawn from its head as it
+  is now (a stale or missing card fails; `pnpm og-images` redraws them).
 
 ## Durable Object (`pnpm test`, project `workers`)
 
@@ -341,37 +344,91 @@ Durable Objects, over real WebSockets.
   tab in the tab order; the landing page's tab order; the docs' Pages button on a phone;
 - the docs: every page renders with no em dashes; code blocks have their file name, a
   GitHub link and a working Copy; the nav, Previous and Next and in-page links move without
-  a reload; an unknown page goes to `/docs`; the landing page links open them; on a phone,
+  a reload; an unknown docs page is the 404 page, whose link goes home; the landing page
+  links open them; on a phone,
   Pages opens the nav; the inspector shows the tree, follows typing and markdown
   shortcuts, pairs lines and rows on hover and with the caret (whichever moved last, so a
   pointer move after typing takes the lead back), and Tab leaves it.
 
 ## Production build (`pnpm e2e`, project `production`)
 
-A setup step builds the app; the tests then serve `dist/client` to the browser themselves
-(`e2e/production/serve.ts`: no server, no Worker; a note's socket never connects). Their contexts come from the `newContext` fixture (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`. They
-check the StyleX output (D28):
+Playwright's second server runs `pnpm build`, then `wrangler dev` on the built Worker, its
+static assets and the prerendered pages, on the port after the dev server's
+(`e2e/production/serve.ts`); a test can slow or hold some of its files on the way, and a
+note's socket never connects there. Their contexts come from the `newContext` fixture
+(`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`.
+
+The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
+
+- `/` and every docs page are HTML with their real text, title, description, canonical URL,
+  Open Graph and Twitter tags, JSON-LD and the Geist preload, and their preview image is
+  served; the landing page's start actions are links to `/new` and `/new?example`, every
+  one `rel="nofollow"`;
+- they hydrate without a single console warning or error, in light with motion and in
+  dark with reduced motion, and so does the 404 page, for any path and for an unknown docs
+  page; with the docs' chunk held back 1.5 s, the wait for `data-hydrated` still covers the
+  docs' own hydration, and a mismatch injected into their HTML is caught; on a CPU slowed
+  eight times, a mismatch injected into `/`, a docs page, the 404 page or an unknown docs
+  page is reported before `data-hydrated` appears;
+- moving from `/docs/blame` to `/docs/ai` in the app brings the head `/docs/ai` has when
+  loaded (title, description, canonical, Open Graph, Twitter, JSON-LD); an unknown docs
+  page reached in the app has the 404 page's (`noindex`, no canonical), and back restores
+  it; a note opened from the landing page has none of the public tags, and back on the
+  landing page its head is the one it loads with; with the head module held back, going
+  home and on to the note again leaves the note's head when the module arrives, and home
+  again brings the whole landing head; offline, a note (from a prefetched editor) gets its
+  head without the module, home keeps the right title with nothing uncaught, and back online
+  the next move home brings the whole head;
+- with scripts off, `/new`, `/new?example` and a note show that jot needs JavaScript to
+  edit notes, and the link home opens the landing page; with scripts on, a note shows no
+  notice;
+- every path gets its real status: 200 for the pages, 404 for an unknown path or docs page
+  and for `/404` itself (the 404 page, `noindex`), 307 from a trailing slash to the page, 400 for a malformed note
+  link (`/n/public` and the shell's own path included), 200 and the empty shell for a note,
+  `/new` and `/new?example`, which open a fresh note in the browser, and
+  `noindex, nofollow` on `/n/*` and `/api/*`;
+- recent notes on the prerendered landing page (`recent.spec.ts`, D30): with a stored list
+  of 3 or 8 notes and the app's script held back, the HTML has the section's slot and no
+  rows, and the head script has reserved its height; once the page hydrates the rows fill
+  that slot with the same box, nothing below it moves, and no warning is logged, at 1440
+  and 390 px; with no list the slot takes no space;
+- no jump on load (`nojump.spec.ts`): every prerendered page, captured whole, is the same
+  picture with scripts off and right after it hydrates, in light and dark at 1440 and 390
+  px, and the landing page under reduced motion too (its illustrations rest on their end
+  from the first paint). Left out on purpose, and listed in the spec: time (the hydrated page's clock is held
+  and CSS motion is off in both, so the landing page's animations stay on their opening
+  frame), the live inspector (its chunk is held, so its loading frame stays) and the
+  shortcut's ⌘ label on Apple platforms.
+
+And the StyleX output (D28):
 
 - every StyleX rule ships in exactly one stylesheet, the one the build chose for it, with no
   marker left; the note page's and the docs' own rules are in their chunks, and few rules
   are moved to the entry;
-- only the listed global rules (color-scheme, the dark tokens, `<body>`, reduced motion,
-  `::highlight()`, a table selection's `::selection`, the inspector's code, the recent
-  notes' slot) sit outside a layer, since unlayered CSS beats every component style;
+- only the listed global rules (color-scheme, the dark tokens and the landing page's and
+  the docs' dark sets, the shortcut's label, `<body>`, reduced motion, `::highlight()`, a
+  table selection's `::selection`, the inspector's code, the recent notes' slot) sit
+  outside a layer, since unlayered CSS beats every component style;
 - the entry stylesheet puts `reset` and every `stylex.p<priority>` layer in priority order
   before its first rule, and every layer any stylesheet uses is in that order;
 - in dark and in light, the theme's background is on the page before the app's script runs
-  (the script is held back);
-- a lazy page's stylesheet that arrives 1.5 s late is in before the page's heading is;
+  (the script is held back), and the prerendered landing page in its own colours;
+- a lazy page's stylesheet that arrives 1.5 s late, the docs' reached from the landing
+  page, is in before the page's heading is;
 - the docs page and a note page compute the same styles for every element whether opened
   directly or reached from the landing page or each other (their stylesheets load in a
   different order).
 
+Unit tests run the prerender itself on a stand-in for the client build
+(`scripts/prerender.test.ts`): it writes every page with its content and the shell's notice,
+and it fails the build (a non-zero exit, nothing written) when a page throws inside a
+Suspense boundary or renders without its heading (`scripts/fixtures/prerender-broken.tsx`).
+
 Plain unit tests (`scripts/vite-stylex.test.ts`) cover the plugin: a module imports its own
 rules, layered by priority; the order declaration; a priority it can't order fails loudly;
 where the build places rules (once, shared ones in the entry, a property's conditions kept
-in one order); and `src/client/theme/tokens.test.ts` keeps the dark token list in step with
-the light one.
+in one order); and `src/client/theme/tokens.test.ts` keeps the dark token lists in step with
+the light ones, the landing page's and the docs' included.
 
 ## Visual (`pnpm e2e:docker`)
 
@@ -398,7 +455,7 @@ and dark, at 1440x900 and 390x844.
   unavailable message, and jot AI's caret after it writes;
 - every docs page, whole, the phone's page list, the inspector following a hovered row, and
   the inspector with a typed quote and code block (its own size at every width);
-- a read-only note and a malformed link (and an unknown path going home).
+- a read-only note, a malformed link and the 404 page.
 
 `e2e/visual/motion.spec.ts` runs in the light 1440 project only. For the landing page's
 load, the fan's lift, a dock menu, the status pill changing, Share confirming, blame's
@@ -438,7 +495,13 @@ projects out (CI, or `JOT_E2E_VISUAL=1`, turns them on).
 
 Traces are kept on failure and uploaded by CI. In sandboxed macOS shells that can't run
 Chromium's multi-process mode, set `JOT_E2E_SINGLE_PROCESS=1`. `JOT_E2E_PORT` moves the
-test server off 5174, so two checkouts on one machine don't share a server.
+dev server off 5174 (and the production build's server off 5175, the port after it), so two
+checkouts on one machine don't share a server.
+
+The landing page, the docs and the 404 page arrive prerendered and show before they
+hydrate. `goto` and `reload` from `e2e/helpers.ts` wait for the app too (`data-hydrated` on
+`<html>`), unless the test asks for `commit` or `domcontentloaded`, as one that holds the
+script back or turns scripts off does.
 
 ## By hand
 

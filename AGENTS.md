@@ -26,7 +26,8 @@ pnpm format:check     # Prettier
 pnpm test             # Vitest: unit (Node) + workers (workerd, real SQLite)
 pnpm e2e              # Playwright against its own dev server on :5174
 pnpm e2e:docker       # Playwright in CI's image, with the visual suite (screenshots)
-pnpm build            # client assets + Worker bundle in dist/
+pnpm build            # client assets + Worker bundle in dist/, then the prerendered pages (D31)
+pnpm og-images        # redraw the link-preview cards in public/og/ (after a page's title or description changes)
 pnpm exec wrangler deploy --dry-run   # after pnpm build: checks the deploy bundle
 pnpm bump-lexical <pr-or-sha>         # then pnpm install
 ```
@@ -44,6 +45,11 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
   version.
 - **`@y/y` is pinned exactly** (`14.0.0-rc.29`), matching `@lexical/y`'s peer dependency.
   The relay uses `@y/y` too, never yrs (D03).
+- **The landing page, the docs and the 404 page are prerendered** (D31) by
+  `scripts/prerender.ts`; a note's page is client-only. Their first render in the browser
+  must match the server's: browser APIs, time and randomness go in effects, device-dependent
+  looks go through CSS. A public page's head (title, description, preview card) lives in
+  `src/client/heads.ts`; `pnpm dev` prerenders nothing, the production tests run on the build.
 - Wire constants live in `src/shared/protocol.ts`; ids, limits and link parsing in
   `src/shared/`. Client and Worker import them from there; never duplicate them.
 - **Docs are rewritten, never amended** (D09): when reality changes, rewrite the doc to
@@ -74,6 +80,9 @@ read` permissions, checkouts with `persist-credentials: false`. The `zizmor` CI 
   at them. Open the same note in two windows and type in both.
 - After Worker changes: `pnpm test` (the workers project runs the Durable Object in
   workerd with real SQLite storage, eviction and alarms), then `pnpm e2e`.
+- After changing the landing page or the docs: `pnpm e2e --project=production` (the
+  prerendered HTML, hydration without warnings, no jump on load, the HTTP statuses), on
+  the build in `wrangler dev`.
 - Before a PR: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm e2e`
   (the pre-push hook runs all but e2e).
 - Sandboxed agent shells on macOS can't launch Chromium normally (mach port rendezvous is
