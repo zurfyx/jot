@@ -193,10 +193,11 @@ export function ServerSideEditing() {
       <H2>Refusals</H2>
       <P>
         <C>editYState</C> writes only to the layout root unless <C>allowedRoots</C> says otherwise.
-        It throws a <C>YHeadlessError</C> with a code: <C>'not-initialized'</C> for a note that was
-        never seeded, <C>'read-only'</C> for a newer schema version or layout, or node types the
-        editor doesn't register, and <C>'foreign-roots'</C> for an update that writes anywhere else.
-        If updates pass through yrs older than 0.28, set <C>clientIDRange: 'uint32'</C>.
+        It throws a <C>YHeadlessError</C> with a code, among them <C>'not-initialized'</C> for a
+        note that was never seeded, <C>'read-only'</C> for a newer schema version or layout, node
+        types the editor doesn't register or content its classes throw on (the error's{' '}
+        <C>warnings</C> say which), and <C>'foreign-roots'</C> for an update that writes anywhere
+        else. If updates pass through yrs older than 0.28, set <C>clientIDRange: 'uint32'</C>.
       </P>
       <H2>In a relay like jot's</H2>
       <P>

@@ -98,7 +98,8 @@ playground needs: no toolbar is always there.
   - "Connecting…", "Offline · 3 edits waiting", "Syncing · 3 edits waiting" (connected,
     and the server hasn't confirmed them yet), and "Back online · merged" for four seconds
     once an offline spell's edits are confirmed;
-  - "Read only" for a newer layout.
+  - "Read only" for a note this jot can't write: one a newer jot wrote to, or one in a
+    layout the binding can't write.
 
   The pill is a button: a click toggles Work offline, and a dark Reconnect button sits
   beside it while that is on.

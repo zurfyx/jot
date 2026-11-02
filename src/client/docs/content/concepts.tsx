@@ -26,8 +26,10 @@ export function ContentInYjs() {
       <Ul>
         <Li>
           <B>The root's attributes:</B> <C>lexical-y:1</C> = <C>true</C> records the layout version
-          the note needs, and <C>k:&lt;type&gt;</C> records how each element type is stored, on its
-          first write.
+          the note needs, <C>lexical-y-schema:1</C> = <C>true</C> the app's schema version (one
+          attribute per version that wrote to the note), and <C>k:&lt;type&gt;</C> how each element
+          type is stored, recorded on its first write. A client opens the note read only when the
+          highest version recorded is newer than its own.
         </Li>
         <Li>
           <B>Text</B> carries its formats: <C>f:bold</C>, <C>f:italic</C>. A link is a format

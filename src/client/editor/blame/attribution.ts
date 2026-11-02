@@ -62,7 +62,8 @@ export function computeBlame(doc: Y.Doc, identity: LocalIdentity = localIdentity
     const delta = root.toDelta({ deep: true, renderer });
     const { lines, moves } = readDelta((delta as { toJSON(): unknown }).toJSON());
     if (moves) {
-      // Lines a peer moved or joined are not where storage has them: skip them.
+      // A pre-freeze note's move records (D25): the lines they cover are not where
+      // storage has them, so skip them.
       markMovedLines(doc, root, lines);
     }
     let total = 0;

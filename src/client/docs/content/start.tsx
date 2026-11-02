@@ -103,7 +103,8 @@ export function QuickStart() {
         Initializing earlier would write an empty note on top of content you haven't received yet.
         After the sync, <C>initialize()</C> reads the note, or seeds an empty one. The seed's client
         id is derived from its content, so two people opening a new note at once write the same
-        items, and the note gets one copy.
+        items, and the note gets one copy (as long as both bind with the same <C>schemaVersion</C>,
+        which is part of what the seed writes).
       </Callout>
       <H2>In jot</H2>
       <P>
@@ -119,17 +120,20 @@ export function QuickStart() {
         The extension's output also has a <C>status</C> signal: <C>'pending'</C> until the first
         sync, then <C>'active'</C>, or <C>'readonly'</C> when the binding can't write the note
         safely: a newer schema version or layout, content with no layout record, node types the
-        editor doesn't register, a type recorded with a storage kind this editor can't use, or an
-        older layout's root that needs converting. jot then says "Read only" and keeps the note
-        readable.
+        editor doesn't register or content its classes throw on, a type recorded with a storage kind
+        this editor can't use, or <C>@lexical/yjs</C> roots that hold content. The binding reports
+        why to the editor's <C>onWarn</C>, as a warning with a stable <C>code</C>, such as{' '}
+        <C>UNSUPPORTED_SCHEMA_WARNING</C>. A read-only note still shows what others write. jot then
+        says "Read only", with a banner that asks for a reload, and keeps the note readable.
       </P>
       <H2>Install</H2>
       <Code source={SNIPPETS.install} />
       <P>
-        <C>@lexical/y</C> isn't on npm yet, so jot installs every Lexical package from the same
-        pkg.pr.new build of its pull request; <C>pnpm bump-lexical &lt;pr-or-sha&gt;</C> moves the
-        pin. <C>@y/y</C> is a peer dependency pinned to the release candidate the binding is tested
-        with. Its type declarations don't type-check on their own, so set <C>skipLibCheck: true</C>.
+        <C>@lexical/y</C> is on Lexical's <C>main</C> branch, but in no stable npm release yet, so
+        jot installs every Lexical package from the same pkg.pr.new build of one <C>main</C> commit;{' '}
+        <C>pnpm bump-lexical &lt;pr-or-sha&gt;</C> moves the pin. <C>@y/y</C> is a peer dependency
+        pinned to the release candidate the binding is tested with. Its type declarations don't
+        type-check on their own, so set <C>skipLibCheck: true</C>.
       </P>
       <P>
         Next, see <DocLink slug="content-in-yjs">how the note is stored</DocLink>, or read the{' '}

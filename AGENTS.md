@@ -44,6 +44,11 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
   version.
 - **`@y/y` is pinned exactly** (`14.0.0-rc.29`), matching `@lexical/y`'s peer dependency.
   The relay uses `@y/y` too, never yrs (D03).
+- **Every `Y.Doc` that holds a note comes from `createYDoc()`** (`@lexical/y`, or
+  `@lexical/y/headless` where no editor runs), so Yjs's format cleanup is off: a bound
+  document, the relay's, an in-tab peer's, a scratch copy. Every binding passes
+  `schemaVersion: SCHEMA_VERSION` (`src/shared/schema.ts`). Raise `SCHEMA_VERSION` in the
+  change that first stores something an older jot can't keep (D29).
 - Wire constants live in `src/shared/protocol.ts`; ids, limits and link parsing in
   `src/shared/`. Client and Worker import them from there; never duplicate them.
 - **Docs are rewritten, never amended** (D09): when reality changes, rewrite the doc to
