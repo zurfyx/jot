@@ -27,6 +27,8 @@ import { ORIGIN } from './serve';
 test.use({ baseURL: ORIGIN });
 
 const PAGES = ['/', ...DOCS_HEADS.map((head) => head.path)];
+/** Where the hydrated page's clock starts and holds. */
+const CLOCK = new Date('2026-11-01T12:00:00Z');
 
 type ContextOptions = Parameters<Browser['newContext']>[0];
 
@@ -81,8 +83,10 @@ async function open(
       Object.defineProperty(navigator, 'platform', { get: () => 'Linux x86_64' });
       Object.defineProperty(navigator, 'userAgentData', { get: () => undefined });
     });
-    await page.clock.install();
-    await page.clock.pauseAt(new Date('2026-11-01T12:00:00Z'));
+    // A fixed clock, started from that time (pausing at a fixed date ahead of
+    // the real clock would fail once that date has passed).
+    await page.clock.install({ time: CLOCK });
+    await page.clock.pauseAt(new Date(CLOCK.getTime() + 1000));
     await page.route(/\/assets\/Inspector-[\w-]+\.js$/, () => {
       // Held: the inspector's frame stays as it is without scripts.
     });
