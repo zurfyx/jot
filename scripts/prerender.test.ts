@@ -22,7 +22,7 @@ function clientBuild(): string {
   mkdirSync(join(dir, '.vite'));
   writeFileSync(
     join(dir, 'index.html'),
-    '<!doctype html>\n<html lang="en">\n  <head>\n    <title>jot</title>\n    <meta name="description" content="jot" />\n  </head>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>\n',
+    '<!doctype html>\n<html lang="en">\n  <head>\n    <title>jot</title>\n    <meta name="description" content="jot" />\n    <script type="module" crossorigin src="/assets/index-Stub1234.js"></script>\n  </head>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>\n',
   );
   writeFileSync(
     join(dir, '.vite/manifest.json'),

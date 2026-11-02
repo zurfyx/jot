@@ -14,6 +14,7 @@ import {
   robotsTxt,
   sitemapXml,
 } from './discovery.ts';
+import { countRules, headerRules, MAX_RULES } from './headers.ts';
 import { htmlToMarkdown } from './markdown.ts';
 import { stylex } from './vite-stylex.ts';
 
@@ -202,10 +203,21 @@ async function main(): Promise<void> {
   });
   const app = (await import(pathToFileURL(join(SERVER, 'prerender.js')).href)) as Prerender;
 
-  const template = await readFile(join(CLIENT, 'index.html'), 'utf8');
-  if (!template.includes('<div id="root"></div>')) {
+  const built = await readFile(join(CLIENT, 'index.html'), 'utf8');
+  if (!built.includes('<div id="root"></div>')) {
     throw new Error(`prerender: ${CLIENT}/index.html is not the built shell; run \`pnpm build\`.`);
   }
+  // The app's script at low priority (D33): the HTML, the stylesheet and the
+  // font are what paint the page, and they get the bandwidth first. Vite
+  // writes this tag itself, so the attribute goes in here.
+  const entries = built.match(/<script type="module" crossorigin src="/g) ?? [];
+  if (entries.length !== 1) {
+    throw new Error(`prerender: the built shell has ${entries.length} entry scripts, not 1.`);
+  }
+  const template = built.replace(
+    '<script type="module" crossorigin src="',
+    '<script type="module" crossorigin fetchpriority="low" src="',
+  );
   const manifestFile = join(CLIENT, '.vite/manifest.json');
   const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as Record<
     string,
@@ -231,7 +243,9 @@ async function main(): Promise<void> {
     // with the page, after the entry's (D28's layer order).
     return [
       ...chunk.css.map((file) => `<link rel="stylesheet" crossorigin href="/${file}">`),
-      ...chunk.js.map((file) => `<link rel="modulepreload" crossorigin href="/${file}">`),
+      ...chunk.js.map(
+        (file) => `<link rel="modulepreload" crossorigin fetchpriority="low" href="/${file}">`,
+      ),
     ].join('\n    ');
   };
   const docsLinks = lazyPage('src/client/docs/DocsPage.tsx');
@@ -355,24 +369,21 @@ async function main(): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, html);
   }
-  // Their types, in UTF-8, named file by file: a pattern would also give an
-  // unknown path's 404 page (HTML) the Markdown type.
-  const types = files.flatMap(([file]) => {
-    const type = file.endsWith('.md')
-      ? 'text/markdown'
-      : file.endsWith('.txt')
-        ? 'text/plain'
-        : file.endsWith('.xml')
-          ? 'application/xml'
-          : null;
-    return type === null ? [] : [`/${file}\n  Content-Type: ${type}; charset=utf-8`];
-  });
+  // Their types, and immutable caching for the hashed assets, named file by
+  // file: a pattern would also reach an unknown path's 404 page (D32, D33).
   const headersFile = join(CLIENT, '_headers');
   const headers = existsSync(headersFile) ? await readFile(headersFile, 'utf8') : '';
-  await writeFile(
-    headersFile,
-    `${headers.trimEnd()}\n\n# What assistants read (D32), written by scripts/prerender.ts.\n${types.join('\n')}\n`,
-  );
+  const assets = existsSync(join(CLIENT, 'assets')) ? await readdir(join(CLIENT, 'assets')) : [];
+  const rules = `${headers.trimEnd()}\n\n${headerRules(
+    files.map(([file]) => file),
+    assets.sort(),
+  ).join('\n')}\n`;
+  if (countRules(rules) > MAX_RULES) {
+    throw new Error(
+      `prerender: _headers would hold ${countRules(rules)} rules; Cloudflare reads at most ${MAX_RULES}.`,
+    );
+  }
+  await writeFile(headersFile, rules);
   console.log(`prerender: ${files.map(([file]) => file).join(', ')}`);
 }
 
