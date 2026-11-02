@@ -439,8 +439,14 @@ writes what crawlers and assistants read (D32): `robots.txt` (the rules and the
 sitemap's address), `sitemap.xml` from every page's canonical URL, a Markdown copy of each docs page converted from its prerendered `<article>` by
 `scripts/markdown.ts` (`/docs.md`, `/docs/<slug>.md`, code fenced with its `<pre>`'s
 `data-language`), `llms.txt` (jot's summary and every docs page by group, from
-`docs/pages.ts`) and `llms-full.txt`, and appends a `_headers` rule naming each of those
-files' type in UTF-8. `wrangler` reads the built config. The
+`docs/pages.ts`) and `llms-full.txt`. Every page it writes, and the shell, loads the app's
+script at low priority (`fetchpriority="low"`, and on a docs page its `modulepreload`
+links too), so the HTML, the stylesheet and the font arrive first (D33). Last it appends to
+`_headers`, file by file (a pattern would also reach the 404 page served for a missing
+path): each text file's type in UTF-8, and `Cache-Control: public, max-age=31536000,
+immutable` for every content-hashed file in `assets/`; everything else keeps the assets'
+default, revalidated on every use. The build fails past Cloudflare's 100 rules.
+`wrangler` reads the built config. The
 link-preview cards are not built: `pnpm og-images` (`scripts/og-images.ts`) draws them in
 Chromium from `heads.ts` and they are committed, each PNG carrying the hash of its card
 (`scripts/og.ts`). Cloudflare Workers Builds, connected to the

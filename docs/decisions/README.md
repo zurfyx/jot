@@ -66,6 +66,7 @@ How expensive is this to get wrong?
 | [D30](D30-recent-notes-in-the-browser.md)               | Recently opened notes in localStorage, on the landing page; pruned at 90 days | LOW    | `DECIDED` |
 | [D31](D31-prerender-the-public-pages.md)                | Prerender the public pages with jot's own router; real 404s; no framework     | MED    | `DECIDED` |
 | [D32](D32-sitemap-robots-and-llms-txt.md)               | A sitemap, robots.txt and llms.txt, built from the route data as static files | LOW    | `DECIDED` |
+| [D33](D33-first-paint-priority-and-caching.md)          | The app's script at low priority; hashed assets cached for a year             | LOW    | `DECIDED` |
 
 ## Superseded
 

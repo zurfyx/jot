@@ -41,7 +41,7 @@ export async function serveBuild(
 /** The entry script the prerendered landing page loads. */
 export function entryScript(): string {
   const html = readFileSync(join(CLIENT, 'index.html'), 'utf8');
-  const match = /<script type="module" crossorigin src="\/(assets\/index-[\w-]+\.js)"/.exec(html);
+  const match = /<script type="module"[^>]* src="\/(assets\/index-[\w-]+\.js)"/.exec(html);
   if (match === null) {
     throw new Error('dist/client/index.html loads no entry script.');
   }

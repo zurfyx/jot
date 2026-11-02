@@ -33,7 +33,7 @@ function clientBuild(): string {
       },
     }),
   );
-  writeFileSync(join(dir, 'assets/geist-latin-wght-normal-test.woff2'), '');
+  writeFileSync(join(dir, 'assets/geist-latin-wght-normal-Te5tHash.woff2'), '');
   return dir;
 }
 
@@ -70,6 +70,15 @@ describe('the prerender (D31)', () => {
     );
     expect(readFileSync(join(client, 'n/shell.html'), 'utf8')).toContain(
       'jot needs JavaScript to edit notes.',
+    );
+    // The app's script at low priority, and the hashed assets cached for a
+    // year (D33).
+    expect(readFileSync(join(client, 'docs/blame/index.html'), 'utf8')).toContain(
+      '<script type="module" crossorigin fetchpriority="low" src="/assets/index-Stub1234.js">',
+    );
+    expect(readFileSync(join(client, 'n/shell.html'), 'utf8')).toContain('fetchpriority="low"');
+    expect(readFileSync(join(client, '_headers'), 'utf8')).toMatch(
+      /\/assets\/geist-latin-wght-normal-[\w-]{8}\.woff2\n {2}Cache-Control: public, max-age=31536000, immutable/,
     );
     // And what crawlers and assistants read (D32).
     expect(readFileSync(join(client, 'robots.txt'), 'utf8')).toContain(

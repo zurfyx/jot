@@ -184,6 +184,10 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   with jot's name and summary, names the site, and lists every docs page under its group
   in reading order with its Markdown link and its line, then the full text; and
   `llms-full.txt` holds every page in order under its address.
+- the build's `_headers` rules (D33, `scripts/headers.test.ts`): a content-hashed name is
+  told from any other; each text file gets its type and each hashed asset a year's
+  `immutable` caching, file by file, with no pattern, nothing for HTML and nothing for a
+  name without a hash; rules are counted one per path, against Cloudflare's 100.
 
 ## Durable Object (`pnpm test`, project `workers`)
 
@@ -373,6 +377,13 @@ static assets and the prerendered pages, on the port after the dev server's
 note's socket never connects there. Their contexts come from the `newContext` fixture
 (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`.
 
+Caching and load order (D33, `caching.spec.ts`): every file in `assets/` has a hash in its
+name and is served `public, max-age=31536000, immutable`; a missing asset is the 404 page
+with the default `public, max-age=0, must-revalidate`, and so is everything else (the
+pages, a note's shell and `/new`, `robots.txt`, the sitemap, the `llms` files, the Markdown
+copies, a preview image, the favicon); every page, the 404 page and the shell load
+the app's one module script with `fetchpriority="low"`.
+
 What crawlers and assistants read (D32, `discovery.spec.ts`), the guard. They are static
 files, the same on every host, a Preview included (where Cloudflare's `noindex` makes
 production's sitemap harmless), so the guard checks that what is served is the built file:
@@ -452,7 +463,7 @@ And the StyleX output (D28):
 Unit tests run the prerender itself on a stand-in for the client build
 (`scripts/prerender.test.ts`): it writes every page with its content and the shell's notice,
 `robots.txt`, the sitemap, `llms.txt`, each docs page's Markdown, `llms-full.txt` and their
-types,
+types, the entry script at low priority and a year's caching for the hashed font,
 and it fails the build (a non-zero exit, nothing written) when a page throws inside a
 Suspense boundary or renders without its heading (`scripts/fixtures/prerender-broken.tsx`).
 
