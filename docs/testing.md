@@ -377,12 +377,14 @@ static assets and the prerendered pages, on the port after the dev server's
 note's socket never connects there. Their contexts come from the `newContext` fixture
 (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`.
 
-Caching and load order (D33, `caching.spec.ts`): every file in `assets/` has a hash in its
-name and is served `public, max-age=31536000, immutable`; a missing asset is the 404 page
+Caching and load order (D33, `caching.spec.ts`): the files in `assets/` are exactly the
+ones Vite's manifest names (`dist/client.manifest.json`), and each is served
+`public, max-age=31536000, immutable`; a missing asset is the 404 page
 with the default `public, max-age=0, must-revalidate`, and so is everything else (the
 pages, a note's shell and `/new`, `robots.txt`, the sitemap, the `llms` files, the Markdown
 copies, a preview image, the favicon); every page, the 404 page and the shell load
-the app's one module script with `fetchpriority="low"`.
+the app's one module script with `fetchpriority="low"`, and every docs page's
+`modulepreload` links carry it too.
 
 What crawlers and assistants read (D32, `discovery.spec.ts`), the guard. They are static
 files, the same on every host, a Preview included (where Cloudflare's `noindex` makes
@@ -463,7 +465,9 @@ And the StyleX output (D28):
 Unit tests run the prerender itself on a stand-in for the client build
 (`scripts/prerender.test.ts`): it writes every page with its content and the shell's notice,
 `robots.txt`, the sitemap, `llms.txt`, each docs page's Markdown, `llms-full.txt` and their
-types, the entry script at low priority and a year's caching for the hashed font,
+types, the entry script and a docs page's `modulepreload` at low priority and a year's
+caching for the hashed font; it writes exactly 100 `_headers` rules (Cloudflare's limit)
+when the assets call for them and fails the build at 101,
 and it fails the build (a non-zero exit, nothing written) when a page throws inside a
 Suspense boundary or renders without its heading (`scripts/fixtures/prerender-broken.tsx`).
 

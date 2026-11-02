@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { DOCS_HEADS } from '../../src/client/heads';
 import { expect, freshNoteId, test } from '../helpers';
 import { CLIENT, ORIGIN } from './serve';
 
@@ -18,10 +19,29 @@ const REVALIDATE = 'public, max-age=0, must-revalidate';
 
 const assets = readdirSync(join(CLIENT, 'assets'));
 
+/**
+ * Every file Vite's manifest names: what Vite itself wrote, with its hash in
+ * the name, independent of the build's own test for one.
+ */
+function manifestFiles(): Set<string> {
+  const manifest = JSON.parse(readFileSync(`${CLIENT}.manifest.json`, 'utf8')) as Record<
+    string,
+    { file: string; css?: string[]; assets?: string[] }
+  >;
+  return new Set(
+    Object.values(manifest).flatMap((chunk) => [
+      chunk.file,
+      ...(chunk.css ?? []),
+      ...(chunk.assets ?? []),
+    ]),
+  );
+}
+
 test('every content-hashed asset is cached for a year', async ({ request }) => {
   expect(assets.length).toBeGreaterThan(10);
+  // The assets are exactly the files Vite wrote, each named by its content.
+  expect(new Set(assets.map((file) => `assets/${file}`))).toEqual(manifestFiles());
   for (const file of assets) {
-    expect(file, 'every built asset has a hash in its name').toMatch(/-[\w-]{8}\.[a-z\d]+$/i);
     const response = await request.get(`/assets/${file}`);
     expect(response.status(), file).toBe(200);
     expect(response.headers()['cache-control'], file).toBe(IMMUTABLE);
@@ -75,4 +95,15 @@ test("the app's script loads at low priority on every page", async ({ request })
   }
   // The built shell carries it too, so nothing serves the app at high priority.
   expect(readFileSync(join(CLIENT, 'n/shell.html'), 'utf8')).toContain('fetchpriority="low"');
+});
+
+test('a docs page preloads its own chunks at low priority too', async ({ request }) => {
+  for (const head of DOCS_HEADS) {
+    const html = await (await request.get(head.path)).text();
+    const preloads = html.match(/<link rel="modulepreload"[^>]*>/g) ?? [];
+    expect(preloads.length, head.path).toBeGreaterThan(0);
+    for (const preload of preloads) {
+      expect(preload, head.path).toContain('fetchpriority="low"');
+    }
+  }
 });

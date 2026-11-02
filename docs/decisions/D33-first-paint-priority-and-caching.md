@@ -5,9 +5,9 @@ Status: `DECIDED`
 ## Context
 
 On a phone, a prerendered page (D31) paints from its HTML and its stylesheet. The app's
-script (about 91 KB compressed), the Geist font and, on jot.rovira.sh, Cloudflare's
+script (about 86 KiB with brotli), the Geist font and, on jot.rovira.sh, Cloudflare's
 analytics script all load at once and share the bandwidth with the stylesheet, so the first
-paint waits on bytes it doesn't need. And every asset was served with Workers Static
+paint can wait on bytes it doesn't need. And every asset was served with Workers Static
 Assets' default `public, max-age=0, must-revalidate`: a returning visitor asked again for
 files whose names change with their content.
 
@@ -32,10 +32,18 @@ files whose names change with their content.
 
 ## Why
 
-- The critical path to the first paint is HTML, then CSS; the script only hydrates what is
-  already painted, so it can wait.
-- A hashed name is a promise that the content never changes under it; caching it forever
+- The caching is the main gain. A returning visitor's browser keeps the script, the
+  stylesheets and the fonts and asks for none of them again; only the HTML is revalidated.
+  A hashed name is a promise that the content never changes under it, so caching it forever
   is safe, and a new build brings new names.
+- The priority is a small gain, measured with Lighthouse (mobile; simulated runs the median
+  of 5, against a Preview of `main` on the same host). Simulated, first paint moved from
+  985 to 960 ms on `/` and from 981 to 961 ms on `/docs/blame`, about 2% and within the
+  runs' noise. With slow 4G applied in the browser (one run each, against production), it
+  moved from 1827 to 1727 ms on `/` and from 1885 to 1731 ms on `/docs/blame`, 5 to 8%. The
+  critical path to the first paint is HTML, then CSS; the script only hydrates what is
+  already painted, so it can wait. A docs page's `modulepreload` links at their default
+  priority measured no better than at low (983 against 976 ms), so they are low too.
 
 ## Consequences
 

@@ -5,6 +5,8 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { countRules, MAX_RULES } from './headers';
+
 /**
  * scripts/prerender.ts fails the build when a page doesn't render (D31): a
  * render error React would leave for the browser, or a page without its
@@ -15,9 +17,9 @@ const ROOT = join(import.meta.dirname, '..');
 const dirs: string[] = [];
 
 /** The least of a client build the script reads: the shell, the manifest and the font. */
-function clientBuild(): string {
+function clientBuild(extraAssets = 0): string {
   const dir = mkdtempSync(join(tmpdir(), 'jot-prerender-'));
-  dirs.push(dir);
+  dirs.push(dir, `${dir}.manifest.json`);
   mkdirSync(join(dir, 'assets'));
   mkdirSync(join(dir, '.vite'));
   writeFileSync(
@@ -34,6 +36,10 @@ function clientBuild(): string {
     }),
   );
   writeFileSync(join(dir, 'assets/geist-latin-wght-normal-Te5tHash.woff2'), '');
+  // More hashed assets, each one more `_headers` rule (D33).
+  for (let i = 0; i < extraAssets; i++) {
+    writeFileSync(join(dir, `assets/chunk-${String(i).padStart(8, '0')}.js`), '');
+  }
   return dir;
 }
 
@@ -77,6 +83,13 @@ describe('the prerender (D31)', () => {
       '<script type="module" crossorigin fetchpriority="low" src="/assets/index-Stub1234.js">',
     );
     expect(readFileSync(join(client, 'n/shell.html'), 'utf8')).toContain('fetchpriority="low"');
+    const preloads =
+      readFileSync(join(client, 'docs/blame/index.html'), 'utf8').match(
+        /<link rel="modulepreload"[^>]*>/g,
+      ) ?? [];
+    expect(preloads).toEqual([
+      '<link rel="modulepreload" crossorigin fetchpriority="low" href="/assets/DocsPage-test.js">',
+    ]);
     expect(readFileSync(join(client, '_headers'), 'utf8')).toMatch(
       /\/assets\/geist-latin-wght-normal-[\w-]{8}\.woff2\n {2}Cache-Control: public, max-age=31536000, immutable/,
     );
@@ -115,4 +128,26 @@ describe('the prerender (D31)', () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('/docs/blame does not say "Blame and history"');
   });
+
+  it(
+    "writes up to 100 _headers rules, Cloudflare's limit, and fails the build past it",
+    { timeout: 60_000 },
+    () => {
+      // How many rules a build with no extra assets writes.
+      const base = clientBuild();
+      expect(prerender(base).status).toBe(0);
+      const rules = countRules(readFileSync(join(base, '_headers'), 'utf8'));
+      expect(rules).toBeLessThan(MAX_RULES);
+
+      const full = clientBuild(MAX_RULES - rules);
+      const fits = prerender(full);
+      expect(fits.status, fits.stderr).toBe(0);
+      expect(countRules(readFileSync(join(full, '_headers'), 'utf8'))).toBe(MAX_RULES);
+
+      const over = clientBuild(MAX_RULES - rules + 1);
+      const fails = prerender(over);
+      expect(fails.status).not.toBe(0);
+      expect(fails.stderr).toContain('_headers would hold 101 rules');
+    },
+  );
 });

@@ -429,7 +429,8 @@ Worker together (`dist/client`, `dist/jot`), then `scripts/prerender.ts` (D31): 
 build of `src/client/prerender.tsx` (Vite's SSR build, with the same StyleX plugin, so the
 same class names) renders each public page with React's `prerender` into the built
 `index.html`, with its head, the main Geist font preloaded, a docs page's chunk and
-stylesheet linked (from the client build's manifest, which it then removes) and a
+stylesheet linked (from the client build's manifest, which it then moves out of the served
+files to `dist/client.manifest.json`) and a
 `<noscript>` style that gives the dark token sets to a system in dark mode when no script
 runs. It writes `index.html`, `docs/index.html`, `docs/<slug>/index.html` and `404.html`,
 and keeps the built shell as `n/shell.html`, with a `<noscript>` notice (`NoScriptNotice`,

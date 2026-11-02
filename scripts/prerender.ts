@@ -223,7 +223,9 @@ async function main(): Promise<void> {
     string,
     ManifestChunk
   >;
-  // The manifest is the build's own record; it is not served.
+  // The manifest is the build's own record: it is not served, but kept beside
+  // the client build (`dist/client.manifest.json`) for the production tests.
+  await writeFile(`${CLIENT}.manifest.json`, JSON.stringify(manifest, null, 2));
   await rm(join(CLIENT, '.vite'), { recursive: true, force: true });
 
   const font = (await readdir(join(CLIENT, 'assets'))).find((file) =>
