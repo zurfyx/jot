@@ -58,13 +58,14 @@ How expensive is this to get wrong?
 | [D09](D09-docs-are-rewritten.md)                        | Docs are rewritten, never amended                                             | LOW    | `DECIDED` |
 | [D11](D11-workers-tests-on-vitest-plugin.md)            | Durable Object tests on `@cloudflare/vitest-plugin`                           | LOW    | `DECIDED` |
 | [D15](D15-no-public-note.md)                            | No public note: abuse on a personal domain, and anyone can fill it            | LOW    | `DECIDED` |
-| [D17](D17-notes-out-of-search-engines.md)               | Notes and the API are `noindex, nofollow` and disallowed in robots.txt        | LOW    | `DECIDED` |
+| [D17](D17-notes-out-of-search-engines.md)               | Notes, the API and new-note links are kept out of search engines              | LOW    | `DECIDED` |
 | [D22](D22-docs-in-the-app.md)                           | Docs at `/docs` in the app; every snippet a compiling file, by `?raw`         | LOW    | `DECIDED` |
 | [D24](D24-previews-on-workers-dev.md)                   | Branch Previews on rovira.workers.dev, noindex, own Durable Objects           | LOW    | `DECIDED` |
 | [D25](D25-older-layout-notes-stay-read-only.md)         | Notes in an older `@lexical/y` layout stay read only; no conversion           | MED    | `DECIDED` |
 | [D29](D29-one-app-schema-version.md)                    | One app schema version for every note, raised when older jot can't keep it    | MED    | `DECIDED` |
 | [D30](D30-recent-notes-in-the-browser.md)               | Recently opened notes in localStorage, on the landing page; pruned at 90 days | LOW    | `DECIDED` |
 | [D31](D31-prerender-the-public-pages.md)                | Prerender the public pages with jot's own router; real 404s; no framework     | MED    | `DECIDED` |
+| [D32](D32-sitemap-robots-and-llms-txt.md)               | A sitemap, robots.txt and llms.txt, built from the route data as static files | LOW    | `DECIDED` |
 
 ## Superseded
 

@@ -169,6 +169,21 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - the link-preview cards (D31, `scripts/og.test.ts`): every public page has its own
   1200×630 PNG under `public/og/`, carrying the hash of the card drawn from its head as it
   is now (a stale or missing card fails; `pnpm og-images` redraws them).
+- the discovery files (D32): the converter behind `/docs/<slug>.md` (`scripts/markdown.test.ts`)
+  writes headings, paragraphs, bold, italic and inline code, absolute links, a code block
+  whole with its language and without its Copy button, lists (nested blocks too, and
+  numbered ones), a table with its header row, a callout as a quote; leaves out what is
+  hidden from assistive technology, an animation's moving frame and SVG; escapes
+  formatting characters, link syntax and raw HTML in text, and a line that would start a
+  heading, a quote, a bullet or a numbered item (but not the same characters mid-line, or
+  `#hashtag`, `-1`, `2.5`); fences inline code and code blocks longer than any run of
+  backticks in them, padding code that starts or ends with one; reads character
+  references, and fails without the part to convert. `scripts/discovery.test.ts`: every
+  docs page's Markdown address sits next to its own; `robots.txt` keeps `/n/`, `/api/` and
+  `/new` out and names the sitemap at its production address; the sitemap lists every public page by its canonical URL, escaped; `llms.txt` opens
+  with jot's name and summary, names the site, and lists every docs page under its group
+  in reading order with its Markdown link and its line, then the full text; and
+  `llms-full.txt` holds every page in order under its address.
 
 ## Durable Object (`pnpm test`, project `workers`)
 
@@ -237,8 +252,8 @@ Durable Objects, over real WebSockets.
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;
-- a note page carries `X-Robots-Tag: noindex, nofollow`, the landing page does not, and
-  `robots.txt` disallows `/n/` and `/api/`;
+- a note page carries `X-Robots-Tag: noindex, nofollow`, and the landing page does not
+  (`robots.txt` is built with the pages, so the production project checks it);
 - the status pill shows "Synced · <size>", and the avatars count the people here;
 - two pages on one note type and converge, the title follows the first line, and the
   other page shows a remote caret;
@@ -358,6 +373,21 @@ static assets and the prerendered pages, on the port after the dev server's
 note's socket never connects there. Their contexts come from the `newContext` fixture
 (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`.
 
+What crawlers and assistants read (D32, `discovery.spec.ts`), the guard. They are static
+files, the same on every host, a Preview included (where Cloudflare's `noindex` makes
+production's sitemap harmless), so the guard checks that what is served is the built file:
+
+- `robots.txt` (`text/plain`, UTF-8) is the built file, disallows `/n/`, `/api/` and `/new`
+  and names the sitemap;
+- `sitemap.xml` (`application/xml`, UTF-8) is the built file, parses as XML in the sitemaps namespace, its `<loc>`s
+  are every public page's canonical URL in order, and each is that page's own canonical;
+- `llms.txt` (`text/plain`, UTF-8) names the site and has a line for every docs page with
+  its Markdown link and its line, and every link in it is served;
+- every docs page's Markdown (`text/markdown`, UTF-8) has the page's heading, no markup
+  and its text, and is in `llms-full.txt` under its address; no bold label runs into the
+  word after it (`**Worker**routes`) in any page or in the full text, code left out; code
+  keeps its language (`ts`, `sh`); an unknown `.md` path is the 404 page, as HTML.
+
 The prerendered pages and the Worker's answers (D31, `prerender.spec.ts`):
 
 - `/` and every docs page are HTML with their real text, title, description, canonical URL,
@@ -421,6 +451,8 @@ And the StyleX output (D28):
 
 Unit tests run the prerender itself on a stand-in for the client build
 (`scripts/prerender.test.ts`): it writes every page with its content and the shell's notice,
+`robots.txt`, the sitemap, `llms.txt`, each docs page's Markdown, `llms-full.txt` and their
+types,
 and it fails the build (a non-zero exit, nothing written) when a page throws inside a
 Suspense boundary or renders without its heading (`scripts/fixtures/prerender-broken.tsx`).
 

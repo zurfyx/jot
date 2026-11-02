@@ -51,7 +51,8 @@ export function Welcome() {
                   {GLYPHS[slug]}
                 </span>
                 <span>
-                  <b {...stylex.props(prose.b, styles.topicTitle)}>{page.title}</b>
+                  <b {...stylex.props(prose.b, styles.topicTitle)}>{page.title}</b>{' '}
+                  {/* The space keeps title and blurb apart in text and in /docs.md (D32). */}
                   <span {...stylex.props(styles.topicBlurb)}>{page.blurb}</span>
                 </span>
               </a>

@@ -7,7 +7,8 @@ import { setPrerenderPath } from './router';
 
 export { headTags, LANDING_HEAD } from './head';
 export { PAGE_HEADS } from './heads';
-export { NOT_FOUND_TITLE } from './site';
+export { DOCS_GROUPS, DOCS_PAGES, docsPath } from './docs/pages';
+export { NOT_FOUND_TITLE, SITE_NAME, siteUrl } from './site';
 
 /**
  * The prerender's entry (scripts/prerender.ts, D31). Nothing here runs in the

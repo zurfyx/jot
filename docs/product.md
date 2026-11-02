@@ -80,7 +80,9 @@ version of the engine.
   browser's own, kept in its storage (D30).
 - **Notes expire.** A note is deleted 90 days after its last visit (D06).
 - **Notes stay out of search engines.** Note pages and the API are marked `noindex,
-nofollow` and disallowed in `robots.txt`; only the landing page is indexable (D17).
+nofollow` and, with the links that create a note, disallowed in `robots.txt`; only the
+  landing page and the docs are indexable, listed in the sitemap, and the docs are also
+  Markdown for assistants (`llms.txt`) (D17, D32).
 - **Notes are small.** A note holds up to 2 MB of Yjs state. At 1.6 MB the page says
   "This note is almost full"; when an edit no longer fits, the page goes read only and says
   "This note is full. Start a new note to keep writing." (D05).

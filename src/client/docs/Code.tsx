@@ -124,7 +124,12 @@ export function Code({ source }: { source: CodeSource }) {
           <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
         </button>
       </figcaption>
-      <pre tabIndex={0} {...stylex.props(styles.pre)}>
+      {/* The language names the Markdown fence in /docs/<slug>.md (D32). */}
+      <pre
+        tabIndex={0}
+        data-language={source.language === 'shell' ? 'sh' : source.language}
+        {...stylex.props(styles.pre)}
+      >
         <code>
           {highlight(source.code, source.language).map((token, i) =>
             token.kind === 'plain' ? (

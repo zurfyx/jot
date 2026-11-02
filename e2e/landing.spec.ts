@@ -535,13 +535,7 @@ test('notes stay out of search engines and the landing page does not', async ({ 
 
   const landing = await request.get('/');
   expect(landing.headers()['x-robots-tag']).toBeUndefined();
-
-  const robots = await request.get('/robots.txt');
-  expect(robots.status()).toBe(200);
-  const lines = (await robots.text()).split('\n');
-  expect(lines).toEqual(
-    expect.arrayContaining(['User-agent: *', 'Disallow: /n/', 'Disallow: /api/']),
-  );
+  // robots.txt is built with the pages (D32): e2e/production/discovery.spec.ts checks it.
 });
 
 test("the quick start's code is in Geist Mono, not the system's monospace", async ({ page }) => {

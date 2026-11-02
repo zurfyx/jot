@@ -45,8 +45,8 @@ export function Blame() {
       <ol {...stylex.props(prose.list, styles.steps)}>
         {BLAME_STEPS.map(([title, body]) => (
           <li key={title} {...stylex.props(prose.text, styles.step)}>
-            <b {...stylex.props(prose.b, styles.stepTitle)}>{title}</b>
-            {body}
+            {/* The space keeps title and text apart in text and in /docs/blame.md (D32). */}
+            <b {...stylex.props(prose.b, styles.stepTitle)}>{title}</b> {body}
           </li>
         ))}
       </ol>

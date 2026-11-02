@@ -33,10 +33,12 @@ A valid id is 22 base64url characters encoding 128 bits, and nothing else: there
 fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note` header.
 
 Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade included,
-carries `X-Robots-Tag: noindex, nofollow`, and `public/robots.txt` disallows `/n/` and
-`/api/` (D17). The shell sits under `/n/`, so a request for it is a malformed note link.
+carries `X-Robots-Tag: noindex, nofollow`, and `robots.txt` disallows `/n/`, `/api/` and
+`/new` (D17). The shell sits under `/n/`, so a request for it is a malformed note link.
 The landing page and the docs carry neither and stay indexable; the 404 page says
-`noindex`. On a Preview, Cloudflare marks every response `noindex` (D24).
+`noindex`. On a Preview, Cloudflare marks every response `noindex` (D24). `robots.txt`
+and `sitemap.xml` are static files (D32), so a Preview serves production's: harmless under
+that header, and its sitemap only points crawlers at jot.rovira.sh.
 
 ## NoteRoom (`src/worker/room.ts`)
 
@@ -432,7 +434,13 @@ stylesheet linked (from the client build's manifest, which it then removes) and 
 runs. It writes `index.html`, `docs/index.html`, `docs/<slug>/index.html` and `404.html`,
 and keeps the built shell as `n/shell.html`, with a `<noscript>` notice (`NoScriptNotice`,
 which shares the 404 page's styles) that jot needs JavaScript to edit notes. Any error
-React reports while rendering, or a page without its heading, fails the build. `wrangler` reads the built config. The
+React reports while rendering, or a page without its heading, fails the build. Then it
+writes what crawlers and assistants read (D32): `robots.txt` (the rules and the
+sitemap's address), `sitemap.xml` from every page's canonical URL, a Markdown copy of each docs page converted from its prerendered `<article>` by
+`scripts/markdown.ts` (`/docs.md`, `/docs/<slug>.md`, code fenced with its `<pre>`'s
+`data-language`), `llms.txt` (jot's summary and every docs page by group, from
+`docs/pages.ts`) and `llms-full.txt`, and appends a `_headers` rule naming each of those
+files' type in UTF-8. `wrangler` reads the built config. The
 link-preview cards are not built: `pnpm og-images` (`scripts/og-images.ts`) draws them in
 Chromium from `heads.ts` and they are committed, each PNG carrying the hash of its card
 (`scripts/og.ts`). Cloudflare Workers Builds, connected to the

@@ -63,6 +63,12 @@ async function shell(request: Request, env: Env, url: URL): Promise<Response> {
   return env.ASSETS.fetch(new Request(new URL('/', url), request));
 }
 
+/** The prerendered 404 page, with its status (D31), as the assets give any unknown path. */
+async function notFoundPage(request: Request, env: Env, url: URL): Promise<Response> {
+  const page = await env.ASSETS.fetch(new Request(new URL('/404', url), request));
+  return new Response(page.body, { status: 404, headers: page.headers });
+}
+
 async function route(request: Request, env: Env, url: URL): Promise<Response> {
   const socket = SOCKET_ROUTE.exec(url.pathname);
   if (socket !== null) {
@@ -93,9 +99,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   }
 
   if (NOT_FOUND_ROUTE.test(url.pathname)) {
-    // The 404 page, with its status (D31).
-    const page = await env.ASSETS.fetch(new Request(new URL('/404', url), request));
-    return new Response(page.body, { status: 404, headers: page.headers });
+    return notFoundPage(request, env, url);
   }
 
   if (url.pathname.startsWith('/api/')) {
