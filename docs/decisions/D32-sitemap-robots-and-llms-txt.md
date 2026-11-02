@@ -1,4 +1,4 @@
-# D32: A sitemap, robots.txt and llms.txt from the route data; Previews name no sitemap
+# D32: A sitemap, robots.txt and llms.txt, built from the route data as static files
 
 Status: `DECIDED`
 
@@ -12,11 +12,11 @@ HTML.
 ## Decision
 
 - **Built from the route data.** `scripts/prerender.ts` writes, after the pages:
-  `sitemap.xml` (every public page's canonical URL, from `heads.ts`), a Markdown copy of
-  every docs page next to it (`/docs.md`, `/docs/<slug>.md`), `llms.txt` (an index:
-  jot's name and summary, then every docs page by group with its Markdown link and its one
-  line from `docs/pages.ts`) and `llms-full.txt` (every docs page's Markdown in reading
-  order, each under its address). None of it is committed.
+  `robots.txt`, `sitemap.xml` (every public page's canonical URL, from `heads.ts`), a
+  Markdown copy of every docs page next to it (`/docs.md`, `/docs/<slug>.md`), `llms.txt`
+  (an index: jot's name and summary, then every docs page by group with its Markdown link
+  and its one line from `docs/pages.ts`) and `llms-full.txt` (every docs page's Markdown
+  in reading order, each under its address). None of it is committed.
 - **Markdown from the prerendered HTML.** `scripts/markdown.ts` converts each docs page's
   `<article>` from the HTML the build just rendered: headings, paragraphs, lists, links
   (made absolute), inline code, tables, callouts as quotes, and code blocks fenced with the
@@ -32,16 +32,17 @@ HTML.
 - **The landing page has no Markdown copy.** It is `llms.txt`'s subject (its name, summary
   and address head the index); its illustrations make no sense as text.
 - **Types.** The build writes `_headers` rules for each file it generated, by name:
-  `text/markdown; charset=utf-8` and `text/plain; charset=utf-8`. A pattern would also
-  give an unknown `.md` path's 404 page the Markdown type.
-- **robots.txt and the sitemap come from the Worker**, which runs first for both and decides
-  by host. Everywhere: `Disallow: /n/`, `/api/` and `/new` (a link that creates a note). In
-  production, `Sitemap: https://jot.rovira.sh/sitemap.xml` too, and the built sitemap. On a
-  Preview (a `*.workers.dev` host, D24): the same rules, no `Sitemap:` line, and a 404 for
-  `/sitemap.xml` (the 404 page, as for any unknown path), since the built sitemap lists
-  production's pages. Previews stay noindex
-  through Cloudflare's header, so robots.txt does not block them: a crawler must fetch a
-  page to see its noindex.
+  `text/markdown`, `text/plain` and `application/xml`, each `charset=utf-8`. A pattern
+  would also give an unknown `.md` path's 404 page the Markdown type.
+- **robots.txt and the sitemap are static files**, served from the assets like the rest,
+  the Worker never involved. `robots.txt` disallows `/n/`, `/api/` and `/new` (a link
+  that creates a note) and names `Sitemap: https://jot.rovira.sh/sitemap.xml`; the sitemap
+  lists production's URLs.
+- **Previews serve the same files.** A Preview (a `*.workers.dev` host, D24) answers
+  `robots.txt` and `/sitemap.xml` with production's, and that is harmless: Cloudflare marks
+  every Preview response `noindex`, so nothing on a Preview is indexed, and a sitemap
+  naming jot.rovira.sh URLs only points crawlers at production. robots.txt does not block
+  Previews either: a crawler must fetch a page to see its noindex.
 
 ## Why
 
@@ -50,12 +51,13 @@ HTML.
   the list, and a test fails otherwise.
 - Converting the pages the build renders keeps the Markdown exactly the docs' content;
   writing it separately would drift.
-- Deciding by host keeps one build for production and every Preview.
+- Static files keep the Worker out of it: one build serves production and every Preview,
+  and nothing about them depends on the host.
 
 ## Consequences
 
 - A docs page needs an `<article>` with its title as its `# ` heading, or the build fails.
 - New markup in the docs that the converter doesn't know reads as plain text; a test of
   the converter covers each kind it handles.
-- `pnpm dev` and the local production build (any host but workers.dev) answer as
-  production.
+- A Preview's `robots.txt` names production's sitemap. A Preview on a custom domain
+  would not get Cloudflare's noindex (D24); it would need its own rule first.

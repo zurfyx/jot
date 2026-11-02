@@ -24,8 +24,6 @@ path no file answers gets the prerendered `404.html` with a 404 (`not_found_hand
 | `GET /n/:id`        | Valid id: the note page's shell (`n/shell.html`). Otherwise 400.  |
 | `GET /new`          | The shell: the client picks the new note (and `?example`).        |
 | `GET /404`          | The 404 page, with a 404.                                         |
-| `GET /robots.txt`   | The rules; in production also `Sitemap:` (D32).                   |
-| `GET /sitemap.xml`  | Production: the built sitemap. A Preview: the 404 page, 404.      |
 | `GET /api/n/:id/ws` | Valid id and a WebSocket upgrade: forwarded to the note's object. |
 |                     | Invalid id: 400. No upgrade: 426.                                 |
 | `/api/*` otherwise  | 404                                                               |
@@ -38,9 +36,9 @@ Every response the Worker gives for `/n/*` and `/api/*`, the WebSocket upgrade i
 carries `X-Robots-Tag: noindex, nofollow`, and `robots.txt` disallows `/n/`, `/api/` and
 `/new` (D17). The shell sits under `/n/`, so a request for it is a malformed note link.
 The landing page and the docs carry neither and stay indexable; the 404 page says
-`noindex`. On a Preview, Cloudflare marks every response `noindex` (D24), and the Worker
-answers `robots.txt` without the `Sitemap:` line and `/sitemap.xml` with a 404, since the
-built sitemap lists production's pages (D32).
+`noindex`. On a Preview, Cloudflare marks every response `noindex` (D24). `robots.txt`
+and `sitemap.xml` are static files (D32), so a Preview serves production's: harmless under
+that header, and its sitemap only points crawlers at jot.rovira.sh.
 
 ## NoteRoom (`src/worker/room.ts`)
 
@@ -437,8 +435,8 @@ runs. It writes `index.html`, `docs/index.html`, `docs/<slug>/index.html` and `4
 and keeps the built shell as `n/shell.html`, with a `<noscript>` notice (`NoScriptNotice`,
 which shares the 404 page's styles) that jot needs JavaScript to edit notes. Any error
 React reports while rendering, or a page without its heading, fails the build. Then it
-writes what crawlers and assistants read (D32): `sitemap.xml` from every page's canonical
-URL, a Markdown copy of each docs page converted from its prerendered `<article>` by
+writes what crawlers and assistants read (D32): `robots.txt` (the rules and the
+sitemap's address), `sitemap.xml` from every page's canonical URL, a Markdown copy of each docs page converted from its prerendered `<article>` by
 `scripts/markdown.ts` (`/docs.md`, `/docs/<slug>.md`, code fenced with its `<pre>`'s
 `data-language`), `llms.txt` (jot's summary and every docs page by group, from
 `docs/pages.ts`) and `llms-full.txt`, and appends a `_headers` rule naming each of those

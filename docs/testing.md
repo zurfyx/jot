@@ -178,8 +178,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   heading, a quote, a bullet or a numbered item (but not the same characters mid-line, or
   `#hashtag`, `-1`, `2.5`); fences inline code and code blocks longer than any run of
   backticks in them, padding code that starts or ends with one; reads character
-  references, and fails without the part to convert. `scripts/discovery.test.ts`: every docs page's Markdown address sits next to its
-  own; the sitemap lists every public page by its canonical URL, escaped; `llms.txt` opens
+  references, and fails without the part to convert. `scripts/discovery.test.ts`: every
+  docs page's Markdown address sits next to its own; `robots.txt` keeps `/n/`, `/api/` and
+  `/new` out and names the sitemap at its production address; the sitemap lists every public page by its canonical URL, escaped; `llms.txt` opens
   with jot's name and summary, names the site, and lists every docs page under its group
   in reading order with its Markdown link and its line, then the full text; and
   `llms-full.txt` holds every page in order under its address.
@@ -206,11 +207,7 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
   deletions of its own;
 - malformed ids, `public` included, get 400 on both routes;
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
-  `X-Robots-Tag: noindex, nofollow`;
-- `robots.txt` and the sitemap by host (D32, `discovery.test.ts`): in production the rules
-  and the `Sitemap:` line; on a Preview (a workers.dev host) the same rules without it, and
-  the 404 page for `/sitemap.xml`; the rules keep `/n/`, `/api/` and `/new` out and block nothing
-  else.
+  `X-Robots-Tag: noindex, nofollow`.
 
 ## End to end (`pnpm e2e`)
 
@@ -255,8 +252,8 @@ Durable Objects, over real WebSockets.
 - the paste field validates in place and opens links and bare codes;
 - a malformed note link is a 400, `/n/public` included, and the landing page links no
   fixed note;
-- a note page carries `X-Robots-Tag: noindex, nofollow`, the landing page does not, and
-  `robots.txt` disallows `/n/`, `/api/` and `/new`;
+- a note page carries `X-Robots-Tag: noindex, nofollow`, and the landing page does not
+  (`robots.txt` is built with the pages, so the production project checks it);
 - the status pill shows "Synced · <size>", and the avatars count the people here;
 - two pages on one note type and converge, the title follows the first line, and the
   other page shows a remote caret;
@@ -376,11 +373,13 @@ static assets and the prerendered pages, on the port after the dev server's
 note's socket never connects there. Their contexts come from the `newContext` fixture
 (`e2e/helpers.ts`), a browser of its own each under `JOT_E2E_SINGLE_PROCESS`.
 
-What crawlers and assistants read (D32, `discovery.spec.ts`), the guard:
+What crawlers and assistants read (D32, `discovery.spec.ts`), the guard. They are static
+files, the same on every host, a Preview included (where Cloudflare's `noindex` makes
+production's sitemap harmless), so the guard checks that what is served is the built file:
 
-- `robots.txt` (`text/plain`, UTF-8) disallows `/n/`, `/api/` and `/new` and names the
-  sitemap;
-- `sitemap.xml` (`application/xml`) parses as XML in the sitemaps namespace, its `<loc>`s
+- `robots.txt` (`text/plain`, UTF-8) is the built file, disallows `/n/`, `/api/` and `/new`
+  and names the sitemap;
+- `sitemap.xml` (`application/xml`, UTF-8) is the built file, parses as XML in the sitemaps namespace, its `<loc>`s
   are every public page's canonical URL in order, and each is that page's own canonical;
 - `llms.txt` (`text/plain`, UTF-8) names the site and has a line for every docs page with
   its Markdown link and its line, and every link in it is served;
@@ -452,7 +451,8 @@ And the StyleX output (D28):
 
 Unit tests run the prerender itself on a stand-in for the client build
 (`scripts/prerender.test.ts`): it writes every page with its content and the shell's notice,
-the sitemap, `llms.txt`, each docs page's Markdown, `llms-full.txt` and their types,
+`robots.txt`, the sitemap, `llms.txt`, each docs page's Markdown, `llms-full.txt` and their
+types,
 and it fails the build (a non-zero exit, nothing written) when a page throws inside a
 Suspense boundary or renders without its heading (`scripts/fixtures/prerender-broken.tsx`).
 
