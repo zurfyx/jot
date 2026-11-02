@@ -1,16 +1,21 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { DOCS_PAGES, docsPath } from '../../src/client/docs/pages';
 import { headTags } from '../../src/client/head';
 import { PAGE_HEADS } from '../../src/client/heads';
 import { SITE_URL, siteUrl } from '../../src/client/site';
 import { markdownPath } from '../../scripts/discovery';
 import { expect, test } from '../helpers';
-import { ORIGIN } from './serve';
+import { CLIENT, ORIGIN } from './serve';
 
 /**
  * The guard on what crawlers and assistants read (D32), on the production
  * build: every public page is in the sitemap and in llms.txt, every docs page
  * has its Markdown copy, everything is served with its type and reads as
- * what it says it is, and every address is a canonical one.
+ * what it says it is, and every address is a canonical one. They are static
+ * files, so every host serves the same ones, a Preview included: what is
+ * served here is the built file.
  */
 
 test.use({ baseURL: ORIGIN });
@@ -37,7 +42,10 @@ test('robots.txt keeps notes and new notes out, and names the sitemap', async ({
   const response = await request.get('/robots.txt');
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toBe('text/plain; charset=utf-8');
-  const lines = (await response.text()).split('\n');
+  const text = await response.text();
+  // The built file itself, as every host serves it.
+  expect(text).toBe(readFileSync(join(CLIENT, 'robots.txt'), 'utf8'));
+  const lines = text.split('\n');
   for (const line of [
     'User-agent: *',
     'Disallow: /n/',
@@ -57,6 +65,7 @@ test('the sitemap is well formed and lists every public page by its canonical UR
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toBe('application/xml; charset=utf-8');
   const xml = await response.text();
+  expect(xml).toBe(readFileSync(join(CLIENT, 'sitemap.xml'), 'utf8'));
   const parsed = await page.evaluate((source) => {
     const document = new DOMParser().parseFromString(source, 'application/xml');
     return {

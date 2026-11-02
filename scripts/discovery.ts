@@ -1,8 +1,10 @@
 /**
  * What jot tells crawlers and assistants about its public pages (D32), built
  * by scripts/prerender.ts from the same route data as the pages' heads:
- * `sitemap.xml`, `llms.txt` (an index), a Markdown copy of every docs page
- * and `llms-full.txt` (all of them in one file).
+ * `robots.txt`, `sitemap.xml`, `llms.txt` (an index), a Markdown copy of
+ * every docs page and `llms-full.txt` (all of them in one file). They are
+ * static files, the same on every host: a Preview serves production's too,
+ * which is harmless, since Cloudflare marks every Preview response noindex.
  */
 
 export interface SitePage {
@@ -22,6 +24,22 @@ export function markdownPath(path: string): string {
     throw new Error(`discovery: ${path} has no Markdown copy.`);
   }
   return `${path}.md`;
+}
+
+/**
+ * Notes, the API and the links that create a note stay out of crawlers' way
+ * (D17); the sitemap is named at its production address.
+ */
+export function robotsTxt(sitemapUrl: string): string {
+  return [
+    'User-agent: *',
+    'Disallow: /n/',
+    'Disallow: /api/',
+    'Disallow: /new',
+    '',
+    `Sitemap: ${sitemapUrl}`,
+    '',
+  ].join('\n');
 }
 
 const escapeXml = (text: string) =>

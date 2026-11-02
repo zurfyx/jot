@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DOCS_GROUPS, DOCS_PAGES, docsPath } from '../src/client/docs/pages';
 import { PAGE_HEADS } from '../src/client/heads';
 import { siteUrl } from '../src/client/site';
-import { llmsFullTxt, llmsTxt, markdownPath, sitemapXml } from './discovery';
+import { llmsFullTxt, llmsTxt, markdownPath, robotsTxt, sitemapXml } from './discovery';
 
 /** The sitemap and llms.txt (D32), from the route data. */
 
@@ -21,6 +21,12 @@ describe('the discovery files', () => {
     expect(markdownPath('/docs/blame')).toBe('/docs/blame.md');
     expect(() => markdownPath('/')).toThrow();
     expect(() => markdownPath('/docs/')).toThrow();
+  });
+
+  it('keep notes, the API and new-note links out in robots.txt, and name the sitemap', () => {
+    expect(robotsTxt('https://jot.rovira.sh/sitemap.xml')).toBe(
+      'User-agent: *\nDisallow: /n/\nDisallow: /api/\nDisallow: /new\n\nSitemap: https://jot.rovira.sh/sitemap.xml\n',
+    );
   });
 
   it('list every public page in the sitemap, by its canonical URL', () => {

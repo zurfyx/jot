@@ -72,6 +72,12 @@ describe('the prerender (D31)', () => {
       'jot needs JavaScript to edit notes.',
     );
     // And what crawlers and assistants read (D32).
+    expect(readFileSync(join(client, 'robots.txt'), 'utf8')).toContain(
+      'Sitemap: https://jot.rovira.sh/sitemap.xml',
+    );
+    expect(readFileSync(join(client, '_headers'), 'utf8')).toContain(
+      '/sitemap.xml\n  Content-Type: application/xml; charset=utf-8',
+    );
     expect(readFileSync(join(client, 'sitemap.xml'), 'utf8')).toContain(
       '<loc>https://jot.rovira.sh/docs/blame</loc>',
     );

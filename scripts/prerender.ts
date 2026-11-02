@@ -6,7 +6,14 @@ import { pathToFileURL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { build } from 'vite';
 
-import { type DocsEntry, llmsFullTxt, llmsTxt, markdownPath, sitemapXml } from './discovery.ts';
+import {
+  type DocsEntry,
+  llmsFullTxt,
+  llmsTxt,
+  markdownPath,
+  robotsTxt,
+  sitemapXml,
+} from './discovery.ts';
 import { htmlToMarkdown } from './markdown.ts';
 import { stylex } from './vite-stylex.ts';
 
@@ -304,10 +311,11 @@ async function main(): Promise<void> {
       .replace('<div id="root"></div>', `<noscript>${notice}</noscript><div id="root"></div>`),
   ]);
 
-  // What crawlers and assistants read (D32): the sitemap, and every docs page
-  // as Markdown, converted from its prerendered article, with the index and
-  // the full text.
+  // What crawlers and assistants read (D32): robots.txt and the sitemap, and
+  // every docs page as Markdown, converted from its prerendered article, with
+  // the index and the full text. Static, the same on every host.
   const site = { name: app.SITE_NAME, summary: app.LANDING_HEAD.description, url: app.siteUrl };
+  files.push(['robots.txt', robotsTxt(app.siteUrl('/sitemap.xml'))]);
   files.push([
     'sitemap.xml',
     sitemapXml(app.PAGE_HEADS.map((head) => app.headTags(head).canonical)),
@@ -354,7 +362,9 @@ async function main(): Promise<void> {
       ? 'text/markdown'
       : file.endsWith('.txt')
         ? 'text/plain'
-        : null;
+        : file.endsWith('.xml')
+          ? 'application/xml'
+          : null;
     return type === null ? [] : [`/${file}\n  Content-Type: ${type}; charset=utf-8`];
   });
   const headersFile = join(CLIENT, '_headers');

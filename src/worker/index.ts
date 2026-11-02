@@ -1,6 +1,5 @@
 import { isNoteId } from '../shared/ids';
 
-import { isPreview, robotsTxt } from './discovery';
 import { NOTE_ID_HEADER } from './room';
 
 export { NoteRoom } from './room';
@@ -97,23 +96,6 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (NEW_ROUTE.test(url.pathname)) {
     // A fresh note (D23) or the example: the client picks its id.
     return shell(request, env, url);
-  }
-
-  if (url.pathname === '/robots.txt') {
-    return new Response(robotsTxt(isPreview(url)), {
-      headers: { 'content-type': 'text/plain; charset=utf-8' },
-    });
-  }
-
-  if (url.pathname === '/sitemap.xml') {
-    // A Preview has no sitemap: the built one lists production's pages (D32).
-    if (isPreview(url)) {
-      return notFoundPage(request, env, url);
-    }
-    const sitemap = await env.ASSETS.fetch(request);
-    const headers = new Headers(sitemap.headers);
-    headers.set('content-type', 'application/xml; charset=utf-8');
-    return new Response(sitemap.body, { status: sitemap.status, headers });
   }
 
   if (NOT_FOUND_ROUTE.test(url.pathname)) {
