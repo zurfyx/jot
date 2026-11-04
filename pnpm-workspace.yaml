@@ -5,35 +5,35 @@
 # the app holds a single copy of Lexical (D04). scripts/bump-lexical.mjs
 # rewrites these together with package.json.
 overrides:
-  '@lexical/a11y': https://pkg.pr.new/meta/lexical/@lexical/a11y@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/code': https://pkg.pr.new/meta/lexical/@lexical/code@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/devtools-core': https://pkg.pr.new/meta/lexical/@lexical/devtools-core@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/file': https://pkg.pr.new/meta/lexical/@lexical/file@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/hashtag': https://pkg.pr.new/meta/lexical/@lexical/hashtag@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/headless': https://pkg.pr.new/meta/lexical/@lexical/headless@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/history': https://pkg.pr.new/meta/lexical/@lexical/history@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/link': https://pkg.pr.new/meta/lexical/@lexical/link@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/list': https://pkg.pr.new/meta/lexical/@lexical/list@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/mark': https://pkg.pr.new/meta/lexical/@lexical/mark@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/markdown': https://pkg.pr.new/meta/lexical/@lexical/markdown@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/offset': https://pkg.pr.new/meta/lexical/@lexical/offset@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/overflow': https://pkg.pr.new/meta/lexical/@lexical/overflow@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/plain-text': https://pkg.pr.new/meta/lexical/@lexical/plain-text@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/react': https://pkg.pr.new/meta/lexical/@lexical/react@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/rich-text': https://pkg.pr.new/meta/lexical/@lexical/rich-text@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/table': https://pkg.pr.new/meta/lexical/@lexical/table@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/text': https://pkg.pr.new/meta/lexical/@lexical/text@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/y': https://pkg.pr.new/meta/lexical/@lexical/y@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  '@lexical/yjs': https://pkg.pr.new/meta/lexical/@lexical/yjs@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
-  'lexical': https://pkg.pr.new/meta/lexical/lexical@0823b74ef4b5e034b412dcb4ac622b936ab72c3d
+  '@lexical/a11y': https://pkg.pr.new/meta/lexical/@lexical/a11y@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/code': https://pkg.pr.new/meta/lexical/@lexical/code@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/devtools-core': https://pkg.pr.new/meta/lexical/@lexical/devtools-core@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/file': https://pkg.pr.new/meta/lexical/@lexical/file@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/hashtag': https://pkg.pr.new/meta/lexical/@lexical/hashtag@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/headless': https://pkg.pr.new/meta/lexical/@lexical/headless@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/history': https://pkg.pr.new/meta/lexical/@lexical/history@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/link': https://pkg.pr.new/meta/lexical/@lexical/link@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/list': https://pkg.pr.new/meta/lexical/@lexical/list@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/mark': https://pkg.pr.new/meta/lexical/@lexical/mark@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/markdown': https://pkg.pr.new/meta/lexical/@lexical/markdown@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/offset': https://pkg.pr.new/meta/lexical/@lexical/offset@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/overflow': https://pkg.pr.new/meta/lexical/@lexical/overflow@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/plain-text': https://pkg.pr.new/meta/lexical/@lexical/plain-text@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/react': https://pkg.pr.new/meta/lexical/@lexical/react@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/rich-text': https://pkg.pr.new/meta/lexical/@lexical/rich-text@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/table': https://pkg.pr.new/meta/lexical/@lexical/table@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/text': https://pkg.pr.new/meta/lexical/@lexical/text@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/y': https://pkg.pr.new/meta/lexical/@lexical/y@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  '@lexical/yjs': https://pkg.pr.new/meta/lexical/@lexical/yjs@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
+  'lexical': https://pkg.pr.new/meta/lexical/lexical@0b4e2f4f771d8b4c15ea4d4190cd0abf76c9ee8d
 
 # pkg.pr.new packages depend on each other by URL.
 blockExoticSubdeps: false
