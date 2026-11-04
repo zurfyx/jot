@@ -10,6 +10,7 @@ import {
   $generateNodesFromMarkdownString,
 } from '@lexical/markdown';
 import { $isLinkNode } from '@lexical/link';
+import { $isListItemNode, $isListNode } from '@lexical/list';
 import { $isTableNode } from '@lexical/table';
 import {
   $createParagraphNode,
@@ -26,7 +27,7 @@ import {
 
 import { normalizeLinkUrl } from '../../../shared/links';
 import { MARKDOWN_TRANSFORMERS } from '../extensions';
-import { $applyTextDiff } from './textDiff';
+import { diffWords, type Hunk } from './textDiff';
 
 /**
  * A hard ceiling on the passage, in characters. The real limit is the model's
@@ -186,13 +187,19 @@ function $sanitizeLinks(node: LexicalNode): void {
 /**
  * Replaces `blocks` with the blocks parsed from `markdown`. Returns the last
  * new block, or null (and changes nothing) when the Markdown holds nothing.
+ *
+ * Old and new blocks are paired in order, and a pair whose blocks both hold
+ * plain text alone is written in place, its kind changed where it must be
+ * (`$rewriteInPlace`): the characters the reply keeps keep their identity, so
+ * a peer's concurrent edit of them (typing, a deletion, a format) survives,
+ * and a second rewrite racing this one merges instead of doubling the text.
+ * Other old blocks are replaced, and extra new blocks follow the last one.
  */
 export function $replaceBlocks(
   blocks: readonly ElementNode[],
   markdown: string,
 ): ElementNode | null {
-  const first = blocks[0];
-  if (first === undefined) {
+  if (blocks[0] === undefined) {
     return null;
   }
   const parsed = $generateNodesFromMarkdownString(markdown, MARKDOWN_TRANSFORMERS);
@@ -216,17 +223,20 @@ export function $replaceBlocks(
   for (const node of nodes) {
     $sanitizeLinks(node);
   }
-  if (nodes.length === blocks.length && nodes.every((node, i) => $canRewrite(blocks[i]!, node))) {
-    nodes.forEach((node, i) => $rewrite(blocks[i]!, node));
-    return blocks[blocks.length - 1] ?? null;
+  let last: ElementNode | null = null;
+  for (let i = 0; i < nodes.length; i++) {
+    const fresh = nodes[i]!;
+    const old = blocks[i];
+    if (old !== undefined) {
+      last = $rewriteInPlace(old, fresh) ?? old.replace(fresh);
+    } else if (last !== null) {
+      last = last.insertAfter(fresh) as ElementNode;
+    }
   }
-  for (const node of nodes) {
-    first.insertBefore(node);
-  }
-  for (const block of blocks) {
+  for (const block of blocks.slice(nodes.length)) {
     block.remove();
   }
-  return nodes[nodes.length - 1] ?? null;
+  return last;
 }
 
 /** A block whose children are all plain text nodes (at least one). */
@@ -246,50 +256,136 @@ function plainTextChildren(block: ElementNode): TextNode[] | null {
 }
 
 /**
- * Whether old block `old` can take parsed block `fresh` in place: the same
- * kind of block (type, and tag where it has one), each holding plain text alone.
+ * The element of parsed block `fresh` that holds its text, when that is plain
+ * text alone: the block itself, or the one item of a one-item list.
  */
-function $canRewrite(old: ElementNode, fresh: ElementNode): boolean {
-  const tag = (node: ElementNode): unknown =>
-    'getTag' in node && typeof node.getTag === 'function' ? node.getTag() : null;
-  return (
-    old.getType() === fresh.getType() &&
-    tag(old) === tag(fresh) &&
-    plainTextChildren(old) !== null &&
-    plainTextChildren(fresh) !== null
-  );
+function textHolder(fresh: ElementNode): ElementNode | null {
+  if (plainTextChildren(fresh) !== null) {
+    return fresh;
+  }
+  const only = fresh.getChildren();
+  if ($isListNode(fresh) && only.length === 1 && $isListItemNode(only[0])) {
+    return plainTextChildren(only[0]) !== null ? only[0] : null;
+  }
+  return null;
 }
 
 /**
- * Writes parsed block `fresh` into old block `old`, which it then equals: the
- * old text nodes take the new text, formats and styles (extra new ones are
- * appended, extra old ones removed). The new text goes in as exact splices,
- * one per changed run of words ($applyTextDiff). Why: @lexical/y keeps the
- * identity of the characters a splice leaves, so blame keeps crediting their
- * writer and a peer's concurrent edit inside them stays where it was made; a
- * text set whole is recorded as before and after only, so the binding guesses
- * one changed stretch from the first change to the last, and a block made
- * again holds only new text, so jot AI would be credited with the whole
- * passage.
+ * Writes parsed block `fresh` into old block `old` without making its text
+ * again, when both hold plain text alone; returns the block that now stands
+ * where `old` was, or null (and changes nothing) when they don't.
+ *
+ * Of the same kind (type, and tag where it has one), `old` stays. Of another,
+ * `old`'s text nodes move into `fresh` and `fresh` takes `old`'s place, as a
+ * Markdown shortcut turns a line into a list item or a heading. Then the text
+ * nodes take the reply's text and formats (`$writeRuns`).
  */
-function $rewrite(old: ElementNode, fresh: ElementNode): void {
-  const olds = plainTextChildren(old)!;
-  const freshes = plainTextChildren(fresh)!;
-  old.setFormat(fresh.getFormatType());
-  old.setIndent(fresh.getIndent());
-  freshes.forEach((text, i) => {
-    const target = olds[i];
-    if (target === undefined) {
-      old.append(text);
-      return;
+function $rewriteInPlace(old: ElementNode, fresh: ElementNode): ElementNode | null {
+  const olds = plainTextChildren(old);
+  const holder = textHolder(fresh);
+  if (olds === null || holder === null) {
+    return null;
+  }
+  const runs = plainTextChildren(holder)!;
+  const tag = (node: ElementNode): unknown =>
+    'getTag' in node && typeof node.getTag === 'function' ? node.getTag() : null;
+  if (holder === fresh && old.getType() === fresh.getType() && tag(old) === tag(fresh)) {
+    old.setFormat(fresh.getFormatType());
+    old.setIndent(fresh.getIndent());
+    $writeRuns(olds, runs);
+    return old;
+  }
+  for (const run of runs) {
+    run.remove();
+  }
+  old.replace(fresh);
+  holder.append(...olds);
+  $writeRuns(olds, runs);
+  return fresh;
+}
+
+/**
+ * Makes text nodes `olds` (siblings, in order) read as `runs`: the text first,
+ * as exact splices, one per changed run of words across the nodes
+ * ($applyTextDiff's rule); then the formats, each node split where a run
+ * starts or ends and taking that run's format, style, detail and mode. Why:
+ * @lexical/y keeps the identity of the characters a splice or a split leaves,
+ * so blame keeps crediting their writer and a peer's concurrent edit inside
+ * them stays where it was made. Matching nodes by position instead would make
+ * a word's new format a new text node holding the rest of the line again.
+ */
+function $writeRuns(olds: readonly TextNode[], runs: readonly TextNode[]): void {
+  const target = runs.map((run) => run.getTextContent()).join('');
+  const nodes = [...olds];
+  const hunks = diffWords(nodes.map((node) => node.getTextContent()).join(''), target);
+  for (let k = hunks.length - 1; k >= 0; k--) {
+    $spliceAcross(nodes, hunks[k]!);
+  }
+  // The text now reads as `target`: split the nodes at each run's edges, then
+  // give each piece the format of the run it falls in.
+  const edges: number[] = [];
+  let length = 0;
+  for (const run of runs) {
+    length += run.getTextContent().length;
+    edges.push(length);
+  }
+  let start = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const size = nodes[i]!.getTextContent().length;
+    const cuts = edges
+      .filter((edge) => edge > start && edge < start + size)
+      .map((edge) => edge - start);
+    if (cuts.length > 0) {
+      const parts = nodes[i]!.splitText(...cuts);
+      nodes.splice(i, 1, ...parts);
+      i += parts.length - 1;
     }
-    $applyTextDiff(target, text.getTextContent());
-    target.setFormat(text.getFormat());
-    target.setStyle(text.getStyle());
-    target.setDetail(text.getDetail());
-    target.setMode(text.getMode());
-  });
-  for (const extra of olds.slice(freshes.length)) {
-    extra.remove();
+    start += size;
+  }
+  let at = 0;
+  for (const node of nodes) {
+    const index = edges.findIndex((edge) => edge > at);
+    const run = runs[index === -1 ? runs.length - 1 : index]!;
+    node.setFormat(run.getFormat());
+    node.setStyle(run.getStyle());
+    node.setDetail(run.getDetail());
+    node.setMode(run.getMode());
+    at += node.getTextContent().length;
+  }
+}
+
+/**
+ * Characters `start` to `end` of the nodes' joined text become `text`: the
+ * insertion goes into the node where the hunk starts, and each node the hunk
+ * covers loses its part (a node left empty is removed, unless it is the last).
+ */
+function $spliceAcross(nodes: TextNode[], { start, end, text }: Hunk): void {
+  // The node that takes the insertion: the one holding `start`, or the last.
+  let owner = nodes.length - 1;
+  let offset = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const length = nodes[i]!.getTextContent().length;
+    if (start < offset + length) {
+      owner = i;
+      break;
+    }
+    offset += length;
+  }
+  offset = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]!;
+    const length = node.getTextContent().length;
+    const from = Math.max(start, offset);
+    const to = Math.min(end, offset + length);
+    if (i === owner || from < to) {
+      node.spliceText(from - offset, Math.max(0, to - from), i === owner ? text : '', false);
+    }
+    offset += length;
+  }
+  for (let i = nodes.length - 1; i >= 0 && nodes.length > 1; i--) {
+    if (nodes[i]!.getTextContent() === '') {
+      nodes[i]!.remove();
+      nodes.splice(i, 1);
+    }
   }
 }
