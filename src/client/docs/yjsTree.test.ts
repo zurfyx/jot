@@ -73,6 +73,7 @@ describe("the inspector's rows", () => {
     expect(root?.kind === 'root' && root.attrs).toEqual(
       expect.arrayContaining([
         { key: 'lexical-y:1', value: 'true' },
+        { key: `lexical-y-schema:${SCHEMA_VERSION}`, value: 'true' },
         { key: 'k:heading', value: '"line"' },
         { key: 'k:list', value: '"group|listType"' },
       ]),
