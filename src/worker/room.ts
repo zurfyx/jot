@@ -49,6 +49,11 @@ import {
   describeRoom,
   captureOf,
   getYGeneration,
+  pendingRecord,
+  prepareNote,
+  recordFrom,
+  recoveryState,
+  replayRecord,
   replaceIncarnation,
   SERVED_ROOTS,
   recoveryView,
@@ -56,9 +61,21 @@ import {
   type YLegacySignal,
   type YRecordSource,
 } from './library';
+import { UNKNOWN_GENERATION } from '../shared/fence';
 import {
   appendPart,
   ensureFenceSchema,
+  inPlaceChain,
+  insertBase,
+  insertTransition,
+  quarantineClients,
+  readBase,
+  readLedger,
+  readPhase,
+  readReplays,
+  writeLedger,
+  writePhase,
+  writeReplay,
   insertRecord,
   listRecords,
   MAX_RECORD_BYTES,
@@ -75,6 +92,8 @@ import {
   writeRoom,
 } from './quarantine';
 import { noteTag, shadowReceipt } from './shadow';
+import { freshCopy } from './copy';
+import { LAYOUT_FLOOR } from './steps';
 
 /** Header the Worker uses to tell a note's Durable Object its id. */
 export const NOTE_ID_HEADER = 'x-jot-note';
@@ -365,10 +384,256 @@ export class NoteRoom extends DurableObject<Env> {
       return new Response('Not a note id.', { status: 400 });
     }
     const url = new URL(request.url);
+    this.noteId = id;
+    // Before anything is served: a note below the floor migrates now (D34).
+    this.ensureCurrent(this.identity());
     if (url.pathname.endsWith('/ws')) {
       return this.openSocket(request, url, id);
     }
     return this.recovery(request, url, id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // The migration moment (D34, design section 3)
+
+  /** The layout every served root must be at: the Worker's, or a test's (development only). */
+  private floor(): number {
+    if (import.meta.env.DEV) {
+      const value = this.testSetting('floor');
+      if (value !== null) {
+        return value;
+      }
+    }
+    return LAYOUT_FLOOR;
+  }
+
+  /** The stored state's cap (D05), or a test's (development only). */
+  private maxBytes(): number {
+    if (import.meta.env.DEV) {
+      const value = this.testSetting('maxBytes');
+      if (value !== null) {
+        return value;
+      }
+    }
+    return NOTE_MAX_BYTES;
+  }
+
+  private testSetting(key: string): number | null {
+    const sql = this.ctx.storage.sql;
+    sql.exec(
+      'CREATE TABLE IF NOT EXISTS test_settings (key TEXT PRIMARY KEY, value INTEGER NOT NULL)',
+    );
+    const row = sql
+      .exec<{ value: number }>('SELECT value FROM test_settings WHERE key = ?', key)
+      .toArray()[0];
+    return row === undefined ? null : row.value;
+  }
+
+  /** Development and tests only: raise the floor or lower the cap for this note. */
+  testSettings(settings: { floor?: number; maxBytes?: number }): void {
+    if (!import.meta.env.DEV) {
+      throw new Error('Not in a production build.');
+    }
+    this.testSetting('floor');
+    for (const [key, value] of Object.entries(settings)) {
+      this.ctx.storage.sql.exec(
+        'INSERT INTO test_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
+        key,
+        value,
+      );
+    }
+  }
+
+  /**
+   * Migrates the note when a served root is below the floor (design section
+   * 3), before anything is served. Synchronous from the check to the commit
+   * (a Durable Object interleaves only at awaits), so nothing else runs in
+   * between: the barrier and the compare-and-set.
+   */
+  private ensureCurrent(room: RoomRow): void {
+    const sql = this.ctx.storage.sql;
+    if (readPhase(sql) === 'stuck') {
+      return;
+    }
+    const floor = this.floor();
+    const described = describeRoom(this.doc, room);
+    if (described.unreadable.length > 0) {
+      // A served root with content but no well-formed layout record or epoch:
+      // nothing reads or migrates it (no client is admitted). Stuck, logged.
+      writePhase(sql, 'stuck');
+      this.logError(
+        'migration',
+        new Error(described.unreadable.join(', ')),
+        undefined,
+        'unreadable roots; the note is stuck',
+      );
+      return;
+    }
+    if (described.pristine || described.layouts === null || described.layouts[0] >= floor) {
+      return;
+    }
+    // 1. Barrier: every socket closes; what they sent before is applied
+    //    already (each message is applied before its handler returns).
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.close(CLOSE_NOTE_UPGRADED, 'Note upgraded');
+      } catch {
+        // already closed
+      }
+    }
+    // 2. Seal: the live document, saved, is what migrates (not a debounced row).
+    this.dirty = true;
+    this.save();
+    const stored = Y.encodeStateAsUpdate(this.doc);
+    // 3. Migrate a copy.
+    let prepared;
+    try {
+      prepared = prepareNote(stored, room.incarnation, floor);
+    } catch (error) {
+      writePhase(sql, 'stuck');
+      this.logError('migration', error, undefined, 'the note could not be migrated; it is stuck');
+      return;
+    }
+    if (!prepared.changed) {
+      return;
+    }
+    if (prepared.state.byteLength > this.maxBytes()) {
+      this.freshDocument(room, stored, prepared.state);
+      return;
+    }
+    // 4. Commit atomically: the state, the generation, the base, the transition.
+    const migrated = prepared.state;
+    const generation = prepared.generation;
+    this.ctx.storage.transactionSync(() => {
+      sql.exec(
+        'UPDATE note SET state = ?, saved_at = ? WHERE id = 0',
+        toArrayBuffer(migrated),
+        Date.now(),
+      );
+      insertBase(sql, room.generation, room.incarnation, stored);
+      insertTransition(sql, room.generation, generation, 'in-place', prepared.receipt);
+      writeRoom(sql, { ...room, generation });
+      if (prepared.pending !== null) {
+        const built = pendingRecord(
+          stored,
+          prepared.pending,
+          {
+            incarnation: room.incarnation,
+            generation: room.generation,
+            layouts: null,
+            schemaVersion: null,
+            renderer: null,
+          },
+          { generation, state: migrated },
+        );
+        this.storeBuilt(built, room.generation);
+      }
+    });
+    this.room = { ...room, generation };
+    this.reload(migrated);
+    console.log('[migration]', JSON.stringify({ note: this.noteId, ...prepared.receipt }));
+  }
+
+  /** Replaces the in-memory document with `state` (after a migration). */
+  private reload(state: Uint8Array): void {
+    this.resetDoc();
+    Y.applyUpdate(this.doc, state, this);
+    this.size = state.byteLength;
+    this.dirty = false;
+  }
+
+  /** Stores a built record (a `pending` record at a migration) with its parts. */
+  private storeBuilt(built: ReturnType<typeof pendingRecord>, base: string): number {
+    const sql = this.ctx.storage.sql;
+    const r = built.record;
+    const seq = insertRecord(sql, {
+      kind: r.kind,
+      session: null,
+      replica: 'pending',
+      source: r.source,
+      base,
+      receivedAt: r.receivedAt,
+      updatedAt: r.receivedAt,
+      hash: r.hash,
+      upload: null,
+      complete: r.complete,
+      actionable: built.actionable,
+      clients: [],
+      newClients: built.newClients,
+      peers: true,
+      draft: null,
+      signals: [],
+      collisions: [],
+      bytes: (r.snapshot?.byteLength ?? 0) + r.queue.reduce((n, q) => n + q.byteLength, 0),
+    });
+    if (r.snapshot !== null) {
+      appendPart(sql, seq, 'snapshot', r.snapshot);
+    }
+    for (const q of r.queue) {
+      appendPart(sql, seq, 'queue', q);
+    }
+    return seq;
+  }
+
+  /**
+   * The note's migrated state passes the cap (D05): a whole-document
+   * transfer under a new incarnation (design section 6): every live item
+   * copied as it is into new items (`copy.ts`, Yjs only). Content ids, cursors and blame
+   * attribution are lost for this note; every replica is then another
+   * incarnation (its edits go to the recovery view, never replayed). If the
+   * fresh state is still over the cap, the note is stuck.
+   */
+  private freshDocument(room: RoomRow, stored: Uint8Array, migrated: Uint8Array): void {
+    const sql = this.ctx.storage.sql;
+    let fresh: Uint8Array;
+    try {
+      fresh = freshCopy(migrated);
+    } catch (error) {
+      writePhase(sql, 'stuck');
+      this.logError('migration', error, undefined, 'the fresh document failed; the note is stuck');
+      return;
+    }
+    if (fresh.byteLength > this.maxBytes()) {
+      writePhase(sql, 'stuck');
+      this.logError(
+        'migration',
+        new Error(`${fresh.byteLength} bytes`),
+        undefined,
+        'the fresh document is over the cap; the note is stuck',
+      );
+      return;
+    }
+    const incarnation = newIncarnation();
+    const doc = createYDoc(fresh, { gc: true });
+    const generation = generationOf(doc, incarnation, SERVED_ROOTS);
+    doc.destroy();
+    const next: RoomRow = {
+      incarnation,
+      inherited: false,
+      seedContract: SEED_LAYOUT,
+      generation,
+      createdAt: Date.now(),
+    };
+    this.ctx.storage.transactionSync(() => {
+      sql.exec(
+        'UPDATE note SET state = ?, saved_at = ? WHERE id = 0',
+        toArrayBuffer(fresh),
+        Date.now(),
+      );
+      insertBase(sql, room.generation, room.incarnation, stored);
+      insertTransition(sql, room.generation, generation, 'fresh', {
+        bytesBefore: stored.byteLength,
+        bytesMigrated: migrated.byteLength,
+        bytesFresh: fresh.byteLength,
+      });
+      writeRoom(sql, next);
+    });
+    this.room = next;
+    this.reload(fresh);
+    console.log(
+      '[migration]',
+      JSON.stringify({ note: this.noteId, fresh: true, bytes: fresh.byteLength }),
+    );
   }
 
   private openSocket(request: Request, url: URL, id: string): Response {
@@ -629,9 +894,20 @@ export class NoteRoom extends DurableObject<Env> {
         return;
       }
       case SYNC_STEP_2:
-      case SYNC_UPDATE:
-        this.receiveUpdate(ws, decoding.readVarUint8Array(decoder));
+      case SYNC_UPDATE: {
+        const update = decoding.readVarUint8Array(decoder);
+        if (readPhase(this.ctx.storage.sql) === 'stuck') {
+          // A note whose migration failed applies nothing (D34): kept instead.
+          Y.decodeUpdate(update);
+          const attachment = (ws.deserializeAttachment() as SocketAttachment | null) ?? {
+            clocks: {},
+          };
+          this.capture(ws, attachment, update);
+          return;
+        }
+        this.receiveUpdate(ws, update);
         return;
+      }
       default:
         throw new MalformedMessage(`unknown sync message ${subtype}`);
     }
@@ -842,6 +1118,7 @@ export class NoteRoom extends DurableObject<Env> {
       if (request.method !== 'GET') {
         return new Response('Method not allowed.', { status: 405 });
       }
+      const replays = readReplays(sql);
       const items: RecoveryListItem[] = listRecords(sql).map((r) => ({
         seq: r.seq,
         kind: r.kind,
@@ -852,6 +1129,13 @@ export class NoteRoom extends DurableObject<Env> {
         clients: [...new Set([...r.clients, ...r.newClients])],
         upload: r.upload,
         bytes: r.bytes,
+        replay: replays.has(r.seq)
+          ? {
+              eligible: replays.get(r.seq)!.eligible,
+              applied: replays.get(r.seq)!.applied,
+              conflicts: replays.get(r.seq)!.conflicts,
+            }
+          : null,
       }));
       return Response.json({ records: items });
     }
@@ -866,10 +1150,17 @@ export class NoteRoom extends DurableObject<Env> {
     const material = readMaterial(sql, seq);
     if (view === 'view') {
       // What the page renders with jot's nodes (D34): the record's source view
-      // migrated on a scratch copy to the layout this build's pages read.
-      let rendered: { state: Uint8Array; complete: boolean };
+      // migrated on a scratch copy to the layout this build's pages read,
+      // through any gap. Render only: never stored or merged.
+      const source = storedSourceView(record.kind, material);
+      const complete = source.complete;
+      source.doc.destroy();
+      let state: Uint8Array;
       try {
-        rendered = recoveryView(record.kind, material);
+        state = recoveryState(
+          recordFrom({ ...record, ...material, receivedAt: record.receivedAt }),
+          record.base === null ? null : readBase(sql, record.base),
+        );
       } catch (error) {
         this.logError(
           'recovery',
@@ -879,10 +1170,10 @@ export class NoteRoom extends DurableObject<Env> {
         );
         return new Response('This record cannot be shown.', { status: 422 });
       }
-      return new Response(rendered.state, {
+      return new Response(state, {
         headers: {
           'content-type': 'application/octet-stream',
-          'x-jot-complete': rendered.complete ? '1' : '0',
+          'x-jot-complete': complete ? '1' : '0',
         },
       });
     }
@@ -940,6 +1231,16 @@ export class NoteRoom extends DurableObject<Env> {
       return new Response('The note keeps too many offline edits.', { status: 507 });
     }
     const now = Date.now();
+    // A generation names its incarnation (`<incarnation>/<epochs>`).
+    const generation = upload.source.generation;
+    if (
+      upload.source.incarnation === null &&
+      generation !== null &&
+      generation !== UNKNOWN_GENERATION &&
+      generation.includes('/')
+    ) {
+      upload.source.incarnation = generation.slice(0, generation.indexOf('/'));
+    }
     const built = buildRecord(
       {
         kind: 'handoff',
@@ -984,12 +1285,129 @@ export class NoteRoom extends DurableObject<Env> {
       }
       return s;
     });
-    return Response.json(
-      acknowledgement(id, upload.replica, upload.source, built.record.hash, hash, {
+    const replay = this.replay(seq, { ...built.record, actionable: built.actionable });
+    return Response.json({
+      ...acknowledgement(id, upload.replica, upload.source, built.record.hash, hash, {
         seq,
-        actionable: built.actionable,
+        actionable: replay?.actionable ?? built.actionable,
       }),
-    );
+      replay: replay === null ? null : { applied: replay.applied, conflicts: replay.conflicts },
+    });
+  }
+
+  /**
+   * Blame for replayed text (D19, D34): a replay writes each source client's
+   * inserts under a client of its own (`clients`: source -> replay), so the
+   * replay client gets the source client's people entry, read from the note
+   * or, when the replica registered while offline, from the record. Blame
+   * then names the offline author, not the replay. Runs inside the replay's
+   * storage transaction; an entry already there is kept.
+   */
+  private creditReplay(
+    record: Parameters<typeof sourceView>[0],
+    clients: readonly (readonly [number, number])[],
+  ): void {
+    if (clients.length === 0) {
+      return;
+    }
+    const people = this.doc.get(PEOPLE_ROOT_NAME);
+    let view: ReturnType<typeof sourceView> | null = null;
+    try {
+      const entries: [string, unknown][] = [];
+      for (const [source, replay] of clients) {
+        if (people.getAttr(String(replay)) !== undefined) {
+          continue;
+        }
+        let entry: unknown = people.getAttr(String(source));
+        if (entry === undefined) {
+          view ??= sourceView(record);
+          entry = view.doc.get(PEOPLE_ROOT_NAME).getAttr(String(source));
+        }
+        if (entry !== undefined) {
+          entries.push([String(replay), entry]);
+        }
+      }
+      if (entries.length > 0) {
+        this.doc.transact(() => {
+          for (const [key, entry] of entries) {
+            people.setAttr(key, entry as never);
+          }
+        }, REPLAY_ORIGIN);
+      }
+    } finally {
+      view?.doc.destroy();
+    }
+  }
+
+  /**
+   * Replays a handoff's own changes onto the note as a checked edit (D34,
+   * design 4.6): computed on the live state and committed with its ledger
+   * and receipt before anything else runs (no await in between). Eligible
+   * only when the record's incarnation is the note's and every transition
+   * since its source generation was an in-place migration. A replay that
+   * fails leaves the record for the recovery view.
+   */
+  private replay(
+    seq: number,
+    record: ReturnType<typeof buildRecord>['record'] & { actionable: boolean },
+  ): { applied: number; conflicts: number; actionable: boolean } | null {
+    if (!REPLAY_ENABLED) {
+      return null;
+    }
+    const sql = this.ctx.storage.sql;
+    const room = this.room!;
+    const from = record.source.generation;
+    const base = from === null || from === UNKNOWN_GENERATION ? null : readBase(sql, from);
+    try {
+      const reserved = quarantineClients(sql);
+      const result = replayRecord({
+        record,
+        base,
+        baseGeneration: from,
+        current: Y.encodeStateAsUpdate(this.doc),
+        incarnation: room.incarnation,
+        generation: room.generation,
+        inPlace: base !== null && from !== null && inPlaceChain(sql, from, room.generation),
+        ledger: readLedger(sql),
+        reserved: (client) => reserved.has(client),
+      });
+      const { applied, conflicts } = result.receipt;
+      // Replayed: something to look at only where a change did not go in.
+      const actionable = result.eligible
+        ? record.actionable && (conflicts > 0 || (record.draft !== null && record.draft.differs))
+        : record.actionable;
+      this.ctx.storage.transactionSync(() => {
+        if (result.update !== null) {
+          Y.applyUpdate(this.doc, result.update, REPLAY_ORIGIN);
+          this.creditReplay(record, result.receipt.clients);
+          this.dirty = true;
+          this.save();
+        }
+        writeLedger(sql, result.receipt.ledger);
+        writeReplay(
+          sql,
+          seq,
+          { eligible: result.eligible, reason: result.reason, applied, conflicts },
+          { changes: result.receipt.changes, clients: result.receipt.clients },
+        );
+        sql.exec('UPDATE records SET actionable = ? WHERE seq = ?', actionable ? 1 : 0, seq);
+      });
+      return { applied, conflicts, actionable };
+    } catch (error) {
+      this.logError('replay', error, undefined, 'the replay failed; the record stays for recovery');
+      writeReplay(
+        sql,
+        seq,
+        {
+          eligible: false,
+          reason: `failed: ${String(error).slice(0, 200)}`,
+          applied: 0,
+          conflicts: 0,
+        },
+        {},
+      );
+      return null;
+    }
   }
 }
 
@@ -1015,6 +1433,15 @@ function acknowledgement(
     actionable: facts.actionable,
   };
 }
+
+/** The note's people registry (D19): one attribute per Yjs client id, read by blame. */
+const PEOPLE_ROOT_NAME = 'jot-people';
+
+/** Replays a handoff at the note (D34); off: every record goes to the recovery view. */
+const REPLAY_ENABLED = true;
+
+/** The origin of a replay's writes in the note's document. */
+const REPLAY_ORIGIN = 'jot-replay';
 
 /** A record source nobody can name: material from before the fence. */
 const UNKNOWN_SOURCE: YRecordSource = {

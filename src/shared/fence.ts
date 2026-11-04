@@ -293,4 +293,6 @@ export interface RecoveryListItem {
   /** The upload's SHA-256 (handoffs) or null (captures). */
   upload: string | null;
   bytes: number;
+  /** What the replay did with it (D34), null when it was not replayed. */
+  replay: { eligible: boolean; applied: number; conflicts: number } | null;
 }

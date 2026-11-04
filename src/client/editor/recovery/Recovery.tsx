@@ -75,6 +75,10 @@ export function isYours(
   );
 }
 
+function conflictCount(n: number): string {
+  return n === 1 ? 'one change' : `${n} changes`;
+}
+
 const SEEN_PREFIX = 'jot:recovery-seen:';
 
 function seenRecords(id: string): Set<number> {
@@ -204,8 +208,9 @@ export function RecoveryBanner({ session }: { session: NoteSession }) {
       data-own-press=""
     >
       <p {...stylex.props(styles.text)}>
-        Edits you made offline {ago(newest.receivedAt / 1000)} could not go into this note, because
-        it changed meanwhile. They are saved here: copy what you want back in.
+        {newest.replay !== null && newest.replay.applied > 0
+          ? `Your offline edits from ${ago(newest.receivedAt / 1000)} went into this note, except ${conflictCount(newest.replay.conflicts)} to something that changed here meanwhile. All of them are saved here: copy what you want back in.`
+          : `Edits you made offline ${ago(newest.receivedAt / 1000)} could not go into this note, because it changed meanwhile. They are saved here: copy what you want back in.`}
       </p>
       <div {...stylex.props(styles.actions)}>
         <button type="button" {...stylex.props(styles.button)} onClick={() => setOpen(!open)}>

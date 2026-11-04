@@ -92,6 +92,35 @@ clients (D03).
   jot made at layout 1 still shows: the object imports no Lexical, only `@lexical/y/server`,
   the runner and the steps. Records past 90 days are pruned;
   256 records or 64 MB per note answer further uploads with 507.
+- **Migration on first open** (D34). Every request a note's object serves (a socket or a
+  recovery request) first checks its served root against the floor (`steps.ts`:
+  `LAYOUT_FLOOR`, the library's `MIN_LAYOUT`, with the frozen steps in chain order). Below
+  it, before anything is served and with no `await` from the check to the commit (a
+  Durable Object interleaves only at awaits): every socket closes with 4000; the live
+  document is saved and its bytes migrate in place on a copy (`prepareYRoom`); one SQLite
+  transaction stores the migrated state, the room's new generation, the old state as the
+  immutable base of the old generation (`bases`), the transition (`transitions`, with the
+  receipt) and, when the runner split pending material out, a `pending` record. The
+  receipt is logged. A root nothing can read (no well-formed record or epoch) or a refused
+  migration leaves the note `stuck`: no client is admitted to an unreadable root, and an
+  update that still arrives is kept as a record, never applied. If the migrated state
+  passes the 2 MB cap, the note becomes a fresh document under a new incarnation
+  (`copy.ts`: every live item of every top-level type copied as it is into new items, with
+  Yjs types only, so the history goes; ids, cursors and blame attribution are lost for that
+  note; still over the cap, it is stuck). The Worker imports no Lexical: the layout
+  constants come from `@lexical/y/server`.
+- **Replay** (D34). A handoff, once stored and before it is acknowledged, is replayed onto
+  the note as a checked edit (`replayYRecovery`): only when its incarnation is the note's
+  and every transition since its source generation was in place, against the base of that
+  generation; computed on the live state and committed with its ledger entries (`ledger`)
+  and receipt (`replays`) in the same synchronous step, then broadcast like any update. A
+  change already in the ledger is not applied twice. Changes that cannot apply (a format
+  whose base value is unknown or changed) are conflicts: the record stays listed with
+  them. A record of another incarnation, an unknown source or a fresh document is never
+  replayed. The replay writes each source client's inserts under a client of its own; in
+  the same transaction that client gets the source client's `jot-people` entry, so blame
+  names the offline author. `/view` serves `recoveryYState`: the record's source view migrated on a scratch
+  copy to the layout this build's pages read, for rendering only.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
   step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a

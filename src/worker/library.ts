@@ -9,7 +9,13 @@ import {
   createYSessionCapture,
   describeYRoom,
   getYGeneration,
+  pendingYRecord,
+  prepareYRoom,
+  recoveryYState,
+  replayYRecovery,
   sourceView,
+  type YPreparedRoom,
+  type YReplayResult,
   type YLegacySignal,
   type YQuarantineRecord,
   type YRecordSource,
@@ -24,7 +30,15 @@ import type { Handshake } from '../shared/fence';
 
 import { LAYOUT_STEPS } from './steps';
 
-export type { YLegacySignal, YQuarantineRecord, YRecordSource, YRoomDescription, YSessionVerdict };
+export type {
+  YLegacySignal,
+  YPreparedRoom,
+  YQuarantineRecord,
+  YRecordSource,
+  YReplayResult,
+  YRoomDescription,
+  YSessionVerdict,
+};
 export { createYDoc, getYGeneration, SEED_LAYOUT };
 
 /** A record's material as NoteRoom stores it (record_parts). */
@@ -209,4 +223,92 @@ function newClientsOf(record: YQuarantineRecord, live: Uint8Array): number[] {
     was.destroy();
     view.doc.destroy();
   }
+}
+
+/**
+ * The load-time migration of a note's sealed state (D34): every served root
+ * below `floor` is migrated in place with the Worker's steps. A no-op when
+ * none is (nothing to store). Throws a YMigrationError when a root is
+ * refused or a check fails.
+ */
+export function prepareNote(state: Uint8Array, incarnation: string, floor: number): YPreparedRoom {
+  return prepareYRoom(state, {
+    steps: LAYOUT_STEPS,
+    incarnation,
+    roots: SERVED_ROOTS,
+    gc: true,
+    to: floor,
+  });
+}
+
+/** The quarantine record of the pending material a migration split out. */
+export function pendingRecord(
+  stored: Uint8Array,
+  pending: Uint8Array,
+  source: YRecordSource,
+  migrated: { generation: string; state: Uint8Array },
+): BuiltRecord {
+  const record = pendingYRecord({ stored, pending, source, receivedAt: Date.now() }, migrated);
+  return {
+    record,
+    newClients: newClientsOf(record, migrated.state),
+    clients: [],
+    peers: true,
+    actionable: record.actionable,
+  };
+}
+
+/** A stored record's library form (rebuilt from its row and parts). */
+export function recordFrom(input: RecordInput): YQuarantineRecord {
+  return quarantineRecord({
+    kind: input.kind,
+    session: input.session,
+    replica: input.replica,
+    peers: input.peers,
+    clients: input.clients,
+    source: input.source,
+    snapshot: input.snapshot,
+    deltas: input.deltas,
+    queue: input.queue,
+    draft: input.draft,
+    signals: input.signals,
+    receivedAt: input.receivedAt,
+  });
+}
+
+export interface ReplayInput {
+  record: YQuarantineRecord;
+  /** The immutable base of the record's source generation, null when none is kept. */
+  base: Uint8Array | null;
+  baseGeneration: string | null;
+  current: Uint8Array;
+  incarnation: string;
+  generation: string;
+  /** Whether every transition from the base generation to the current one was in place. */
+  inPlace: boolean;
+  ledger: ReadonlyMap<string, string>;
+  reserved: (client: number) => boolean;
+}
+
+/** Replays a record's own changes onto the current state (a checked edit: commit it at once). */
+export function replayRecord(input: ReplayInput): YReplayResult {
+  return replayYRecovery(input.record, input.base ?? input.current, input.current, {
+    incarnation: input.incarnation,
+    generation: input.generation,
+    baseGeneration: input.base === null ? '' : (input.baseGeneration ?? ''),
+    inPlace: input.base !== null && input.inPlace,
+    roots: SERVED_ROOTS,
+    gc: true,
+    ledger: input.ledger,
+    reserved: input.reserved,
+  });
+}
+
+/**
+ * The state the recovery view renders for a record: its source view migrated
+ * on a scratch copy to the layout this build's clients read, through any
+ * gap. Render only: never stored, sent into the note or merged.
+ */
+export function recoveryState(record: YQuarantineRecord, base: Uint8Array | null): Uint8Array {
+  return recoveryYState(record, LAYOUT_STEPS, base);
 }

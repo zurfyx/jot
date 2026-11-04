@@ -1,13 +1,21 @@
 /**
- * The frozen layout steps the Worker bundles (D34): one place, so a release
- * whose Lexical pin lacks a step ships without it. The `@lexical/y` this
- * release pins ships `1to2` and `2to3` (layout 3, its MIN_LAYOUT). Release R
- * only runs them on copies (shadow receipts); R+1 migrates notes with them.
+ * The layout migration the Worker runs (D34), in one place: the frozen steps
+ * it bundles and the floor it migrates to. The `@lexical/y` this release pins
+ * ships `1to2` and `2to3` (layout 3, its MIN_LAYOUT and SEED_LAYOUT).
  */
+import { MIN_LAYOUT } from '@lexical/y/server';
 import step1to2 from '@lexical/y/migrate/1to2';
 import step2to3 from '@lexical/y/migrate/2to3';
 
+/** Every step the Worker ships, in chain order. */
 export const LAYOUT_STEPS = [step1to2, step2to3] as const;
 
 /** The layout the last bundled step reaches: what shadow receipts migrate a copy to. */
 export const SHADOW_LAYOUT = LAYOUT_STEPS[LAYOUT_STEPS.length - 1]!.to;
+
+/**
+ * The layout every served root is migrated to on a note's first open: the
+ * library's floor. Only roots below it migrate. Tests raise it per note
+ * (development builds only, NoteRoom's test settings).
+ */
+export const LAYOUT_FLOOR = MIN_LAYOUT;
