@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import * as Y from '@y/y';
 
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
-import { readRawNote, writeRawNote } from './raw-client';
+import { readRawNote } from './raw-client';
 
 const NOTE_URL = /\/n\/([\w-]{22})$/;
 
@@ -50,15 +50,6 @@ async function storeCopy(page: Page, id: string, copy: string) {
     ([key, value]) => localStorage.setItem(key!, value!),
     [`jot:pending:${id}`, copy],
   );
-}
-
-/** Text that doesn't compress into fewer Yjs bytes. */
-function filler(length: number): string {
-  let text = '';
-  while (text.length < length) {
-    text += Math.random().toString(36).slice(2);
-  }
-  return text.slice(0, length);
 }
 
 test('Start a new note opens a shared note at once, and a second window joins it', async ({
@@ -133,22 +124,32 @@ test("a draft left by jot's earlier version moves into the next new note, once",
     .first()
     .click();
   const id = await expectFreshNote(page);
-  await expect(editor(page).locator('p')).toHaveText(['Draft from before', 'Second line']);
-  // Pushed to the relay, then cleared.
+  // It has no generation the note can check (D34): it waits under the new note's
+  // offline edits, as this browser's, and is cleared from storage.
   await expect.poll(() => storedKeys(page)).toEqual([]);
+  await page.reload();
+  await expectFreshNote(page);
+  await expect(page.getByTestId('recovery-banner')).toBeVisible();
+  await page.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
+  await expect(page.getByTestId('recovery-text').locator('p')).toHaveText([
+    'Draft from before',
+    'Second line',
+  ]);
+  await expect(editor(page)).toHaveText('');
   const other = await otherContext.newPage();
   await openNote(other, id);
-  await expect(editor(other).locator('p')).toHaveText(['Draft from before', 'Second line']);
+  await expect(editor(other)).toHaveText('');
 
-  // Only once: the next new note is empty.
+  // Only once: the next new note has none.
   await page.goto('/new');
   await expectFreshNote(page);
-  await expect(editor(page)).toHaveText('');
+  await expect(page.getByTestId('recovery-banner')).toHaveCount(0);
 });
 
-test("a note copy left by jot's earlier version reaches its note when a page opens", async ({
+test("a note copy left by jot's earlier version reaches its note's offline edits when a page opens", async ({
   page,
   otherContext,
+  newContext,
   baseURL,
 }) => {
   const copy = await storedNote(await otherContext.newPage(), baseURL!, ['Shared, then closed']);
@@ -163,11 +164,19 @@ test("a note copy left by jot's earlier version reaches its note when a page ope
   const id = await expectFreshNote(page);
   expect(id).not.toBe(pendingId);
   await expect.poll(() => storedKeys(page)).toEqual([]);
-  // The copy went to its own note, not the new one.
+  // The copy went to its own note's offline edits, not into either note.
   await expect(editor(page)).toHaveText('');
-  const other = await otherContext.newPage();
+  await openNote(page, pendingId);
+  await expect(editor(page)).toHaveText('');
+  await expect(page.getByTestId('recovery-banner')).toBeVisible();
+  await page.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
+  await expect(page.getByTestId('recovery-text')).toHaveText('Shared, then closed');
+  // Another browser sees it as another visitor's, under ⋯ → Offline edits.
+  const other = await (await newContext()).newPage();
   await openNote(other, pendingId);
-  await expect(editor(other)).toHaveText('Shared, then closed');
+  await expect(other.getByTestId('recovery-banner')).toHaveCount(0);
+  await other.getByTestId('dock').getByRole('button', { name: 'More' }).click();
+  await expect(other.getByTestId('recovery-item')).toBeVisible();
 });
 
 test('a draft is claimed only when the note opens: a page left during a slow load keeps it', async ({
@@ -238,35 +247,37 @@ test('a copy the server already holds, deletions included, is cleared and change
   await expectFreshNote(page);
   await expect.poll(() => storedKeys(page)).toEqual([]);
   await expect(editor(writer)).toHaveText('Hello again');
+  // It holds nothing the note lacks: nobody is asked to look at it.
+  await openNote(page, id);
+  await expect(page.getByTestId('recovery-banner')).toHaveCount(0);
+  await page.getByTestId('dock').getByRole('button', { name: 'More' }).click();
+  await expect(page.getByTestId('recovery-item')).toHaveCount(0);
 });
 
-test('a copy for a full note is dropped, not retried on every page', async ({ page, baseURL }) => {
-  test.setTimeout(60_000);
+test('a copy is uploaded once, not on every page', async ({ page }) => {
   const id = freshNoteId();
-  // Two writes, each under the relay's message size, fill the note near the cap.
-  await writeRawNote(baseURL!, id, (doc) => doc.get('filler').insert(0, filler(950_000)));
-  await writeRawNote(baseURL!, id, (doc) => doc.get('filler').insert(0, filler(950_000)));
   const doc = new Y.Doc();
-  doc.get('copy').insert(0, `COPY${filler(200_000)}`);
+  doc.get('copy').insert(0, 'COPY');
   const copy = JSON.stringify({
     id: 'old',
     state: Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64'),
   });
 
-  const sockets: string[] = [];
-  page.on('websocket', (socket) => sockets.push(socket.url()));
+  const uploads: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes(`/api/n/${id}/recovery`)) {
+      uploads.push(request.url());
+    }
+  });
   await storeCopy(page, id, copy);
   await page.goto('/new');
   await expectFreshNote(page);
   await expect.poll(() => storedKeys(page), { timeout: 15_000 }).toEqual([]);
-  const server = new Y.Doc();
-  Y.applyUpdate(server, await readRawNote(baseURL!, id));
-  expect(server.get('copy').toString()).not.toContain('COPY');
-  expect(sockets.filter((url) => url.includes(id))).toHaveLength(1);
+  expect(uploads).toHaveLength(1);
 
   // The next note page leaves that note alone.
   await page.goto('/new');
   await expectFreshNote(page);
   await page.waitForTimeout(500);
-  expect(sockets.filter((url) => url.includes(id))).toHaveLength(1);
+  expect(uploads).toHaveLength(1);
 });

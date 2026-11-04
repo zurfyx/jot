@@ -4,6 +4,7 @@ import { AskAIDockItem, AskAISurface } from './ai/AskAI';
 import { ModelMenuItem, ModelPanel } from './ai/ModelPanel';
 import { BlameChip, BlameMenuToggle, BlameSurface } from './blame/Blame';
 import { ExampleBanner, ExampleSurface, ReplayDemoItem } from './example/Example';
+import { RecoveryBanner, RecoveryMenuItem, RecoveryPanel } from './recovery/Recovery';
 import type { NoteSession } from './session';
 
 /**
@@ -49,4 +50,10 @@ export const NOTE_FEATURES: readonly NoteFeature[] = [
   },
   { id: 'blame', dockEnd: BlameChip, menuTop: BlameMenuToggle, surface: BlameSurface },
   { id: 'example', banner: ExampleBanner, menuTop: ReplayDemoItem, surface: ExampleSurface },
+  // Offline edits the note could not take (D34).
+  {
+    id: 'recovery',
+    banner: RecoveryBanner,
+    menuPanel: { Item: RecoveryMenuItem, Panel: RecoveryPanel },
+  },
 ];

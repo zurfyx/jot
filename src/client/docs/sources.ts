@@ -98,7 +98,7 @@ export const SNIPPETS = {
     code: installCommand(),
     language: 'shell',
   },
-  roomFetch: from('src/worker/room.ts', roomSource, 'async fetch('),
+  roomFetch: from('src/worker/room.ts', roomSource, 'private openSocket('),
   roomUpdate: from('src/worker/room.ts', roomSource, 'private receiveUpdate('),
   roomSave: from('src/worker/room.ts', roomSource, 'save(): void'),
   contentMap: from(

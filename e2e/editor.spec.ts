@@ -168,19 +168,6 @@ test('offline edits sync on reconnect', async ({ context }) => {
   await expect(editor(a)).toContainText('Written online');
 });
 
-test('a note from a newer layout opens read only', async ({ page, baseURL }) => {
-  const id = freshNoteId();
-  await writeRawNote(baseURL!, id, (doc) => {
-    const root = doc.get('lexical-y');
-    root.setAttr('lexical-y:99', true);
-    root.insert(0, 'From the future');
-  });
-  await page.goto(`/n/${id}`);
-  await expect(page.getByTestId('status-pill')).toHaveText('Read only');
-  await expect(page.getByText('This note was written by a newer version of jot')).toBeVisible();
-  await expect(editor(page)).toHaveAttribute('contenteditable', 'false');
-});
-
 test('a note a newer jot wrote opens read only', async ({ page, baseURL }) => {
   const id = freshNoteId();
   // What a jot one schema version ahead writes: a note it can read, recorded with its version.

@@ -146,21 +146,25 @@ const styles = stylex.create({
 /** A note page: note `id`, shared through the relay (D23). */
 export default function NotePage({ id }: { id: string }) {
   const [session, setSession] = useState<NoteSession | null>(null);
+  // Bumped when a handoff is acknowledged (D34): the note opens afresh.
+  const [generationKey, setGenerationKey] = useState(0);
   const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // The session is an external system (socket, document, editor) whose
     // lifetime is this effect's; React state only hands it to the children.
     const created = createNoteSession(id);
+    const stopReplace = created.onReplace(() => setGenerationKey((key) => key + 1));
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSession(created);
-    // Notes an earlier version of jot kept in this browser go to the relay.
+    // Notes an earlier version of jot kept in this browser go to the note's offline edits.
     pushLegacyCopies();
     return () => {
+      stopReplace();
       created.dispose();
       setSession(null);
     };
-  }, [id]);
+  }, [id, generationKey]);
 
   useEffect(() => {
     if (session === null) {
@@ -216,6 +220,7 @@ function NoteBody({ session }: { session: NoteSession }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
+  const fence = useSignal(session.fence);
   const empty = useEmptyAndTitle(session);
   useRecentVisit(session);
   const editable = useEditable(session.editor);
@@ -235,7 +240,34 @@ function NoteBody({ session }: { session: NoteSession }) {
 
   return (
     <>
-      {status === 'readonly' && (
+      {fence === 'handing-off' && (
+        <p {...stylex.props(styles.message, styles.notice)} role="status" data-own-press="">
+          This note changed while you were offline. Saving your offline edits…
+        </p>
+      )}
+      {fence === 'failed' && (
+        <p {...stylex.props(styles.message, styles.banner)} role="status" data-own-press="">
+          Your offline edits couldn&rsquo;t be saved to this note. Copy what you need before you
+          close this page.
+        </p>
+      )}
+      {fence === 'reload' && (
+        <p {...stylex.props(styles.message, styles.banner)} role="status" data-own-press="">
+          This note was upgraded.{' '}
+          <a
+            {...stylex.props(styles.bannerLink)}
+            href={window.location.href}
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.reload();
+            }}
+          >
+            Reload
+          </a>{' '}
+          to keep editing.
+        </p>
+      )}
+      {status === 'readonly' && fence === 'ok' && (
         <p {...stylex.props(styles.message, styles.banner)} role="status" data-own-press="">
           Read only. This note was written by a newer version of jot; reload to edit.
         </p>

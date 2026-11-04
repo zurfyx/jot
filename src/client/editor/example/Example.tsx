@@ -16,7 +16,22 @@ import { exampleState } from './controller';
  * relayed to everyone first.
  */
 export function ExampleSurface({ session }: { session: NoteSession }) {
-  useLayoutEffect(() => exampleState(session).start(), [session]);
+  useLayoutEffect(() => {
+    const started = exampleState(session).start();
+    let stopped = false;
+    const stop = () => {
+      if (!stopped) {
+        stopped = true;
+        started();
+      }
+    };
+    // A handoff (D34) stops every writer of the page's document first.
+    const stopOnHandoff = session.onBeforeHandoff(stop);
+    return () => {
+      stopOnHandoff();
+      stop();
+    };
+  }, [session]);
   return null;
 }
 

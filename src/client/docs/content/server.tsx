@@ -1,6 +1,7 @@
 import {
   CLOSE_MALFORMED,
   MESSAGE_AWARENESS,
+  MESSAGE_NOTE_FENCE,
   MESSAGE_NOTE_STATUS,
   MESSAGE_QUERY_AWARENESS,
   MESSAGE_SYNC,
@@ -20,6 +21,7 @@ const MESSAGES: [number, string, string, string][] = [
   [MESSAGE_AWARENESS, 'awareness', 'both', 'y-protocols awareness update'],
   [MESSAGE_QUERY_AWARENESS, 'query awareness', 'to server', 'none; answered with every state'],
   [MESSAGE_NOTE_STATUS, 'note status', 'to client', 'stored bytes, flags (1: update refused)'],
+  [MESSAGE_NOTE_FENCE, 'note fence', 'to client', 'verdict, generation, may seed (handshake only)'],
 ];
 
 /** The relay's shape: browsers, the Worker, one Durable Object per note, SQLite. */
@@ -109,8 +111,9 @@ export function Relay() {
       <P>
         Sockets are accepted with the Hibernation API: an idle note is evicted from memory while its
         sockets stay open, and the next message runs the constructor again, which reloads the
-        document from SQLite. On connect the room sends sync step 1, everyone's awareness and the
-        note's size.
+        document from SQLite. On connect the room first reads the socket's handshake (the generation
+        fence below); an admitted socket then gets sync step 1, everyone's awareness and the note's
+        size.
       </P>
       <Code source={SNIPPETS.roomFetch} />
       <H2>The protocol</H2>
@@ -148,6 +151,17 @@ export function Relay() {
         Every applied update goes to every socket, the sender's included: <C>@y/websocket</C> counts
         its own updates as confirmed when they come back. A malformed frame closes only its own
         socket, with code {CLOSE_MALFORMED}.
+      </P>
+      <H2>The generation fence</H2>
+      <P>
+        Each note has a generation: a random incarnation, new whenever the note is created again
+        after it expired, plus the layout epochs of <C>@lexical/y</C>'s migrations. A page keeps the
+        generation its document belongs to and presents it in the socket's URL, with whether it
+        holds edits of its own. A page whose edits were made against another generation never syncs:
+        it uploads its whole document, waits for the room to acknowledge it, and opens the note
+        afresh; the edits wait under ⋯ → Offline edits, read only, to copy back in. A page from
+        before the fence on a note that existed before it edits as it always did; anywhere else its
+        document is kept the same way and it turns read only.
       </P>
       <H2>Storage</H2>
       <P>

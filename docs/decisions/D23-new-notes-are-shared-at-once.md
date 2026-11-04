@@ -34,14 +34,11 @@ writes across tabs, and a pill state of their own.
     (`jot:legacy-draft`) and re-reads the draft inside it, so two tabs starting notes at
     once can't take one draft into two notes. Storage that throws (denied) or a refused
     lock skip the migration; the note still opens;
-  - every note page that opens pushes each `jot:pending:<id>` to its own note from a
-    headless client with no presence. Its document starts empty, so the server's sync
-    step 2 is the note's whole state, mirrored with every later update. A copy that adds
-    nothing to the mirror (inserts and deletes alike) is already there and is removed;
-    otherwise it is written and sent, and removed once the echo shows all of it. A copy
-    the server refuses (the note is full) can never land: it is removed too, so it isn't
-    retried on every page. A push that hasn't finished in 30 s gives up and keeps the copy
-    for the next page. An unreadable copy is dropped;
+  - every note page that opens hands each `jot:pending:<id>` to its own note's offline
+    edits (D34): a copy has no generation the note can check, so it is uploaded as a
+    record of its own and never merged into the note; it is removed from storage once the
+    note acknowledges it or refuses it for good, and kept for the next page if the note
+    could not be reached. An unreadable copy is dropped;
   - the moved draft shares the binding's content-derived seed with the new note's own
     first sync, so the note shows the draft once, without an extra empty line;
   - a tab still running the earlier version during the deploy can write `jot:draft` again
@@ -56,7 +53,7 @@ writes across tabs, and a pill state of their own.
   first keystroke. The link is 128 random bits (D02), so in practice that is whoever it is
   given to.
 - Offline edits of every note live in memory until the socket reconnects (D13).
-- A legacy copy for a full note is dropped: its content was never on the server and can't
-  be, and keeping it would open a socket on every note page.
+- A legacy copy's content shows under its note's Offline edits, as this browser's, rather
+  than in the note: the person copies back what they want (D34).
 - The migration code can go once old drafts are unlikely to exist: it is small and
   touches nothing else.

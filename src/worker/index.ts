@@ -5,6 +5,15 @@ import { NOTE_ID_HEADER } from './room';
 export { NoteRoom } from './room';
 
 const SOCKET_ROUTE = /^\/api\/n\/([^/]+)\/ws$/;
+/**
+ * Development and tests only (compiled out of production builds): give a
+ * note a new incarnation and close its sockets, as a migration will, so the
+ * end-to-end tests can move a note on while a page holds offline edits
+ * (`?inherited=1`: as a note from before the fence).
+ */
+const TEST_REPLACE_ROUTE = /^\/api\/test\/n\/([^/]+)\/replace-incarnation$/;
+/** A note's offline-edit recovery (D34): uploads, the list, a record's source view and export. */
+const RECOVERY_ROUTE = /^\/api\/n\/([^/]+)\/recovery(?:\/\d+\/(?:view|raw))?$/;
 const NOTE_ROUTE = /^\/n\/([^/]+)\/?$/;
 const NEW_ROUTE = /^\/new\/?$/;
 /** The 404 page's own file, which the assets would otherwise serve with a 200. */
@@ -78,6 +87,32 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
     }
     if (request.method !== 'GET' || request.headers.get('Upgrade') !== 'websocket') {
       return new Response('Expected a WebSocket upgrade.', { status: 426 });
+    }
+    const stub = env.NOTES.get(env.NOTES.idFromName(id));
+    const headers = new Headers(request.headers);
+    headers.set(NOTE_ID_HEADER, id);
+    return stub.fetch(new Request(request, { headers }));
+  }
+
+  if (import.meta.env.DEV) {
+    const replace = TEST_REPLACE_ROUTE.exec(url.pathname);
+    if (replace !== null && request.method === 'POST' && isNoteId(replace[1] ?? '')) {
+      const id = replace[1]!;
+      await env.NOTES.get(env.NOTES.idFromName(id)).testReplaceIncarnation(
+        url.searchParams.get('inherited') === '1',
+      );
+      return new Response('replaced');
+    }
+  }
+
+  const recovery = RECOVERY_ROUTE.exec(url.pathname);
+  if (recovery !== null) {
+    const id = recovery[1] ?? '';
+    if (!isNoteId(id)) {
+      return badRequest('Not a note id.');
+    }
+    if (request.method !== 'GET' && request.method !== 'POST') {
+      return new Response('Method not allowed.', { status: 405 });
     }
     const stub = env.NOTES.get(env.NOTES.idFromName(id));
     const headers = new Headers(request.headers);
