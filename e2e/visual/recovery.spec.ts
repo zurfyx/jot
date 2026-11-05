@@ -1,4 +1,3 @@
-import { MIN_LAYOUT } from '@lexical/y';
 import type { Page } from '@playwright/test';
 
 import { writeRawNote } from '../raw-client';

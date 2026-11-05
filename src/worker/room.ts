@@ -55,18 +55,18 @@ import {
   recoveryState,
   replaceIncarnation,
   SERVED_ROOTS,
-  recoveryView,
+  storedSourceView,
   verdictFor,
   type YLegacySignal,
   type YRecordSource,
 } from './library';
-import { UNKNOWN_GENERATION } from '../shared/fence';
 import {
   appendPart,
   ensureFenceSchema,
   insertBase,
   insertTransition,
   readBase,
+  sameIncarnationSince,
   readPhase,
   writePhase,
   insertRecord,
@@ -529,8 +529,7 @@ export class NoteRoom extends DurableObject<Env> {
 
   /** Replaces the in-memory document with `state` (after a migration). */
   private reload(state: Uint8Array): void {
-    this.resetDoc();
-    Y.applyUpdate(this.doc, state, this);
+    this.resetDoc(state);
     this.size = state.byteLength;
     this.dirty = false;
   }
@@ -540,7 +539,7 @@ export class NoteRoom extends DurableObject<Env> {
     const sql = this.ctx.storage.sql;
     const r = built.record;
     const seq = insertRecord(sql, {
-      kind: r.kind,
+      kind: 'pending',
       session: null,
       replica: 'pending',
       source: r.source,
@@ -598,7 +597,7 @@ export class NoteRoom extends DurableObject<Env> {
     }
     const incarnation = newIncarnation();
     const doc = createYDoc(fresh, { gc: true });
-    const generation = generationOf(doc, incarnation, SERVED_ROOTS);
+    const generation = getYGeneration(doc, incarnation, SERVED_ROOTS);
     doc.destroy();
     const next: RoomRow = {
       incarnation,
@@ -1216,15 +1215,17 @@ export class NoteRoom extends DurableObject<Env> {
       return new Response('The note keeps too many offline edits.', { status: 507 });
     }
     const now = Date.now();
-    // A generation names its incarnation (`<incarnation>/<epochs>`).
+    // The record names the incarnation its generation was made under, when
+    // the note can tell from its own transitions (generations are opaque).
     const generation = upload.source.generation;
+    const room = this.identity();
     if (
       upload.source.incarnation === null &&
       generation !== null &&
       generation !== UNKNOWN_GENERATION &&
-      generation.includes('/')
+      sameIncarnationSince(sql, generation, room.generation)
     ) {
-      upload.source.incarnation = generation.slice(0, generation.indexOf('/'));
+      upload.source.incarnation = room.incarnation;
     }
     const built = buildRecord(
       {
@@ -1277,7 +1278,6 @@ export class NoteRoom extends DurableObject<Env> {
       }),
     );
   }
-
 }
 
 /** The durable acknowledgement of a stored upload (UploadAcknowledgement). */

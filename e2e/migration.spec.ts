@@ -91,10 +91,6 @@ async function appendLine(page: Page, text: string) {
 /** Raises the note's floor and opens it in this build: that first open migrates it. */
 async function migrate(page: Page, baseURL: string, id: string) {
   await setFloor(baseURL, id, TARGET);
-  await page.addInitScript(
-    (value) => localStorage.setItem('jot:test-floor', String(value)),
-    TARGET,
-  );
   await openNote(page, id);
   await expect(page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
   await expect

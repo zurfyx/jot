@@ -201,7 +201,12 @@ describe(`migration on first open (to layout ${TARGET})`, () => {
     expect(layoutsOf(after)).toEqual(MIGRATED_LAYOUTS);
     expect(textOf(after)).toBe(textOf(before));
     const room = (await identity(id))!;
-    expect(room.generation).toMatch(new RegExp(`^${room.incarnation}/lexical-y=${TARGET}\\.`));
+    // Its generation (g1) names the migration: the served root's epoch transition.
+    expect(room.generation.startsWith('g1:')).toBe(true);
+    expect(JSON.parse(room.generation.slice(3))).toEqual([
+      room.incarnation,
+      [['lexical-y', [expect.any(Number), expect.any(Number)]]],
+    ]);
     expect(a.fences[0]!.generation).toBe(room.generation);
     expect(await count(id, 'bases')).toBe(1);
     expect(await transitionKinds(id)).toEqual(['in-place']);

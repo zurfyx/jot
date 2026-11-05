@@ -111,8 +111,9 @@ clients (D03).
   constants come from `@lexical/y/server`.
 - **No replay yet** (D34). A handoff is kept as a record and shown read only; nothing is
   replayed onto the note: the `@lexical/y` this release pins ships no replay (it comes
-  with meta/lexical#9771). `/view` serves `recoveryYState`: the record's source view
-  migrated on a scratch copy to the layout this build's pages read, for rendering only.
+  with meta/lexical#9771). `/view` serves the record's source view (`sourceView`, a record
+  this release reads) migrated on a scratch copy through the bundled steps to the layout
+  this build's pages read (`migrateYState`), for rendering only.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
   step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a

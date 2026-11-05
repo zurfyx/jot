@@ -35,7 +35,6 @@ import { excludeServerState, type Unconfirmed } from './confirm';
 import { REGISTRY_ORIGIN } from './blame/registry';
 import { jotEditorExtension } from './extensions';
 import { localUser } from './presence';
-import { readFloor } from './floor';
 import { handOff, type HandoffResult } from './handoff';
 import { compactedSize } from './size';
 
@@ -124,9 +123,9 @@ export function createNoteSession(id: string): NoteSession {
         createYCollabConfig({
           doc,
           schemaVersion: SCHEMA_VERSION,
-          // Release R's server does not migrate a note below MIN_LAYOUT yet:
-          // such a note stays read only here (D34).
-          layoutUpgrade: null,
+          // The note's object migrates a note below MIN_LAYOUT on its first
+          // open (D34), before it serves it.
+          layoutUpgrade: LAYOUT_HANDLE,
           // Initialized on the first sync (onSync below).
           synced: false,
           selfCheck: import.meta.env.DEV,

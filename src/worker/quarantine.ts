@@ -489,7 +489,35 @@ export function insertTransition(
   );
 }
 
+/**
+ * Whether the note reached its current generation from `from` through
+ * in-place migrations only (a fresh document starts another incarnation):
+ * then `from` was made under the note's current incarnation. Generations are
+ * opaque (`@lexical/y/server`'s g1): this reads the recorded transitions,
+ * never the token.
+ */
+export function sameIncarnationSince(sql: SqlStorage, from: string, current: string): boolean {
+  if (from === current) {
+    return true;
+  }
+  const rows = sql
+    .exec<{ from_gen: string; to_gen: string; kind: string }>(
+      'SELECT from_gen, to_gen, kind FROM transitions ORDER BY seq',
+    )
+    .toArray();
+  let at = from;
+  for (const row of rows) {
+    if (row.from_gen !== at) {
+      continue;
+    }
+    if (row.kind !== 'in-place') {
+      return false;
+    }
+    at = row.to_gen;
+  }
+  return at === current;
+}
+
 export function transitionCount(sql: SqlStorage): number {
   return sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM transitions').one().n;
 }
-

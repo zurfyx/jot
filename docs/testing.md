@@ -221,16 +221,16 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
   `X-Robots-Tag: noindex, nofollow`.
 
-Migration (D34, `src/worker/migration.test.ts`, with the 1to2 step and a
-per-note floor of 2): a layout 1 note migrates in place on its first open (layout 2 and
-an epoch recorded, its text unchanged, its base kept, one in-place transition) and a
+Migration (D34, `src/worker/migration.test.ts`, with the 1to2 and 2to3 steps and the
+floor of 3): a layout 1 note migrates in place on its first open (layout 3 and an epoch
+recorded, its generation naming that migration, its text unchanged, its base kept, one in-place transition) and a
 second open writes nothing; an update applied just before is in the migrated state (the
 seal) and its socket closes with 4000; a replica at the old generation is stale and gets
 nothing; a note with an unreadable root is stuck and admits nobody; a layout 1
 record's view is migrated for rendering and nothing is stored; the fresh copy of a note
 migrated to layout 2 or 3 has the same live items in order, unit for unit (formats, a
-deleted word's history gone, `jot-people` kept), no id of the original, and reads the same
-(layout 2); a note whose migrated state passes a lowered cap becomes a fresh document under
+deleted word's history gone, `jot-people` kept), no id of the original, and reads the
+same; a note whose migrated state passes a lowered cap becomes a fresh document under
 a new incarnation.
 
 The generation fence (D34, `src/worker/fence.test.ts`):
@@ -393,9 +393,11 @@ Durable Objects, over real WebSockets.
   receives only the signal and an empty sync step 2, keeps its own text, and its document
   shows under Offline edits; a note this release cannot read reloads the page once, then
   says so;
-- migration end to end (`e2e/migration.spec.ts`, development-only test settings raise one
-  note's floor to 2 for the Worker and the pages): a layout 1 note, a tab offline with an
-  edit, the floor raised, the next open migrates it (layout 2 recorded), the offline tab
+- migration end to end (`e2e/migration.spec.ts`, a development-only test setting holds one
+  note's floor at 1 for the Worker until the test raises it to 3; the offline tab must be a
+  page that can edit layout 1, an R build's `dist/client` in `JOT_E2E_R_DIST`, else the spec
+  skips): a layout 1 note, a tab offline with an edit, the floor raised, the next open
+  migrates it (layout 3 recorded), the offline tab
   reconnects and hands off: its edit stays out of the note, under Offline edits (the banner
   and the record's view, the bold kept), and both tabs keep editing the migrated note.
 - the keyboard and pointer paths between features: Aa from the keyboard (the first item

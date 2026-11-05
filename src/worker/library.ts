@@ -9,9 +9,7 @@ import {
   createYSessionCapture,
   describeYRoom,
   getYGeneration,
-  pendingYRecord,
   prepareYRoom,
-  recoveryYState,
   sourceView,
   type YPreparedRoom,
   type YLegacySignal,
@@ -61,28 +59,6 @@ export function storedSourceView(kind: string, material: StoredMaterial) {
     deltas: material.deltas,
     queue: material.queue,
   });
-}
-
-/**
- * What the recovery view renders for a stored record: its source view,
- * migrated on a scratch copy through the bundled steps to the layout this
- * build's pages read (a record made by an earlier jot is at layout 1). Render
- * only: never stored, sent into the note or merged.
- */
-export function recoveryView(
-  kind: string,
-  material: StoredMaterial,
-): { state: Uint8Array; complete: boolean } {
-  const view = storedSourceView(kind, material);
-  try {
-    const state = migrateYState(Y.encodeStateAsUpdate(view.doc), LAYOUT_STEPS, {
-      roots: SERVED_ROOTS,
-      gc: false,
-    }).state;
-    return { state, complete: view.complete };
-  } finally {
-    view.doc.destroy();
-  }
 }
 
 /** An empty Yjs update: the snapshot of a session that sent none. */
@@ -245,7 +221,10 @@ export function pendingRecord(
   source: YRecordSource,
   migrated: { generation: string; state: Uint8Array },
 ): BuiltRecord {
-  const record = pendingYRecord({ stored, pending, source, receivedAt: Date.now() }, migrated);
+  const record = createYQuarantineRecord(
+    { kind: 'pending', stored, pending, source, receivedAt: Date.now() },
+    migrated,
+  );
   return {
     record,
     newClients: newClientsOf(record, migrated.state),
@@ -257,7 +236,7 @@ export function pendingRecord(
 
 /** A stored record's library form (rebuilt from its row and parts). */
 export function recordFrom(input: RecordInput): YQuarantineRecord {
-  return quarantineRecord({
+  return createYQuarantineRecord({
     kind: input.kind,
     session: input.session,
     replica: input.replica,
@@ -279,5 +258,20 @@ export function recordFrom(input: RecordInput): YQuarantineRecord {
  * gap. Render only: never stored, sent into the note or merged.
  */
 export function recoveryState(record: YQuarantineRecord, base: Uint8Array | null): Uint8Array {
-  return recoveryYState(record, LAYOUT_STEPS, base);
+  const view = sourceView(record);
+  try {
+    // A record missing a dependency (a pending record's skipped range) renders
+    // over its base, the state of the generation it was made against.
+    if (!view.complete && base !== null) {
+      Y.applyUpdate(view.doc, base);
+    }
+    // Every root of a scratch copy migrated to this build's floor (layout 3);
+    // anything the migration splits out is not rendered.
+    return migrateYState(Y.encodeStateAsUpdate(view.doc), LAYOUT_STEPS, {
+      roots: SERVED_ROOTS,
+      gc: false,
+    }).state;
+  } finally {
+    view.doc.destroy();
+  }
 }

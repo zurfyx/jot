@@ -6,7 +6,7 @@
  * lets go of anything. Then the page opens the note afresh; the edits wait in
  * the note's offline edits (the recovery view).
  */
-import { LAYOUT_VERSION, type YBinding } from '@lexical/y';
+import { LAYOUT_VERSION, MIN_LAYOUT, type YBinding } from '@lexical/y';
 
 import {
   acknowledges,
@@ -18,7 +18,6 @@ import {
   UPLOAD_HASH_HEADER,
 } from '../../shared/fence';
 import { SCHEMA_VERSION } from '../../shared/schema';
-import { readFloor } from './floor';
 
 export type HandoffResult = 'saved' | 'refused';
 
@@ -154,12 +153,11 @@ export async function handOff(
     session: sessionId(),
     replica: 'tab',
     source: {
-      // A generation names its incarnation (`<incarnation>/<epochs>`).
-      incarnation: input.generation?.includes('/')
-        ? input.generation.slice(0, input.generation.indexOf('/'))
-        : null,
+      // A generation is opaque (`@lexical/y/server`'s g1): the page does not
+      // read the incarnation out of it, and nothing here needs it.
+      incarnation: null,
       generation: input.generation ?? UNKNOWN_GENERATION,
-      layouts: [readFloor(), LAYOUT_VERSION],
+      layouts: [MIN_LAYOUT, LAYOUT_VERSION],
       schemaVersion: SCHEMA_VERSION,
       renderer: 'jot',
     },
