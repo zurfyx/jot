@@ -51,7 +51,7 @@ import {
   getYGeneration,
   replaceIncarnation,
   SERVED_ROOTS,
-  storedSourceView,
+  recoveryView,
   verdictFor,
   type YLegacySignal,
   type YRecordSource,
@@ -861,18 +861,26 @@ export class NoteRoom extends DurableObject<Env> {
     }
     const material = readMaterial(sql, seq);
     if (view === 'view') {
-      // The record's source view, whole: the page reads it with jot's nodes (D34).
-      const source = storedSourceView(record.kind, material);
+      // What the page renders with jot's nodes (D34): the record's source view
+      // migrated on a scratch copy to the layout this build's pages read.
+      let rendered: { state: Uint8Array; complete: boolean };
       try {
-        return new Response(Y.encodeStateAsUpdate(source.doc), {
-          headers: {
-            'content-type': 'application/octet-stream',
-            'x-jot-complete': source.complete ? '1' : '0',
-          },
-        });
-      } finally {
-        source.doc.destroy();
+        rendered = recoveryView(record.kind, material);
+      } catch (error) {
+        this.logError(
+          'recovery',
+          error,
+          undefined,
+          'the record could not be migrated for its view',
+        );
+        return new Response('This record cannot be shown.', { status: 422 });
       }
+      return new Response(rendered.state, {
+        headers: {
+          'content-type': 'application/octet-stream',
+          'x-jot-complete': rendered.complete ? '1' : '0',
+        },
+      });
     }
     return new Response(encodeExport(record, material), {
       headers: {

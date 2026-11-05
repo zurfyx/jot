@@ -17,9 +17,12 @@ import {
   type YSessionVerdict,
   SEED_LAYOUT,
 } from '@lexical/y/server';
-import type * as Y from '@y/y';
+import { migrateYState } from '@lexical/y/migrate';
+import * as Y from '@y/y';
 
 import type { Handshake } from '../shared/fence';
+
+import { LAYOUT_STEPS } from './steps';
 
 export type { YLegacySignal, YQuarantineRecord, YRecordSource, YRoomDescription, YSessionVerdict };
 export { createYDoc, getYGeneration, SEED_LAYOUT };
@@ -47,6 +50,28 @@ export function storedSourceView(kind: string, material: StoredMaterial) {
     deltas: material.deltas,
     queue: material.queue,
   });
+}
+
+/**
+ * What the recovery view renders for a stored record: its source view,
+ * migrated on a scratch copy through the bundled steps to the layout this
+ * build's pages read (a record made by an earlier jot is at layout 1). Render
+ * only: never stored, sent into the note or merged.
+ */
+export function recoveryView(
+  kind: string,
+  material: StoredMaterial,
+): { state: Uint8Array; complete: boolean } {
+  const view = storedSourceView(kind, material);
+  try {
+    const state = migrateYState(Y.encodeStateAsUpdate(view.doc), LAYOUT_STEPS, {
+      roots: SERVED_ROOTS,
+      gc: false,
+    }).state;
+    return { state, complete: view.complete };
+  } finally {
+    view.doc.destroy();
+  }
 }
 
 /** An empty Yjs update: the snapshot of a session that sent none. */

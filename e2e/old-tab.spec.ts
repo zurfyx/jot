@@ -5,7 +5,8 @@ import { type Page, type PlaywrightWorkerArgs } from '@playwright/test';
 import * as Y from '@y/y';
 
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
-import { readRawNote } from './raw-client';
+import { layout1Note } from '../src/shared/testing/layout1';
+import { readRawNote, writeRawNote } from './raw-client';
 
 /**
  * A real jot from before the fence (D34) against this release's Worker: its
@@ -91,13 +92,9 @@ test('an older tab with offline edits, on a note that moved on, keeps its text, 
 }) => {
   const id = freshNoteId();
   const today = await context.newPage();
-  await openNote(today, id);
-  await editor(today).click();
-  await today.keyboard.type('Shared start');
-  await expect
-    .poll(async () => noteText(await readRawNote(baseURL!, id)))
-    .toContain('Shared start');
-  // The note as it was before the fence shipped: the older tab edits it as always.
+  // The note as it was before the fence shipped (layout 1, as an earlier jot
+  // stored it): the older tab edits it as always.
+  await writeRawNote(baseURL!, id, (doc) => Y.applyUpdate(doc, layout1Note('shared')));
   await replaceIncarnation(baseURL!, id, true);
 
   const browser = await olderBrowser(playwright);
@@ -122,10 +119,15 @@ test('an older tab with offline edits, on a note that moved on, keeps its text, 
   await expect(editor(older)).toContainText('Typed in the older tab');
   await expect(editor(older)).toContainText('Shared start');
 
-  // Never in the note; under Offline edits.
-  expect(noteText(await readRawNote(baseURL!, id))).not.toContain('Typed in the older tab');
-  await today.reload();
-  await expect(today.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  // Never in the note; under Offline edits. This release reads layout 3 and
+  // up and migrates nothing: the note stays at layout 1, which its pages (and
+  // the raw client, which presents this release's handshake) are refused
+  // until R+1 migrates it.
+  await today.goto(`/n/${id}`);
+  await expect(today.getByTestId('status-pill')).toContainText('Reload to edit', {
+    timeout: 15_000,
+  });
+  await expect(editor(today)).not.toContainText('Typed in the older tab');
   await today.getByTestId('dock').getByRole('button', { name: 'More' }).click();
   await today.getByTestId('recovery-item').click();
   await today.getByTestId('recovery-row').first().getByRole('button', { name: 'View' }).click();

@@ -87,8 +87,10 @@ clients (D03).
   `YRecordAcknowledgement` version 1: the note, the replica and its source generation, the
   record and its hash, plus the upload's SHA-256): the object holds a response until its
   writes are durable, so the answer is durable; the same upload twice is one record. `/view` serves a record's source view (its
-  snapshot, deltas and queue in one scratch document) as Yjs bytes: the object imports
-  no Lexical, only `@lexical/y/server`, the runner and the steps. Records past 90 days are pruned;
+  snapshot, deltas and queue in one scratch document) migrated on that copy through the
+  bundled steps to the layout this build's pages read, as Yjs bytes, so a record an earlier
+  jot made at layout 1 still shows: the object imports no Lexical, only `@lexical/y/server`,
+  the runner and the steps. Records past 90 days are pruned;
   256 records or 64 MB per note answer further uploads with 507.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
