@@ -109,18 +109,10 @@ clients (D03).
   Yjs types only, so the history goes; ids, cursors and blame attribution are lost for that
   note; still over the cap, it is stuck). The Worker imports no Lexical: the layout
   constants come from `@lexical/y/server`.
-- **Replay** (D34). A handoff, once stored and before it is acknowledged, is replayed onto
-  the note as a checked edit (`replayYRecovery`): only when its incarnation is the note's
-  and every transition since its source generation was in place, against the base of that
-  generation; computed on the live state and committed with its ledger entries (`ledger`)
-  and receipt (`replays`) in the same synchronous step, then broadcast like any update. A
-  change already in the ledger is not applied twice. Changes that cannot apply (a format
-  whose base value is unknown or changed) are conflicts: the record stays listed with
-  them. A record of another incarnation, an unknown source or a fresh document is never
-  replayed. The replay writes each source client's inserts under a client of its own; in
-  the same transaction that client gets the source client's `jot-people` entry, so blame
-  names the offline author. `/view` serves `recoveryYState`: the record's source view migrated on a scratch
-  copy to the layout this build's pages read, for rendering only.
+- **No replay yet** (D34). A handoff is kept as a record and shown read only; nothing is
+  replayed onto the note: the `@lexical/y` this release pins ships no replay (it comes
+  with meta/lexical#9771). `/view` serves `recoveryYState`: the record's source view
+  migrated on a scratch copy to the layout this build's pages read, for rendering only.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
   step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a

@@ -58,8 +58,8 @@ export function ensureFenceSchema(sql: SqlStorage): void {
     bytes INTEGER NOT NULL
   )`);
   // R+1 (D34): the room's phase (`serving`, or `stuck` after a refused
-  // migration), the migrations and fresh documents it went through, the
-  // replay ledger and receipts. A note R created gains the column here.
+  // migration) and the migrations and fresh documents it went through. A
+  // note R created gains the column here.
   const columns = sql
     .exec<{ name: string }>("SELECT name FROM pragma_table_info('room')")
     .toArray()
@@ -72,19 +72,6 @@ export function ensureFenceSchema(sql: SqlStorage): void {
     from_gen TEXT NOT NULL,
     to_gen TEXT NOT NULL,
     kind TEXT NOT NULL,
-    receipt TEXT NOT NULL,
-    at INTEGER NOT NULL
-  )`);
-  sql.exec(`CREATE TABLE IF NOT EXISTS ledger (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  )`);
-  sql.exec(`CREATE TABLE IF NOT EXISTS replays (
-    record INTEGER PRIMARY KEY,
-    eligible INTEGER NOT NULL,
-    reason TEXT,
-    applied INTEGER NOT NULL,
-    conflicts INTEGER NOT NULL,
     receipt TEXT NOT NULL,
     at INTEGER NOT NULL
   )`);
@@ -415,10 +402,6 @@ export function pruneQuarantine(sql: SqlStorage, now: number): void {
     'DELETE FROM record_parts WHERE seq IN (SELECT seq FROM records WHERE received_at < ?)',
     cutoff,
   );
-  sql.exec(
-    'DELETE FROM replays WHERE record IN (SELECT seq FROM records WHERE received_at < ?)',
-    cutoff,
-  );
   sql.exec('DELETE FROM records WHERE received_at < ?', cutoff);
   sql.exec(
     `DELETE FROM base_parts WHERE generation IN (SELECT generation FROM bases WHERE created_at < ?
@@ -510,114 +493,3 @@ export function transitionCount(sql: SqlStorage): number {
   return sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM transitions').one().n;
 }
 
-/**
- * Whether the note went from `from` to `to` through in-place migrations
- * only (every step recorded, none a fresh document).
- */
-export function inPlaceChain(sql: SqlStorage, from: string, to: string): boolean {
-  const rows = sql
-    .exec<{ from_gen: string; to_gen: string; kind: string }>(
-      'SELECT from_gen, to_gen, kind FROM transitions ORDER BY seq',
-    )
-    .toArray();
-  let at = from;
-  for (const row of rows) {
-    if (row.from_gen !== at) {
-      continue;
-    }
-    if (row.kind !== 'in-place') {
-      return false;
-    }
-    at = row.to_gen;
-  }
-  return at === to && at !== from;
-}
-
-export function readLedger(sql: SqlStorage): Map<string, string> {
-  return new Map(
-    sql
-      .exec<{ key: string; value: string }>('SELECT key, value FROM ledger')
-      .toArray()
-      .map((r) => [r.key, r.value]),
-  );
-}
-
-export function writeLedger(
-  sql: SqlStorage,
-  entries: readonly (readonly [string, string])[],
-): void {
-  for (const [key, value] of entries) {
-    sql.exec(
-      'INSERT INTO ledger (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING',
-      key,
-      value,
-    );
-  }
-}
-
-export interface ReplayRow {
-  eligible: boolean;
-  reason: string | null;
-  applied: number;
-  conflicts: number;
-}
-
-export function writeReplay(
-  sql: SqlStorage,
-  record: number,
-  replay: ReplayRow,
-  receipt: unknown,
-): void {
-  sql.exec(
-    `INSERT INTO replays (record, eligible, reason, applied, conflicts, receipt, at)
-     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (record) DO NOTHING`,
-    record,
-    replay.eligible ? 1 : 0,
-    replay.reason,
-    replay.applied,
-    replay.conflicts,
-    JSON.stringify(receipt),
-    Date.now(),
-  );
-}
-
-export function readReplays(sql: SqlStorage): Map<number, ReplayRow & { receipt: string }> {
-  return new Map(
-    sql
-      .exec<{
-        record: number;
-        eligible: number;
-        reason: string | null;
-        applied: number;
-        conflicts: number;
-        receipt: string;
-      }>('SELECT record, eligible, reason, applied, conflicts, receipt FROM replays')
-      .toArray()
-      .map((r) => [
-        r.record,
-        {
-          eligible: r.eligible === 1,
-          reason: r.reason,
-          applied: r.applied,
-          conflicts: r.conflicts,
-          receipt: r.receipt,
-        },
-      ]),
-  );
-}
-
-/** Every client id the quarantine knows (a replay must not take one). */
-export function quarantineClients(sql: SqlStorage): Set<number> {
-  const out = new Set<number>();
-  for (const row of sql
-    .exec<{ clients: string; new_clients: string }>('SELECT clients, new_clients FROM records')
-    .toArray()) {
-    for (const c of [
-      ...(JSON.parse(row.clients) as number[]),
-      ...(JSON.parse(row.new_clients) as number[]),
-    ]) {
-      out.add(c);
-    }
-  }
-  return out;
-}

@@ -17,7 +17,8 @@ import {
  * Release R+1 (D34) end to end: a layout 1 note, a tab offline with edits,
  * the note's floor raised, its first open migrates it in place (to layout 2
  * with the 1to2 step, or to 3 once the library's floor is 3), and the offline
- * tab hands its edits off: the note replays them.
+ * tab hands its edits off: they wait under Offline edits (replay at the note
+ * is deferred until @lexical/y ships it).
  *
  * The offline tab is this build, or, with JOT_E2E_R_DIST (the dist/client of
  * a release R build), an R page: the realistic case at layout 3, where no
@@ -87,12 +88,6 @@ async function appendLine(page: Page, text: string) {
   await page.keyboard.type(text);
 }
 
-async function toggleBlame(page: Page) {
-  await page.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Show blame' }).click();
-  await page.keyboard.press('Escape');
-}
-
 /** Raises the note's floor and opens it in this build: that first open migrates it. */
 async function migrate(page: Page, baseURL: string, id: string) {
   await setFloor(baseURL, id, TARGET);
@@ -107,7 +102,7 @@ async function migrate(page: Page, baseURL: string, id: string) {
     .toContain(`lexical-y:${TARGET}`);
 }
 
-test('a note migrates on its first open; a tab offline across it has its edits replayed, a bold included', async ({
+test('a note migrates on its first open; a tab offline across it keeps its edits under Offline edits', async ({
   context,
   playwright,
   baseURL,
@@ -136,95 +131,18 @@ test('a note migrates on its first open; a tab offline across it has its edits r
   await expect(editor(a)).not.toContainText('Written offline');
 
   await b.page.getByRole('button', { name: 'Reconnect' }).click();
-  await expect(editor(a)).toContainText('Written offline', { timeout: 20_000 });
-  await expect(editor(a).locator('.jot-bold')).toHaveText('Shared');
   await b.upgrade();
   await expect(b.page.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
-  await expect(editor(b.page)).toContainText('Written offline');
-  await expect(editor(b.page).locator('.jot-bold')).toHaveText('Shared');
-  // Every change went in: nothing to look at.
-  await expect(b.page.getByTestId('recovery-banner')).toHaveCount(0);
+  // The offline edits did not go into the note: they wait under Offline edits.
+  await expect(editor(a)).not.toContainText('Written offline');
+  await expect(editor(b.page)).not.toContainText('Written offline');
+  const banner = b.page.getByTestId('recovery-banner');
+  await expect(banner).toContainText('Edits you made offline');
+  await banner.getByRole('button', { name: 'View' }).click();
+  await expect(b.page.getByTestId('recovery-text')).toContainText('Written offline');
+  await expect(b.page.getByTestId('recovery-text').locator('.jot-bold')).toHaveText('Shared');
   // Both keep editing the migrated note.
   await appendLine(a, 'After the migration');
   await expect(editor(b.page)).toContainText('After the migration');
   await b.close();
-});
-
-test('replayed text is blamed on its offline author, not on the replay', async ({
-  context,
-  otherContext,
-  playwright,
-  baseURL,
-}) => {
-  const id = freshNoteId();
-  await storeLayout1Note(baseURL!, id, 'topic');
-  await asPerson(otherContext, 'Ana', 1);
-  const ana = await offlineTab(otherContext, playwright, baseURL!, ['Ana', 1]);
-  await openNote(ana.page, id);
-  await expect(editor(ana.page)).toContainText('Topic');
-  await workOffline(ana.page);
-  await appendLine(ana.page, 'Written offline by Ana');
-  await expect(ana.page.getByTestId('status-pill')).toHaveText(/^Offline/);
-
-  await asPerson(context, 'Gerard', 0);
-  const gerard = await context.newPage();
-  await migrate(gerard, baseURL!, id);
-  await ana.page.getByRole('button', { name: 'Reconnect' }).click();
-  await expect(editor(gerard)).toContainText('Written offline by Ana', { timeout: 20_000 });
-  await toggleBlame(gerard);
-  await expect(gerard.getByTestId('blame-name')).toContainText(['Ana']);
-  const box = await editor(gerard).getByText('Written offline by Ana').boundingBox();
-  expect(box).not.toBeNull();
-  await gerard.mouse.move(box!.x + 20, box!.y + box!.height / 2);
-  await expect(gerard.getByTestId('blame-card')).toContainText('Ana');
-  await ana.close();
-});
-
-test('a block type changed on both sides is a conflict: the text goes in, the change waits under Offline edits', async ({
-  context,
-  otherContext,
-  playwright,
-  baseURL,
-}) => {
-  const id = freshNoteId();
-  await storeLayout1Note(baseURL!, id, 'topic');
-  const ana = await offlineTab(otherContext, playwright, baseURL!, ['Ana', 1]);
-  await openNote(ana.page, id);
-  await expect(editor(ana.page)).toContainText('Topic');
-  await workOffline(ana.page);
-  // Offline: the first line becomes a heading, and a line is added.
-  await editor(ana.page)
-    .locator('p')
-    .first()
-    .click({ position: { x: 1, y: 8 } });
-  await ana.page.keyboard.type('# ');
-  await expect(editor(ana.page).locator('h1')).toHaveText('Topic');
-  await appendLine(ana.page, 'Notes from the train');
-
-  const gerard = await context.newPage();
-  await migrate(gerard, baseURL!, id);
-  // Meanwhile, on the migrated note: the same line becomes a quote.
-  await editor(gerard)
-    .locator('p')
-    .first()
-    .click({ position: { x: 1, y: 8 } });
-  await gerard.keyboard.type('> ');
-  await expect(editor(gerard).locator('blockquote')).toHaveText('Topic');
-
-  await ana.page.getByRole('button', { name: 'Reconnect' }).click();
-  // The text went in; the block type stays Gerard's: Ana's change is a conflict.
-  await expect(editor(gerard)).toContainText('Notes from the train', { timeout: 20_000 });
-  await expect(editor(gerard).locator('blockquote')).toHaveText('Topic');
-  await expect(editor(gerard).locator('h1')).toHaveCount(0);
-  await ana.upgrade();
-  await expect(editor(ana.page)).toContainText('Notes from the train', { timeout: 15_000 });
-  await expect(editor(ana.page).locator('blockquote')).toHaveText('Topic');
-  const banner = ana.page.getByTestId('recovery-banner');
-  // (An R page's banner predates replay: it says the edits could not go in.)
-  await expect(banner).toContainText(
-    ana.thisBuild() ? 'except one change' : 'Edits you made offline',
-  );
-  await banner.getByRole('button', { name: 'View' }).click();
-  await expect(ana.page.getByTestId('recovery-text').locator('h1')).toHaveText('Topic');
-  await ana.close();
 });

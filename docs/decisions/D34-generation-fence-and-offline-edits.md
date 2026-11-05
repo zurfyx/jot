@@ -44,10 +44,12 @@ memory only (D13), so the pages at risk are the ones open across such a change, 
   object before anything is served, in place, behind a barrier with no await, the old
   state kept as the base of its generation. A note whose migrated state passes the 2 MB
   cap becomes a fresh document under a new incarnation.
-- **Replay.** A handoff of the same incarnation, made against a generation the note
-  migrated from in place, is replayed at the note as a checked edit: its text inserts and
-  deletions go in by identity, a format change only where its earlier value is known and
-  unchanged; the rest are conflicts, kept with the record.
+- **Replay, later.** A handoff of the same incarnation, made against a generation the note
+  migrated from in place, is to be replayed at the note as a checked edit (its text inserts
+  and deletions by identity, a format change only where its earlier value is known and
+  unchanged; the rest conflicts kept with the record). Deferred: the `@lexical/y` jot pins
+  ships no replay; it comes with meta/lexical#9771. Until then every handoff waits under
+  Offline edits.
 - **Offline edits.** Records are kept in the object's SQLite (parts under the 2 MB row
   cap) for 90 days and go with the note at its expiry. ⋯ → Offline edits lists those that
   hold something the note lacks; a banner shows this browser's own. The object reads a

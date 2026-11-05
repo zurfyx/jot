@@ -12,10 +12,8 @@ import {
   pendingYRecord,
   prepareYRoom,
   recoveryYState,
-  replayYRecovery,
   sourceView,
   type YPreparedRoom,
-  type YReplayResult,
   type YLegacySignal,
   type YQuarantineRecord,
   type YRecordSource,
@@ -35,7 +33,6 @@ export type {
   YPreparedRoom,
   YQuarantineRecord,
   YRecordSource,
-  YReplayResult,
   YRoomDescription,
   YSessionVerdict,
 };
@@ -273,34 +270,6 @@ export function recordFrom(input: RecordInput): YQuarantineRecord {
     draft: input.draft,
     signals: input.signals,
     receivedAt: input.receivedAt,
-  });
-}
-
-export interface ReplayInput {
-  record: YQuarantineRecord;
-  /** The immutable base of the record's source generation, null when none is kept. */
-  base: Uint8Array | null;
-  baseGeneration: string | null;
-  current: Uint8Array;
-  incarnation: string;
-  generation: string;
-  /** Whether every transition from the base generation to the current one was in place. */
-  inPlace: boolean;
-  ledger: ReadonlyMap<string, string>;
-  reserved: (client: number) => boolean;
-}
-
-/** Replays a record's own changes onto the current state (a checked edit: commit it at once). */
-export function replayRecord(input: ReplayInput): YReplayResult {
-  return replayYRecovery(input.record, input.base ?? input.current, input.current, {
-    incarnation: input.incarnation,
-    generation: input.generation,
-    baseGeneration: input.base === null ? '' : (input.baseGeneration ?? ''),
-    inPlace: input.base !== null && input.inPlace,
-    roots: SERVED_ROOTS,
-    gc: true,
-    ledger: input.ledger,
-    reserved: input.reserved,
   });
 }
 

@@ -53,7 +53,6 @@ import {
   prepareNote,
   recordFrom,
   recoveryState,
-  replayRecord,
   replaceIncarnation,
   SERVED_ROOTS,
   recoveryView,
@@ -65,17 +64,11 @@ import { UNKNOWN_GENERATION } from '../shared/fence';
 import {
   appendPart,
   ensureFenceSchema,
-  inPlaceChain,
   insertBase,
   insertTransition,
-  quarantineClients,
   readBase,
-  readLedger,
   readPhase,
-  readReplays,
-  writeLedger,
   writePhase,
-  writeReplay,
   insertRecord,
   listRecords,
   MAX_RECORD_BYTES,
@@ -580,7 +573,7 @@ export class NoteRoom extends DurableObject<Env> {
    * transfer under a new incarnation (design section 6): every live item
    * copied as it is into new items (`copy.ts`, Yjs only). Content ids, cursors and blame
    * attribution are lost for this note; every replica is then another
-   * incarnation (its edits go to the recovery view, never replayed). If the
+   * incarnation (its edits go to the recovery view). If the
    * fresh state is still over the cap, the note is stuck.
    */
   private freshDocument(room: RoomRow, stored: Uint8Array, migrated: Uint8Array): void {
@@ -1118,7 +1111,6 @@ export class NoteRoom extends DurableObject<Env> {
       if (request.method !== 'GET') {
         return new Response('Method not allowed.', { status: 405 });
       }
-      const replays = readReplays(sql);
       const items: RecoveryListItem[] = listRecords(sql).map((r) => ({
         seq: r.seq,
         kind: r.kind,
@@ -1129,13 +1121,6 @@ export class NoteRoom extends DurableObject<Env> {
         clients: [...new Set([...r.clients, ...r.newClients])],
         upload: r.upload,
         bytes: r.bytes,
-        replay: replays.has(r.seq)
-          ? {
-              eligible: replays.get(r.seq)!.eligible,
-              applied: replays.get(r.seq)!.applied,
-              conflicts: replays.get(r.seq)!.conflicts,
-            }
-          : null,
       }));
       return Response.json({ records: items });
     }
@@ -1285,130 +1270,14 @@ export class NoteRoom extends DurableObject<Env> {
       }
       return s;
     });
-    const replay = this.replay(seq, { ...built.record, actionable: built.actionable });
-    return Response.json({
-      ...acknowledgement(id, upload.replica, upload.source, built.record.hash, hash, {
+    return Response.json(
+      acknowledgement(id, upload.replica, upload.source, built.record.hash, hash, {
         seq,
-        actionable: replay?.actionable ?? built.actionable,
+        actionable: built.actionable,
       }),
-      replay: replay === null ? null : { applied: replay.applied, conflicts: replay.conflicts },
-    });
+    );
   }
 
-  /**
-   * Blame for replayed text (D19, D34): a replay writes each source client's
-   * inserts under a client of its own (`clients`: source -> replay), so the
-   * replay client gets the source client's people entry, read from the note
-   * or, when the replica registered while offline, from the record. Blame
-   * then names the offline author, not the replay. Runs inside the replay's
-   * storage transaction; an entry already there is kept.
-   */
-  private creditReplay(
-    record: Parameters<typeof sourceView>[0],
-    clients: readonly (readonly [number, number])[],
-  ): void {
-    if (clients.length === 0) {
-      return;
-    }
-    const people = this.doc.get(PEOPLE_ROOT_NAME);
-    let view: ReturnType<typeof sourceView> | null = null;
-    try {
-      const entries: [string, unknown][] = [];
-      for (const [source, replay] of clients) {
-        if (people.getAttr(String(replay)) !== undefined) {
-          continue;
-        }
-        let entry: unknown = people.getAttr(String(source));
-        if (entry === undefined) {
-          view ??= sourceView(record);
-          entry = view.doc.get(PEOPLE_ROOT_NAME).getAttr(String(source));
-        }
-        if (entry !== undefined) {
-          entries.push([String(replay), entry]);
-        }
-      }
-      if (entries.length > 0) {
-        this.doc.transact(() => {
-          for (const [key, entry] of entries) {
-            people.setAttr(key, entry as never);
-          }
-        }, REPLAY_ORIGIN);
-      }
-    } finally {
-      view?.doc.destroy();
-    }
-  }
-
-  /**
-   * Replays a handoff's own changes onto the note as a checked edit (D34,
-   * design 4.6): computed on the live state and committed with its ledger
-   * and receipt before anything else runs (no await in between). Eligible
-   * only when the record's incarnation is the note's and every transition
-   * since its source generation was an in-place migration. A replay that
-   * fails leaves the record for the recovery view.
-   */
-  private replay(
-    seq: number,
-    record: ReturnType<typeof buildRecord>['record'] & { actionable: boolean },
-  ): { applied: number; conflicts: number; actionable: boolean } | null {
-    if (!REPLAY_ENABLED) {
-      return null;
-    }
-    const sql = this.ctx.storage.sql;
-    const room = this.room!;
-    const from = record.source.generation;
-    const base = from === null || from === UNKNOWN_GENERATION ? null : readBase(sql, from);
-    try {
-      const reserved = quarantineClients(sql);
-      const result = replayRecord({
-        record,
-        base,
-        baseGeneration: from,
-        current: Y.encodeStateAsUpdate(this.doc),
-        incarnation: room.incarnation,
-        generation: room.generation,
-        inPlace: base !== null && from !== null && inPlaceChain(sql, from, room.generation),
-        ledger: readLedger(sql),
-        reserved: (client) => reserved.has(client),
-      });
-      const { applied, conflicts } = result.receipt;
-      // Replayed: something to look at only where a change did not go in.
-      const actionable = result.eligible
-        ? record.actionable && (conflicts > 0 || (record.draft !== null && record.draft.differs))
-        : record.actionable;
-      this.ctx.storage.transactionSync(() => {
-        if (result.update !== null) {
-          Y.applyUpdate(this.doc, result.update, REPLAY_ORIGIN);
-          this.creditReplay(record, result.receipt.clients);
-          this.dirty = true;
-          this.save();
-        }
-        writeLedger(sql, result.receipt.ledger);
-        writeReplay(
-          sql,
-          seq,
-          { eligible: result.eligible, reason: result.reason, applied, conflicts },
-          { changes: result.receipt.changes, clients: result.receipt.clients },
-        );
-        sql.exec('UPDATE records SET actionable = ? WHERE seq = ?', actionable ? 1 : 0, seq);
-      });
-      return { applied, conflicts, actionable };
-    } catch (error) {
-      this.logError('replay', error, undefined, 'the replay failed; the record stays for recovery');
-      writeReplay(
-        sql,
-        seq,
-        {
-          eligible: false,
-          reason: `failed: ${String(error).slice(0, 200)}`,
-          applied: 0,
-          conflicts: 0,
-        },
-        {},
-      );
-      return null;
-    }
-  }
 }
 
 /** The durable acknowledgement of a stored upload (UploadAcknowledgement). */
@@ -1433,15 +1302,6 @@ function acknowledgement(
     actionable: facts.actionable,
   };
 }
-
-/** The note's people registry (D19): one attribute per Yjs client id, read by blame. */
-const PEOPLE_ROOT_NAME = 'jot-people';
-
-/** Replays a handoff at the note (D34); off: every record goes to the recovery view. */
-const REPLAY_ENABLED = true;
-
-/** The origin of a replay's writes in the note's document. */
-const REPLAY_ORIGIN = 'jot-replay';
 
 /** A record source nobody can name: material from before the fence. */
 const UNKNOWN_SOURCE: YRecordSource = {
