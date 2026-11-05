@@ -121,7 +121,9 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   const box = (await last.boundingBox())!;
   await last.click({ position: { x: box.width - 4, y: box.height / 2 } });
   await page.keyboard.type(' Ana does.');
-  await expect(tree).toContainText('"Who brings snacks? Ana does." ¶');
+  // Layout 3: the bold run above ends at a closing marker (`[n]`), shown on
+  // the text that follows it.
+  await expect(tree).toContainText(/"Who brings snacks\? Ana does\."\{f:bold: \[\d+\]\} ¶/);
   await page.keyboard.press('Enter');
   await page.keyboard.type('## Budget');
   const budget = tree.getByTestId('inspector-row').filter({ hasText: /"Budget/ });
@@ -163,7 +165,9 @@ test('Tab leaves the inspector instead of indenting', async ({ page }) => {
   await editor.getByText('Who brings snacks?').click();
   await page.keyboard.press('Tab');
   await expect(editor).not.toBeFocused();
-  await expect(page.getByTestId('inspector-tree')).toContainText('"Who brings snacks?" ¶ {}');
+  await expect(page.getByTestId('inspector-tree')).toContainText(
+    /"Who brings snacks\?"\{f:bold: \[\d+\]\} ¶ \{\}/,
+  );
 });
 
 test('code in the docs is in Geist Mono, not the system monospace', async ({ page }) => {

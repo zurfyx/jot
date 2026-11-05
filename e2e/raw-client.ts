@@ -3,19 +3,14 @@ import * as Y from '@y/y';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
-import { LAYOUT_VERSION, MIN_LAYOUT, SEED_LAYOUT } from '@lexical/y';
+import { createYServerLayoutUpgrade } from '@lexical/y';
 
 import { handshakeParams } from '../src/shared/fence';
 import { MESSAGE_SYNC } from '../src/shared/protocol';
 
 /** This release's handshake for a replica with nothing of its own (D34). */
 const FRESH = new URLSearchParams(
-  handshakeParams({
-    generation: null,
-    material: false,
-    layouts: [MIN_LAYOUT, LAYOUT_VERSION],
-    seed: SEED_LAYOUT,
-  }),
+  handshakeParams(createYServerLayoutUpgrade().handshake({ generation: null, material: false })),
 ).toString();
 
 /** Joins note `id` from Node over the real protocol and syncs its document. */

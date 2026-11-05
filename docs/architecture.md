@@ -83,15 +83,17 @@ clients (D03).
 - **Offline edits** (D34). `quarantine.ts`: `records` and `record_parts` (parts of at most
   1.9 MB, under the 2 MB row cap), and `bases` for the migrations to come. An upload is
   checked against the SHA-256 its header names, stored in one transaction, and answered
-  with that hash: the object holds a response until its writes are durable, so the answer
-  is the acknowledgement; the same upload twice is one record. `/view` serves a record's source view (its
+  with its acknowledgement (`shared/fence.ts`'s `UploadAcknowledgement`, `@lexical/y/server`'s
+  `YRecordAcknowledgement` version 1: the note, the replica and its source generation, the
+  record and its hash, plus the upload's SHA-256): the object holds a response until its
+  writes are durable, so the answer is durable; the same upload twice is one record. `/view` serves a record's source view (its
   snapshot, deltas and queue in one scratch document) as Yjs bytes: the object imports
   no Lexical, only `@lexical/y/server`, the runner and the steps. Records past 90 days are pruned;
   256 records or 64 MB per note answer further uploads with 507.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
-  step reaches (`steps.ts`: `1to2` with this `@lexical/y`; layout 3 once `2to3` ships with
-  it) and the receipt is logged with a hash of the note id. Nothing is written.
+  step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a
+  hash of the note id. Nothing is written.
 - **Robustness.** Any malformed frame (text, unknown type, truncated varint, bad awareness
   JSON, undecodable update) closes that socket with 1007 and leaves the others alone.
   Clients reconnect with backoff and re-sync with the sync steps. No socket handler
@@ -189,15 +191,19 @@ or refuses it for good; after four failed attempts it stays for the next page.
 
 **The generation fence** (D34). `session.ts` keeps the generation the page's document
 belongs to, adopted when a full sync with the note completes, and presents it in the
-socket URL (`shared/fence.ts`: `f`, `g`, `m`, `lo`, `hi`, `seed`; `@y/websocket` re-reads
-`provider.params` on every reconnect). The note's verdict (message 65) comes first: admit
+socket URL: the version 1 handshake `@lexical/y`'s layout upgrade handle builds
+(`shared/fence.ts`: `f` its version, `g`, `m`, `lo`, `hi`, `seed`, and `ft` its features
+when it has any; `@y/websocket` re-reads `provider.params` on every reconnect). This
+release's `@lexical/y` reads layout 3 and up (MIN_LAYOUT 3) and its object migrates no note
+(`layoutUpgrade: null`), so a note stored at layout 1 or 2 opens read only. The note's verdict (message 65) comes first: admit
 and bootstrap sync as before; refuse-layout reloads the page once (a guard in
 sessionStorage, `jot:fence-reload:<id>`), then shows "This note was upgraded. Reload to
 keep editing."; stale runs the handoff (`editor/handoff.ts`): the provider stops,
 `onBeforeHandoff` listeners stop the example's peers and jot AI, `binding.quiesce()`
 commits what the editor holds and stops the binding writing, and the whole document (plus
 a draft only for what could not be committed) is uploaded with its SHA-256 and retried with
-the same bytes until the object acknowledges that hash. Then `onReplace` has `NotePage`
+the same bytes until the object acknowledges exactly that upload: the same note, replica,
+source generation and SHA-256 (`acknowledges`); a bare hash acknowledges nothing. Then `onReplace` has `NotePage`
 open a fresh session (its effect is keyed on the id and a generation key), which bootstraps
 from the note. The uploaded hash is kept in sessionStorage (`jot:uploaded:<id>`).
 `editor/recovery/` is the feature that shows records: a banner for this browser's own

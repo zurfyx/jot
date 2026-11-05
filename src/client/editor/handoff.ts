@@ -9,6 +9,7 @@
 import { LAYOUT_VERSION, MIN_LAYOUT, type YBinding } from '@lexical/y';
 
 import {
+  acknowledges,
   encodeUpload,
   recoveryPath,
   sha256Hex,
@@ -68,7 +69,8 @@ const defaultDeps: UploadDeps = {
 };
 
 /**
- * Uploads `upload` to note `id` until the server acknowledges its hash.
+ * Uploads `upload` to note `id` until the server durably acknowledges
+ * exactly it (its note, replica, source generation and bytes).
  * Network failures and server errors retry with the same bytes; a refusal
  * (malformed, too large, too many records) ends it: the caller keeps the
  * material.
@@ -90,8 +92,15 @@ export async function uploadMaterial(
         body: body as Uint8Array<ArrayBuffer>,
       });
       if (response.ok) {
-        const ack = (await response.json()) as { upload?: unknown };
-        if (ack.upload === hash) {
+        const ack: unknown = await response.json();
+        if (
+          acknowledges(ack, {
+            room: id,
+            replica: upload.replica,
+            sourceGeneration: upload.source.generation ?? UNKNOWN_GENERATION,
+            upload: hash,
+          })
+        ) {
           rememberUpload(id, hash);
           return { result: 'saved', hash };
         }

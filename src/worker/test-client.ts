@@ -4,7 +4,7 @@ import { exports } from 'cloudflare:workers';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
-import { LAYOUT_VERSION, MIN_LAYOUT, SEED_LAYOUT } from '@lexical/y';
+import { createYServerLayoutUpgrade } from '@lexical/y';
 
 import { type Handshake, handshakeParams } from '../shared/fence';
 import { noteSocketPath } from '../shared/ids';
@@ -19,10 +19,7 @@ import {
 /** This release's handshake for a fresh replica (no generation, no material). */
 export function freshHandshake(overrides: Partial<Handshake> = {}): Handshake {
   return {
-    generation: null,
-    material: false,
-    layouts: [MIN_LAYOUT, LAYOUT_VERSION],
-    seed: SEED_LAYOUT,
+    ...createYServerLayoutUpgrade().handshake({ generation: null, material: false }),
     ...overrides,
   };
 }

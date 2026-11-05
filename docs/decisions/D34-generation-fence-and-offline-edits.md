@@ -17,20 +17,23 @@ memory only (D13), so the pages at risk are the ones open across such a change, 
 
 - **Generation.** Each note's object keeps a random 128-bit incarnation, made at the first
   visit that finds none and again whenever the note is created afresh after its expiry,
-  and serves the generation `<incarnation>/<epochs>` (`@lexical/y/server`'s `generationOf`;
-  no epoch until a note migrates). It is stored, never recomputed from the document per
+  and serves its generation (`@lexical/y/server`'s `getYGeneration`, version `g1`: the
+  incarnation and each served root's last migration, none until a note migrates; opaque to
+  everyone else). It is stored, never recomputed from the document per
   update. A note that already existed when the fence shipped gets an _inherited_
   incarnation.
-- **Handshake.** A note page presents, in its socket URL, the generation its document
-  belongs to (adopted only when a full sync with the note completed), whether it holds
-  edits of its own, the layouts its release reads and the layout its seed records. The
+- **Handshake.** A note page presents, in its socket URL, the version 1 handshake its
+  `@lexical/y` builds: the generation its document belongs to (adopted only when a full
+  sync with the note completed), whether it holds edits of its own, the layouts its release
+  reads, the layout its seed records and the features it implements. The
   object answers with a verdict (`checkYSession`, message 65, sent only to sockets that
   presented the handshake): admit, bootstrap, stale or refuse-layout.
 - **Stale: hand off, then open afresh.** A page whose edits were made against another
   generation never syncs. It stops its writers (in-tab peers too), commits what the editor
   holds (`binding.quiesce()`), uploads its whole document as one record and waits for the
-  object's acknowledgement naming the upload's SHA-256, retrying the same bytes; only then
-  does it open the note afresh. A page that cannot read the note reloads once.
+  object's durable acknowledgement of exactly that upload (scoped to the note, the replica
+  and its source generation, naming the upload's SHA-256), retrying the same bytes; only
+  then does it open the note afresh. A page that cannot read the note reloads once.
 - **Pages from before the fence** keep editing a note with an inherited, never-migrated
   incarnation as they always did. Anywhere else (a new note, a note created again, a
   migrated note) their whole document is kept as a record (a sync step 1 with an empty

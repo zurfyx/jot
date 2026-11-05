@@ -35,8 +35,8 @@ export async function noteTag(noteId: string): Promise<string> {
 
 /**
  * Migrates a copy of `state` to the layout the last bundled step reaches
- * (`to` explicitly: this release's MIN_LAYOUT is 1, so the default target
- * would make every receipt a no-op) and reports what happened. Never throws.
+ * (`to` explicitly, so a receipt measures exactly the bundled chain) and
+ * reports what happened. Never throws.
  */
 export function shadowReceipt(note: string, state: Uint8Array): ShadowReceipt {
   if (state.byteLength > SHADOW_MAX_BYTES) {

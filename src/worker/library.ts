@@ -5,12 +5,10 @@
 import {
   checkYSession,
   createYDoc,
+  createYQuarantineRecord,
+  createYSessionCapture,
   describeYRoom,
-  generationOf,
-  hasNewYEdits,
-  legacySignal,
-  needsNewIncarnation,
-  quarantineRecord,
+  getYGeneration,
   sourceView,
   type YLegacySignal,
   type YQuarantineRecord,
@@ -24,7 +22,51 @@ import type * as Y from '@y/y';
 import type { Handshake } from '../shared/fence';
 
 export type { YLegacySignal, YQuarantineRecord, YRecordSource, YRoomDescription, YSessionVerdict };
-export { createYDoc, generationOf, hasNewYEdits, legacySignal, SEED_LAYOUT, sourceView };
+export { createYDoc, getYGeneration, SEED_LAYOUT };
+
+/** A record's material as NoteRoom stores it (record_parts). */
+export interface StoredMaterial {
+  snapshot: Uint8Array | null;
+  deltas: Uint8Array[];
+  queue: Uint8Array[];
+}
+
+/**
+ * The source view of a record NoteRoom stored. NoteRoom stores only records
+ * it built with this release (version 1, update format `'yjs-v1'`, no
+ * feature requirement), so it names that header; the library refuses any
+ * other before reading a byte.
+ */
+export function storedSourceView(kind: string, material: StoredMaterial) {
+  return sourceView({
+    v: 1,
+    updateFormat: 'yjs-v1',
+    kind,
+    requires: [],
+    snapshot: material.snapshot,
+    deltas: material.deltas,
+    queue: material.queue,
+  });
+}
+
+/** An empty Yjs update: the snapshot of a session that sent none. */
+const EMPTY_UPDATE = new Uint8Array([0, 0]);
+
+/**
+ * The update that turns a client from before the fence read only, built on
+ * the material NoteRoom keeps for its session (a hibernating Durable Object
+ * keeps the material, not the capture object). The capture also lists the
+ * signals the session wrote other content at (`collisions`).
+ */
+export function captureOf(material: StoredMaterial, signals: readonly YLegacySignal[]) {
+  return createYSessionCapture({
+    v: 1,
+    updateFormat: 'yjs-v1',
+    snapshot: material.snapshot ?? EMPTY_UPDATE,
+    deltas: [...material.deltas, ...material.queue],
+    signals,
+  });
+}
 
 /** The roots NoteRoom serves: the editor's. `jot-people` is not a Lexical root. */
 export const SERVED_ROOTS = ['lexical-y'] as const;
@@ -50,9 +92,13 @@ export function verdictFor(room: YRoomDescription, handshake: Handshake | null):
   return checkYSession(room, handshake);
 }
 
-/** Whether a pristine room issued under another seed contract needs a new incarnation. */
+/**
+ * Whether a pristine room issued under another seed contract needs a new
+ * incarnation (y-server.md: a pristine room whose seed contract is not this
+ * release's SEED_LAYOUT).
+ */
 export function replaceIncarnation(room: YRoomDescription, seedLayout: number): boolean {
-  return needsNewIncarnation(room, seedLayout);
+  return room.pristine && room.seedContract !== seedLayout;
 }
 
 export interface RecordInput {
@@ -84,29 +130,36 @@ export interface BuiltRecord {
 
 /**
  * Builds a record and judges it against `live` (the room's state when it
- * arrives; R keeps no base, so nothing the room already holds is new).
+ * arrives, under its generation; R keeps no base, so nothing the room already
+ * holds is new).
  */
-export function buildRecord(input: RecordInput, live: Uint8Array): BuiltRecord {
-  const record = quarantineRecord({
-    kind: input.kind,
-    session: input.session,
-    replica: input.replica,
-    peers: input.peers,
-    clients: input.clients,
-    source: input.source,
-    snapshot: input.snapshot,
-    deltas: input.deltas,
-    queue: input.queue,
-    draft: input.draft,
-    signals: input.signals,
-    receivedAt: input.receivedAt,
-  });
+export function buildRecord(
+  input: RecordInput,
+  live: { generation: string; state: Uint8Array },
+): BuiltRecord {
+  const record = createYQuarantineRecord(
+    {
+      kind: input.kind,
+      session: input.session,
+      replica: input.replica,
+      peers: input.peers,
+      clients: input.clients,
+      source: input.source,
+      snapshot: input.snapshot,
+      deltas: input.deltas,
+      queue: input.queue,
+      draft: input.draft,
+      signals: input.signals,
+      receivedAt: input.receivedAt,
+    },
+    live,
+  );
   return {
     record,
-    newClients: newClientsOf(record, live),
+    newClients: newClientsOf(record, live.state),
     clients: input.clients,
     peers: input.peers,
-    actionable: hasNewYEdits(record, live),
+    actionable: record.actionable,
   };
 }
 

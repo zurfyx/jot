@@ -11,6 +11,7 @@ import {
   sha256Hex,
   UNKNOWN_GENERATION,
   type Upload,
+  type UploadAcknowledgement,
   UPLOAD_HASH_HEADER,
 } from '../shared/fence';
 import { generateNoteId } from '../shared/ids';
@@ -124,7 +125,9 @@ describe('incarnation', () => {
     expect(room).not.toBeNull();
     expect(room!.inherited).toBe(false);
     expect(room!.incarnation).toMatch(/^[A-Za-z0-9_-]{22}$/);
-    expect(room!.generation).toBe(`${room!.incarnation}/-`);
+    expect(room!.generation).toBe(
+      `g1:${JSON.stringify([room!.incarnation, [['lexical-y', null]]])}`,
+    );
     expect(room!.seedContract).toBe(SEED_LAYOUT);
     expect(a.fences).toEqual([
       { verdict: FENCE_BOOTSTRAP, generation: room!.generation, initialize: true },
@@ -345,11 +348,20 @@ describe('recovery uploads', () => {
     await bad.text();
     const first = await post(id, body);
     expect(first.status).toBe(200);
-    const ack = (await first.json()) as { seq: number; upload: string; actionable: boolean };
-    expect(ack.upload).toBe(await sha256Hex(body));
-    expect(ack.actionable).toBe(true);
-    const again = (await (await post(id, body)).json()) as { seq: number };
-    expect(again.seq).toBe(ack.seq);
+    const ack = (await first.json()) as UploadAcknowledgement;
+    // The durable acknowledgement, scoped (YRecordAcknowledgement, version 1).
+    expect(ack).toMatchObject({
+      v: 1,
+      room: id,
+      replica: 'tab',
+      sourceGeneration: UNKNOWN_GENERATION,
+      upload: await sha256Hex(body),
+      actionable: true,
+    });
+    expect(ack.hash).toMatch(/^yr1-sha256:[0-9a-f]{64}$/);
+    expect(ack.record).toBe(ack.hash);
+    const again = (await (await post(id, body)).json()) as UploadAcknowledgement;
+    expect(again).toEqual(ack);
     await evictDurableObject(stubFor(id));
     const { records } = await recoveryList(id);
     expect(records.map((r) => r.seq)).toEqual([ack.seq]);

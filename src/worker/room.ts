@@ -10,6 +10,8 @@ import {
   parseHandshake,
   type RecoveryListItem,
   sha256Hex,
+  UNKNOWN_GENERATION,
+  type UploadAcknowledgement,
   UPLOAD_HASH_HEADER,
   UPLOAD_MAX_BYTES,
 } from '../shared/fence';
@@ -45,11 +47,11 @@ import {
   createYDoc,
   SEED_LAYOUT,
   describeRoom,
-  generationOf,
-  legacySignal,
+  captureOf,
+  getYGeneration,
   replaceIncarnation,
   SERVED_ROOTS,
-  sourceView,
+  storedSourceView,
   verdictFor,
   type YLegacySignal,
   type YRecordSource,
@@ -202,7 +204,7 @@ export class NoteRoom extends DurableObject<Env> {
         incarnation,
         inherited: this.hasStoredRow(),
         seedContract: SEED_LAYOUT,
-        generation: generationOf(this.doc, incarnation, SERVED_ROOTS),
+        generation: getYGeneration(this.doc, incarnation, SERVED_ROOTS),
         createdAt: Date.now(),
       };
     } else if (replaceIncarnation(this.describe(room), SEED_LAYOUT)) {
@@ -211,7 +213,7 @@ export class NoteRoom extends DurableObject<Env> {
         incarnation,
         inherited: false,
         seedContract: SEED_LAYOUT,
-        generation: generationOf(this.doc, incarnation, SERVED_ROOTS),
+        generation: getYGeneration(this.doc, incarnation, SERVED_ROOTS),
         createdAt: Date.now(),
       };
     } else {
@@ -303,7 +305,7 @@ export class NoteRoom extends DurableObject<Env> {
       incarnation,
       inherited,
       seedContract: SEED_LAYOUT,
-      generation: generationOf(this.doc, incarnation, SERVED_ROOTS),
+      generation: getYGeneration(this.doc, incarnation, SERVED_ROOTS),
       createdAt: Date.now(),
     };
     writeRoom(this.ctx.storage.sql, room);
@@ -362,7 +364,7 @@ export class NoteRoom extends DurableObject<Env> {
     if (url.pathname.endsWith('/ws')) {
       return this.openSocket(request, url, id);
     }
-    return this.recovery(request, url);
+    return this.recovery(request, url, id);
   }
 
   private openSocket(request: Request, url: URL, id: string): Response {
@@ -712,12 +714,9 @@ export class NoteRoom extends DurableObject<Env> {
   }
 
   private signalFor(material: ReturnType<typeof readMaterial>) {
-    const view = sourceView(material);
-    try {
-      return legacySignal(Y.encodeStateAsUpdate(view.doc), SCHEMA_VERSION);
-    } finally {
-      view.doc.destroy();
-    }
+    // A fresh capture each time: it signs the material as it is now, under a
+    // new client id; the record keeps every signal sent.
+    return captureOf(material, []).signal(SCHEMA_VERSION)!;
   }
 
   private buildFacts(
@@ -740,7 +739,7 @@ export class NoteRoom extends DurableObject<Env> {
         clients: stored.clients,
         peers: stored.peers,
       },
-      Y.encodeStateAsUpdate(this.doc),
+      { generation: this.identity().generation, state: Y.encodeStateAsUpdate(this.doc) },
     );
   }
 
@@ -821,7 +820,7 @@ export class NoteRoom extends DurableObject<Env> {
   // Recovery (D34): uploads of offline edits, the list, a record's source view
   // and its raw export.
 
-  private async recovery(request: Request, url: URL): Promise<Response> {
+  private async recovery(request: Request, url: URL, id: string): Promise<Response> {
     const match = /\/recovery(?:\/(\d+)\/(view|raw))?$/.exec(url.pathname);
     if (match === null) {
       return new Response('Not found.', { status: 404 });
@@ -834,7 +833,7 @@ export class NoteRoom extends DurableObject<Env> {
     const [, seqText, view] = match;
     if (seqText === undefined) {
       if (request.method === 'POST') {
-        return this.upload(request);
+        return this.upload(request, id);
       }
       if (request.method !== 'GET') {
         return new Response('Method not allowed.', { status: 405 });
@@ -863,7 +862,7 @@ export class NoteRoom extends DurableObject<Env> {
     const material = readMaterial(sql, seq);
     if (view === 'view') {
       // The record's source view, whole: the page reads it with jot's nodes (D34).
-      const source = sourceView(material);
+      const source = storedSourceView(record.kind, material);
       try {
         return new Response(Y.encodeStateAsUpdate(source.doc), {
           headers: {
@@ -885,11 +884,12 @@ export class NoteRoom extends DurableObject<Env> {
 
   /**
    * Keeps a client's handoff (its whole material) as one record. The
-   * response, which names the upload's SHA-256, is the durable
-   * acknowledgement: a Durable Object holds its response until the write is
-   * durable. The same upload twice is one record.
+   * response is the durable acknowledgement (UploadAcknowledgement: scoped
+   * to this note, the replica and its source generation, naming the record,
+   * its hash and the upload's SHA-256): a Durable Object holds its response
+   * until the write is durable. The same upload twice is one record.
    */
-  private async upload(request: Request): Promise<Response> {
+  private async upload(request: Request, id: string): Promise<Response> {
     const declared = request.headers.get(UPLOAD_HASH_HEADER);
     const length = Number(request.headers.get('content-length') ?? '0');
     if (length > UPLOAD_MAX_BYTES) {
@@ -906,7 +906,12 @@ export class NoteRoom extends DurableObject<Env> {
     const sql = this.ctx.storage.sql;
     const existing = recordByUpload(sql, hash);
     if (existing !== null) {
-      return Response.json({ seq: existing.seq, upload: hash, actionable: existing.actionable });
+      return Response.json(
+        acknowledgement(id, existing.replica ?? '', existing.source, existing.hash, hash, {
+          seq: existing.seq,
+          actionable: existing.actionable,
+        }),
+      );
     }
     let upload;
     try {
@@ -938,7 +943,7 @@ export class NoteRoom extends DurableObject<Env> {
         clients: upload.clients,
         peers: upload.peers,
       },
-      Y.encodeStateAsUpdate(this.doc),
+      { generation: this.identity().generation, state: Y.encodeStateAsUpdate(this.doc) },
     );
     const seq = this.ctx.storage.transactionSync(() => {
       const s = insertRecord(sql, {
@@ -967,8 +972,36 @@ export class NoteRoom extends DurableObject<Env> {
       }
       return s;
     });
-    return Response.json({ seq, upload: hash, actionable: built.actionable });
+    return Response.json(
+      acknowledgement(id, upload.replica, upload.source, built.record.hash, hash, {
+        seq,
+        actionable: built.actionable,
+      }),
+    );
   }
+}
+
+/** The durable acknowledgement of a stored upload (UploadAcknowledgement). */
+function acknowledgement(
+  room: string,
+  replica: string,
+  source: { generation: string | null },
+  recordHash: string,
+  upload: string,
+  facts: { seq: number; actionable: boolean },
+): UploadAcknowledgement {
+  return {
+    v: 1,
+    room,
+    replica,
+    sourceGeneration: source.generation ?? UNKNOWN_GENERATION,
+    // A record's id is its hash (createYQuarantineRecord's default).
+    record: recordHash,
+    hash: recordHash,
+    upload,
+    seq: facts.seq,
+    actionable: facts.actionable,
+  };
 }
 
 /** A record source nobody can name: material from before the fence. */

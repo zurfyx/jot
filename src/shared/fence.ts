@@ -6,7 +6,10 @@
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
-/** The fence's protocol version, in the `f` query parameter. */
+/**
+ * The fence's protocol version, in the `f` query parameter: the handshake's
+ * `v` (`@lexical/y/server`'s version 1 handshake).
+ */
 export const FENCE_VERSION = 1;
 
 /** A generation a replica cannot name: material from before the fence (`@lexical/y/server`'s). */
@@ -14,28 +17,40 @@ export const UNKNOWN_GENERATION = 'unknown';
 
 /**
  * What a client says before any sync message (`@lexical/y/server`'s
- * `YSessionHandshake`): the generation its edits were made against (null:
- * none yet; `'unknown'`: a copy from before the fence), whether it holds
- * edits of its own, the layouts its release reads and the layout its seed
- * records.
+ * `YSessionHandshake`, version 1, as `@lexical/y`'s layout upgrade handle
+ * builds it): the generation its edits were made against (null: none yet;
+ * `'unknown'`: a copy from before the fence), whether it holds edits of its
+ * own, the layouts its release reads, the layout its seed records and the
+ * features it implements.
  */
 export interface Handshake {
+  v: 1;
   generation: string | null;
   material: boolean;
   layouts: readonly [number, number];
   seed: number;
+  /** Absent: none. */
+  features?: readonly string[];
 }
+
+/** A feature name in the `ft` parameter (comma-separated). */
+const FEATURE = /^[a-z0-9][a-z0-9.-]{0,63}$/;
 
 /** The handshake as query parameters on the note's socket URL. */
 export function handshakeParams(handshake: Handshake): Record<string, string> {
-  return {
-    f: String(FENCE_VERSION),
+  const params: Record<string, string> = {
+    f: String(handshake.v),
     g: handshake.generation ?? '',
     m: handshake.material ? '1' : '0',
     lo: String(handshake.layouts[0]),
     hi: String(handshake.layouts[1]),
     seed: String(handshake.seed),
   };
+  const features = handshake.features ?? [];
+  if (features.length > 0) {
+    params.ft = features.join(',');
+  }
+  return params;
 }
 
 function layoutParam(value: string | null): number | null {
@@ -59,8 +74,12 @@ export function parseHandshake(url: URL): Handshake | null {
   const hi = layoutParam(params.get('hi'));
   const seed = layoutParam(params.get('seed'));
   const m = params.get('m');
+  const ft = params.get('ft');
+  const features = ft === null || ft === '' ? [] : ft.split(',');
   if (
     params.get('f') !== String(FENCE_VERSION) ||
+    features.length > 32 ||
+    !features.every((f) => FEATURE.test(f)) ||
     g.length > 512 ||
     lo === null ||
     hi === null ||
@@ -70,7 +89,14 @@ export function parseHandshake(url: URL): Handshake | null {
   ) {
     throw new Error('malformed handshake');
   }
-  return { generation: g === '' ? null : g, material: m === '1', layouts: [lo, hi], seed };
+  return {
+    v: FENCE_VERSION,
+    generation: g === '' ? null : g,
+    material: m === '1',
+    layouts: [lo, hi],
+    seed,
+    features,
+  };
 }
 
 /** Where a replica's material came from (`@lexical/y/server`'s `YRecordSource`). */
@@ -201,6 +227,49 @@ export function decodeUpload(bytes: Uint8Array): Upload {
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * The server's durable acknowledgement of an upload: `@lexical/y/server`'s
+ * `YRecordAcknowledgement` (version 1: the room, replica and source
+ * generation it is scoped to, the record and its hash), plus the upload's
+ * SHA-256, the record's seq and whether it holds anything new.
+ */
+export interface UploadAcknowledgement {
+  v: 1;
+  room: string;
+  replica: string;
+  sourceGeneration: string;
+  record: string;
+  hash: string;
+  upload: string;
+  seq: number;
+  actionable: boolean;
+}
+
+/**
+ * Whether `ack` acknowledges exactly the upload this replica sent: every
+ * scope field matches, and it names the exact bytes (their SHA-256). A bare
+ * hash, or an acknowledgement for another note, replica or generation, or of
+ * another version, acknowledges nothing: the replica keeps its material.
+ */
+export function acknowledges(
+  ack: unknown,
+  sent: { room: string; replica: string; sourceGeneration: string; upload: string },
+): boolean {
+  if (typeof ack !== 'object' || ack === null) {
+    return false;
+  }
+  const a = ack as Partial<Record<keyof UploadAcknowledgement, unknown>>;
+  return (
+    a.v === 1 &&
+    a.room === sent.room &&
+    a.replica === sent.replica &&
+    a.sourceGeneration === sent.sourceGeneration &&
+    a.upload === sent.upload &&
+    typeof a.record === 'string' &&
+    typeof a.hash === 'string'
+  );
 }
 
 /** The header an upload names its hash in; the server checks it. */

@@ -5,10 +5,9 @@ import {
   signal,
 } from '@lexical/extension';
 import {
+  createYCollabConfig,
   createYDoc,
-  LAYOUT_VERSION,
-  MIN_LAYOUT,
-  SEED_LAYOUT,
+  createYServerLayoutUpgrade,
   type YBinding,
   type YBindingStatus,
   YCollabExtension,
@@ -16,7 +15,7 @@ import {
 import { Awareness } from '@y/protocols/awareness';
 import { WebsocketProvider } from '@y/websocket';
 import * as Y from '@y/y';
-import { configExtension, defineExtension, type LexicalEditorWithDispose } from 'lexical';
+import { defineExtension, type LexicalEditorWithDispose } from 'lexical';
 import * as decoding from 'lib0/decoding';
 
 import { type Handshake, handshakeParams } from '../../shared/fence';
@@ -105,6 +104,9 @@ export interface NoteSession {
   dispose(): void;
 }
 
+/** Builds this release's session handshake (`@lexical/y`'s layout upgrade handle). */
+const LAYOUT_HANDLE = createYServerLayoutUpgrade();
+
 function socketBase(): string {
   const { protocol, host } = window.location;
   return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}`;
@@ -118,9 +120,12 @@ export function createNoteSession(id: string): NoteSession {
     defineExtension({
       dependencies: [
         jotEditorExtension,
-        configExtension(YCollabExtension, {
+        createYCollabConfig({
           doc,
           schemaVersion: SCHEMA_VERSION,
+          // Release R's server does not migrate a note below MIN_LAYOUT yet:
+          // such a note stays read only here (D34).
+          layoutUpgrade: null,
           // Initialized on the first sync (onSync below).
           synced: false,
           selfCheck: import.meta.env.DEV,
@@ -162,12 +167,10 @@ export function createNoteSession(id: string): NoteSession {
   let offered: string | null = null;
   let localWrites = false;
   const ownClients = new Set<number>();
-  const handshake = (): Handshake => ({
-    generation,
-    material: localWrites || generation !== null,
-    layouts: [MIN_LAYOUT, LAYOUT_VERSION],
-    seed: SEED_LAYOUT,
-  });
+  // `@lexical/y` builds the handshake (version 1: this release's layouts,
+  // seed layout and features); never by hand.
+  const handshake = (): Handshake =>
+    LAYOUT_HANDLE.handshake({ generation, material: localWrites || generation !== null });
 
   const updateCap = () => {
     bytes.value = Math.max(serverBytes.value, localBytes.value);

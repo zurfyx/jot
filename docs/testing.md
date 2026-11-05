@@ -28,7 +28,8 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   through the socket URL, is absent for a client from before the fence and refused when
   malformed; the upload envelope round-trips and refuses trailing bytes, other versions
   and bad fields; the handoff (`editor/handoff.test.ts`) quiesces first, uploads the same
-  bytes on every retry with backoff, resolves only on an acknowledgement naming its hash,
+  bytes on every retry with backoff, resolves only on an acknowledgement of exactly that
+  upload (a bare hash, or one for another note, replica, generation or version, is not),
   keeps a draft only for what could not be committed, stops at a refusal, and a copy gives
   up after its attempts; a record's source view renders with jot's nodes
   (`recovery/render.test.ts`), one recording a higher schema version too, and bytes that

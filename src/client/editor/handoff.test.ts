@@ -21,6 +21,23 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The server's acknowledgement of `body`, uploaded by a tab to note `room`. */
+async function ack(body: Uint8Array, overrides: Record<string, unknown> = {}) {
+  const upload = decodeUpload(body);
+  return Response.json({
+    v: 1,
+    room: 'n',
+    replica: upload.replica,
+    sourceGeneration: upload.source.generation ?? UNKNOWN_GENERATION,
+    record: 'yr1-sha256:r',
+    hash: 'yr1-sha256:r',
+    upload: await sha256Hex(body),
+    seq: 1,
+    actionable: true,
+    ...overrides,
+  });
+}
+
 function binding(state = new Uint8Array([0, 0]), differs = false) {
   const calls: string[] = [];
   return {
@@ -35,15 +52,22 @@ function binding(state = new Uint8Array([0, 0]), differs = false) {
 }
 
 describe('the handoff', () => {
-  it('quiesces, uploads the whole document and resolves only on an acknowledgement naming its hash', async () => {
+  it('quiesces, uploads the whole document and resolves only on an acknowledgement of exactly it', async () => {
     vi.stubGlobal('sessionStorage', memoryStorage());
     const { binding: b, calls } = binding(new Uint8Array([0, 0]), true);
     const bodies: Uint8Array[] = [];
     const responses = [
       () => Promise.reject(new Error('offline')),
       () => Promise.resolve(new Response('busy', { status: 503 })),
-      async () => Response.json({ upload: 'not the hash' }),
+      // A bare hash acknowledges nothing, nor one scoped to another note,
+      // replica or generation, or of another version.
       async () => Response.json({ upload: await sha256Hex(bodies[0]!) }),
+      async () => ack(bodies[0]!, { upload: 'not the hash' }),
+      async () => ack(bodies[0]!, { room: 'other' }),
+      async () => ack(bodies[0]!, { replica: 'copy' }),
+      async () => ack(bodies[0]!, { sourceGeneration: 'g1:["other",[]]' }),
+      async () => ack(bodies[0]!, { v: 2 }),
+      async () => ack(bodies[0]!),
     ];
     const sleeps: number[] = [];
     const result = await handOff(
@@ -60,10 +84,10 @@ describe('the handoff', () => {
       },
     );
     expect(result).toBe('saved');
-    expect(calls).toEqual(['quiesce', 'post', 'post', 'post', 'post']);
+    expect(calls).toEqual(['quiesce', ...Array<string>(9).fill('post')]);
     // The same bytes every time: nothing can grow once every writer stopped.
     expect(new Set(bodies.map((b) => b.join(','))).size).toBe(1);
-    expect(sleeps).toEqual([1000, 2000, 4000]);
+    expect(sleeps).toEqual([1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000]);
     const upload = decodeUpload(bodies[0]!);
     expect(upload.source.generation).toBe(UNKNOWN_GENERATION);
     expect(upload.clients).toEqual([5]);
@@ -83,7 +107,7 @@ describe('the handoff', () => {
       {
         fetch: (async (_url: string, init: RequestInit) => {
           body = init.body as Uint8Array;
-          return Response.json({ upload: await sha256Hex(body) });
+          return ack(body);
         }) as typeof fetch,
         sleep: async () => {},
       },

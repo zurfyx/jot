@@ -17,9 +17,16 @@ const url = (params: Record<string, string>) =>
 describe('handshake', () => {
   it('round-trips through the socket URL', () => {
     const cases: Handshake[] = [
-      { generation: null, material: false, layouts: [1, 2], seed: 1 },
-      { generation: 'abc/-', material: true, layouts: [3, 3], seed: 3 },
-      { generation: UNKNOWN_GENERATION, material: true, layouts: [1, 2], seed: 1 },
+      { v: 1, generation: null, material: false, layouts: [1, 2], seed: 1, features: [] },
+      { v: 1, generation: 'g1:["i",[]]', material: true, layouts: [3, 3], seed: 3, features: [] },
+      {
+        v: 1,
+        generation: UNKNOWN_GENERATION,
+        material: true,
+        layouts: [1, 2],
+        seed: 1,
+        features: ['a-feature', 'other.2'],
+      },
     ];
     for (const handshake of cases) {
       expect(parseHandshake(url(handshakeParams(handshake)))).toEqual(handshake);
@@ -31,7 +38,14 @@ describe('handshake', () => {
   });
 
   it('throws on a malformed one', () => {
-    const good = handshakeParams({ generation: null, material: false, layouts: [1, 2], seed: 1 });
+    const good = handshakeParams({
+      v: 1,
+      generation: null,
+      material: false,
+      layouts: [1, 2],
+      seed: 1,
+      features: [],
+    });
     for (const bad of [
       { ...good, f: '2' },
       { ...good, m: 'yes' },
@@ -39,6 +53,9 @@ describe('handshake', () => {
       { ...good, lo: '0' },
       { ...good, seed: 'x' },
       { ...good, g: 'g'.repeat(600) },
+      { ...good, ft: 'Bad Feature' },
+      { ...good, ft: 'a,,b' },
+      { ...good, ft: Array.from({ length: 33 }, (_, i) => `f${i}`).join(',') },
     ]) {
       expect(() => parseHandshake(url(bad))).toThrow();
     }
