@@ -153,6 +153,8 @@ export async function handOff(
     session: sessionId(),
     replica: 'tab',
     source: {
+      // A generation is opaque (`@lexical/y/server`'s g1): the page does not
+      // read the incarnation out of it, and nothing here needs it.
       incarnation: null,
       generation: input.generation ?? UNKNOWN_GENERATION,
       layouts: [MIN_LAYOUT, LAYOUT_VERSION],

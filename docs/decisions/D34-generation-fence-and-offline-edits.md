@@ -40,11 +40,21 @@ memory only (D13), so the pages at risk are the ones open across such a change, 
   state vector makes their step 2 a standalone snapshot), and they are turned read only by
   an update built on that snapshot recording a schema version above jot's: the banner
   they already have says "reload to edit". Nothing of the note is ever sent to them.
+- **Migration on first open.** A note whose layout is below the floor migrates in its
+  object before anything is served, in place, behind a barrier with no await, the old
+  state kept as the base of its generation. A note whose migrated state passes the 2 MB
+  cap becomes a fresh document under a new incarnation.
+- **Replay, later.** A handoff of the same incarnation, made against a generation the note
+  migrated from in place, is to be replayed at the note as a checked edit (its text inserts
+  and deletions by identity, a format change only where its earlier value is known and
+  unchanged; the rest conflicts kept with the record). Deferred: the `@lexical/y` jot pins
+  ships no replay; it comes with meta/lexical#9771. Until then every handoff waits under
+  Offline edits.
 - **Offline edits.** Records are kept in the object's SQLite (parts under the 2 MB row
   cap) for 90 days and go with the note at its expiry. ⋯ → Offline edits lists those that
   hold something the note lacks; a banner shows this browser's own. The object reads a
   record with jot's node set and the page shows it read only beside the note, with Copy
-  text and a lossless Export. Nothing is merged automatically in this release.
+  text and a lossless Export.
 - **Copies from D18 builds** are uploaded as records of their own, never merged into the
   note, and cleared from storage once acknowledged (D23).
 

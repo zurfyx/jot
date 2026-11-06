@@ -9,7 +9,9 @@ import {
   createYSessionCapture,
   describeYRoom,
   getYGeneration,
+  prepareYRoom,
   sourceView,
+  type YPreparedRoom,
   type YLegacySignal,
   type YQuarantineRecord,
   type YRecordSource,
@@ -24,7 +26,14 @@ import type { Handshake } from '../shared/fence';
 
 import { LAYOUT_STEPS } from './steps';
 
-export type { YLegacySignal, YQuarantineRecord, YRecordSource, YRoomDescription, YSessionVerdict };
+export type {
+  YLegacySignal,
+  YPreparedRoom,
+  YQuarantineRecord,
+  YRecordSource,
+  YRoomDescription,
+  YSessionVerdict,
+};
 export { createYDoc, getYGeneration, SEED_LAYOUT };
 
 /** A record's material as NoteRoom stores it (record_parts). */
@@ -50,28 +59,6 @@ export function storedSourceView(kind: string, material: StoredMaterial) {
     deltas: material.deltas,
     queue: material.queue,
   });
-}
-
-/**
- * What the recovery view renders for a stored record: its source view,
- * migrated on a scratch copy through the bundled steps to the layout this
- * build's pages read (a record made by an earlier jot is at layout 1). Render
- * only: never stored, sent into the note or merged.
- */
-export function recoveryView(
-  kind: string,
-  material: StoredMaterial,
-): { state: Uint8Array; complete: boolean } {
-  const view = storedSourceView(kind, material);
-  try {
-    const state = migrateYState(Y.encodeStateAsUpdate(view.doc), LAYOUT_STEPS, {
-      roots: SERVED_ROOTS,
-      gc: false,
-    }).state;
-    return { state, complete: view.complete };
-  } finally {
-    view.doc.destroy();
-  }
 }
 
 /** An empty Yjs update: the snapshot of a session that sent none. */
@@ -207,6 +194,84 @@ function newClientsOf(record: YQuarantineRecord, live: Uint8Array): number[] {
     return out.sort((a, b) => a - b);
   } finally {
     was.destroy();
+    view.doc.destroy();
+  }
+}
+
+/**
+ * The load-time migration of a note's sealed state (D34): every served root
+ * below `floor` is migrated in place with the Worker's steps. A no-op when
+ * none is (nothing to store). Throws a YMigrationError when a root is
+ * refused or a check fails.
+ */
+export function prepareNote(state: Uint8Array, incarnation: string, floor: number): YPreparedRoom {
+  return prepareYRoom(state, {
+    steps: LAYOUT_STEPS,
+    incarnation,
+    roots: SERVED_ROOTS,
+    gc: true,
+    to: floor,
+  });
+}
+
+/** The quarantine record of the pending material a migration split out. */
+export function pendingRecord(
+  stored: Uint8Array,
+  pending: Uint8Array,
+  source: YRecordSource,
+  migrated: { generation: string; state: Uint8Array },
+): BuiltRecord {
+  const record = createYQuarantineRecord(
+    { kind: 'pending', stored, pending, source, receivedAt: Date.now() },
+    migrated,
+  );
+  return {
+    record,
+    newClients: newClientsOf(record, migrated.state),
+    clients: [],
+    peers: true,
+    actionable: record.actionable,
+  };
+}
+
+/** A stored record's library form (rebuilt from its row and parts). */
+export function recordFrom(input: RecordInput): YQuarantineRecord {
+  return createYQuarantineRecord({
+    kind: input.kind,
+    session: input.session,
+    replica: input.replica,
+    peers: input.peers,
+    clients: input.clients,
+    source: input.source,
+    snapshot: input.snapshot,
+    deltas: input.deltas,
+    queue: input.queue,
+    draft: input.draft,
+    signals: input.signals,
+    receivedAt: input.receivedAt,
+  });
+}
+
+/**
+ * The state the recovery view renders for a record: its source view migrated
+ * on a scratch copy to the layout this build's clients read, through any
+ * gap. Render only: never stored, sent into the note or merged.
+ */
+export function recoveryState(record: YQuarantineRecord, base: Uint8Array | null): Uint8Array {
+  const view = sourceView(record);
+  try {
+    // A record missing a dependency (a pending record's skipped range) renders
+    // over its base, the state of the generation it was made against.
+    if (!view.complete && base !== null) {
+      Y.applyUpdate(view.doc, base);
+    }
+    // Every root of a scratch copy migrated to this build's floor (layout 3);
+    // anything the migration splits out is not rendered.
+    return migrateYState(Y.encodeStateAsUpdate(view.doc), LAYOUT_STEPS, {
+      roots: SERVED_ROOTS,
+      gc: false,
+    }).state;
+  } finally {
     view.doc.destroy();
   }
 }

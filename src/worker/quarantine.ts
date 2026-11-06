@@ -57,6 +57,24 @@ export function ensureFenceSchema(sql: SqlStorage): void {
     collisions TEXT NOT NULL,
     bytes INTEGER NOT NULL
   )`);
+  // R+1 (D34): the room's phase (`serving`, or `stuck` after a refused
+  // migration) and the migrations and fresh documents it went through. A
+  // note R created gains the column here.
+  const columns = sql
+    .exec<{ name: string }>("SELECT name FROM pragma_table_info('room')")
+    .toArray()
+    .map((c) => c.name);
+  if (!columns.includes('phase')) {
+    sql.exec("ALTER TABLE room ADD COLUMN phase TEXT NOT NULL DEFAULT 'serving'");
+  }
+  sql.exec(`CREATE TABLE IF NOT EXISTS transitions (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_gen TEXT NOT NULL,
+    to_gen TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    receipt TEXT NOT NULL,
+    at INTEGER NOT NULL
+  )`);
   sql.exec(`CREATE TABLE IF NOT EXISTS record_parts (
     seq INTEGER NOT NULL,
     n INTEGER NOT NULL,
@@ -395,4 +413,111 @@ export function pruneQuarantine(sql: SqlStorage, now: number): void {
        AND generation NOT IN (SELECT base FROM records WHERE base IS NOT NULL)`,
     cutoff,
   );
+}
+
+export type Phase = 'serving' | 'stuck';
+
+export function readPhase(sql: SqlStorage): Phase {
+  const row = sql.exec<{ phase: string }>('SELECT phase FROM room WHERE id = 0').toArray()[0];
+  return row?.phase === 'stuck' ? 'stuck' : 'serving';
+}
+
+export function writePhase(sql: SqlStorage, phase: Phase): void {
+  sql.exec('UPDATE room SET phase = ? WHERE id = 0', phase);
+}
+
+/** Keeps `state` as the immutable base of `generation` (INSERT only: a second one aborts). */
+export function insertBase(
+  sql: SqlStorage,
+  generation: string,
+  incarnation: string,
+  state: Uint8Array,
+): void {
+  sql.exec(
+    'INSERT INTO bases (generation, incarnation, created_at) VALUES (?, ?, ?)',
+    generation,
+    incarnation,
+    Date.now(),
+  );
+  for (let chunk = 0, at = 0; at < state.byteLength || chunk === 0; chunk++, at += PART_BYTES) {
+    const slice = state.subarray(at, Math.min(at + PART_BYTES, state.byteLength));
+    sql.exec(
+      'INSERT INTO base_parts (generation, chunk, data) VALUES (?, ?, ?)',
+      generation,
+      chunk,
+      slice.buffer.slice(slice.byteOffset, slice.byteOffset + slice.byteLength),
+    );
+  }
+}
+
+export function readBase(sql: SqlStorage, generation: string): Uint8Array | null {
+  const rows = sql
+    .exec<{ data: ArrayBuffer }>(
+      'SELECT data FROM base_parts WHERE generation = ? ORDER BY chunk',
+      generation,
+    )
+    .toArray();
+  if (rows.length === 0) {
+    return null;
+  }
+  const size = rows.reduce((n, r) => n + r.data.byteLength, 0);
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const r of rows) {
+    out.set(new Uint8Array(r.data), at);
+    at += r.data.byteLength;
+  }
+  return out;
+}
+
+export type TransitionKind = 'in-place' | 'fresh';
+
+export function insertTransition(
+  sql: SqlStorage,
+  from: string,
+  to: string,
+  kind: TransitionKind,
+  receipt: unknown,
+): void {
+  sql.exec(
+    'INSERT INTO transitions (from_gen, to_gen, kind, receipt, at) VALUES (?, ?, ?, ?, ?)',
+    from,
+    to,
+    kind,
+    JSON.stringify(receipt),
+    Date.now(),
+  );
+}
+
+/**
+ * Whether the note reached its current generation from `from` through
+ * in-place migrations only (a fresh document starts another incarnation):
+ * then `from` was made under the note's current incarnation. Generations are
+ * opaque (`@lexical/y/server`'s g1): this reads the recorded transitions,
+ * never the token.
+ */
+export function sameIncarnationSince(sql: SqlStorage, from: string, current: string): boolean {
+  if (from === current) {
+    return true;
+  }
+  const rows = sql
+    .exec<{ from_gen: string; to_gen: string; kind: string }>(
+      'SELECT from_gen, to_gen, kind FROM transitions ORDER BY seq',
+    )
+    .toArray();
+  let at = from;
+  for (const row of rows) {
+    if (row.from_gen !== at) {
+      continue;
+    }
+    if (row.kind !== 'in-place') {
+      return false;
+    }
+    at = row.to_gen;
+  }
+  return at === current;
+}
+
+export function transitionCount(sql: SqlStorage): number {
+  return sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM transitions').one().n;
 }

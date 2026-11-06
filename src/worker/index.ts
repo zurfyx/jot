@@ -12,6 +12,8 @@ const SOCKET_ROUTE = /^\/api\/n\/([^/]+)\/ws$/;
  * (`?inherited=1`: as a note from before the fence).
  */
 const TEST_REPLACE_ROUTE = /^\/api\/test\/n\/([^/]+)\/replace-incarnation$/;
+/** Development and tests only: `?floor=` and `?maxBytes=` for one note (D34). */
+const TEST_SETTINGS_ROUTE = /^\/api\/test\/n\/([^/]+)\/settings$/;
 /** A note's offline-edit recovery (D34): uploads, the list, a record's source view and export. */
 const RECOVERY_ROUTE = /^\/api\/n\/([^/]+)\/recovery(?:\/\d+\/(?:view|raw))?$/;
 const NOTE_ROUTE = /^\/n\/([^/]+)\/?$/;
@@ -102,6 +104,18 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
         url.searchParams.get('inherited') === '1',
       );
       return new Response('replaced');
+    }
+    const settings = TEST_SETTINGS_ROUTE.exec(url.pathname);
+    if (settings !== null && request.method === 'POST' && isNoteId(settings[1] ?? '')) {
+      const values: { floor?: number; maxBytes?: number } = {};
+      for (const key of ['floor', 'maxBytes'] as const) {
+        const value = url.searchParams.get(key);
+        if (value !== null) {
+          values[key] = Number(value);
+        }
+      }
+      await env.NOTES.get(env.NOTES.idFromName(settings[1]!)).testSettings(values);
+      return new Response('set');
     }
   }
 

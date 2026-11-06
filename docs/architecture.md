@@ -92,6 +92,28 @@ clients (D03).
   jot made at layout 1 still shows: the object imports no Lexical, only `@lexical/y/server`,
   the runner and the steps. Records past 90 days are pruned;
   256 records or 64 MB per note answer further uploads with 507.
+- **Migration on first open** (D34). Every request a note's object serves (a socket or a
+  recovery request) first checks its served root against the floor (`steps.ts`:
+  `LAYOUT_FLOOR`, the library's `MIN_LAYOUT`, with the frozen steps in chain order). Below
+  it, before anything is served and with no `await` from the check to the commit (a
+  Durable Object interleaves only at awaits): every socket closes with 4000; the live
+  document is saved and its bytes migrate in place on a copy (`prepareYRoom`); one SQLite
+  transaction stores the migrated state, the room's new generation, the old state as the
+  immutable base of the old generation (`bases`), the transition (`transitions`, with the
+  receipt) and, when the runner split pending material out, a `pending` record. The
+  receipt is logged. A root nothing can read (no well-formed record or epoch) or a refused
+  migration leaves the note `stuck`: no client is admitted to an unreadable root, and an
+  update that still arrives is kept as a record, never applied. If the migrated state
+  passes the 2 MB cap, the note becomes a fresh document under a new incarnation
+  (`copy.ts`: every live item of every top-level type copied as it is into new items, with
+  Yjs types only, so the history goes; ids, cursors and blame attribution are lost for that
+  note; still over the cap, it is stuck). The Worker imports no Lexical: the layout
+  constants come from `@lexical/y/server`.
+- **No replay yet** (D34). A handoff is kept as a record and shown read only; nothing is
+  replayed onto the note: the `@lexical/y` this release pins ships no replay (it comes
+  with meta/lexical#9771). `/view` serves the record's source view (`sourceView`, a record
+  this release reads) migrated on a scratch copy through the bundled steps to the layout
+  this build's pages read (`migrateYState`), for rendering only.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
   step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a

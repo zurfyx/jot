@@ -123,9 +123,9 @@ export function createNoteSession(id: string): NoteSession {
         createYCollabConfig({
           doc,
           schemaVersion: SCHEMA_VERSION,
-          // Release R's server does not migrate a note below MIN_LAYOUT yet:
-          // such a note stays read only here (D34).
-          layoutUpgrade: null,
+          // The note's object migrates a note below MIN_LAYOUT on its first
+          // open (D34), before it serves it.
+          layoutUpgrade: LAYOUT_HANDLE,
           // Initialized on the first sync (onSync below).
           synced: false,
           selfCheck: import.meta.env.DEV,
@@ -381,6 +381,12 @@ export function createNoteSession(id: string): NoteSession {
       inFlight = 0;
     }
   };
+  // The handshake is re-read for the next connection (the URL is built when
+  // a socket opens): after a close, before the provider reconnects.
+  const refreshHandshake = () => {
+    provider.params = handshakeParams(handshake());
+  };
+  provider.on('connection-close', refreshHandshake);
   provider.on('status', onStatus);
   provider.on('sync', onSync);
   provider.on('sync-status', onSyncStatus);
@@ -434,6 +440,7 @@ export function createNoteSession(id: string): NoteSession {
         // The note stays editable; edits wait in the document.
         provider.disconnect();
       } else {
+        refreshHandshake();
         provider.connect();
       }
     },
@@ -471,6 +478,7 @@ export function createNoteSession(id: string): NoteSession {
       stopEditable();
       window.removeEventListener('online', onOnline);
       doc.off('update', onDocUpdate);
+      provider.off('connection-close', refreshHandshake);
       provider.off('status', onStatus);
       provider.off('sync', onSync);
       provider.off('sync-status', onSyncStatus);

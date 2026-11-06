@@ -1,6 +1,6 @@
 import { runDurableObjectAlarm, runInDurableObject, evictDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
-import { SEED_LAYOUT } from '@lexical/y';
+import { LAYOUT_VERSION, SEED_LAYOUT } from '@lexical/y';
 import { seedYState } from '@lexical/y/headless';
 import * as Y from '@y/y';
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
@@ -201,7 +201,11 @@ describe('handshake verdicts', () => {
       freshHandshake({ generation: UNKNOWN_GENERATION, material: true }),
       freshHandshake({ generation: 'other/-', material: true }),
       freshHandshake({ generation: null, material: true }),
-      freshHandshake({ generation: a.fences[0]!.generation, material: true, layouts: [3, 3] }),
+      freshHandshake({
+        generation: a.fences[0]!.generation,
+        material: true,
+        layouts: [LAYOUT_VERSION + 1, LAYOUT_VERSION + 1],
+      }),
     ];
     for (const handshake of cases) {
       const c = await TestClient.connect(id, { handshake, waitSync: false });
@@ -210,7 +214,7 @@ describe('handshake verdicts', () => {
       c.close();
     }
     const refused = await TestClient.connect(id, {
-      handshake: freshHandshake({ layouts: [3, 3] }),
+      handshake: freshHandshake({ layouts: [LAYOUT_VERSION + 1, LAYOUT_VERSION + 1] }),
       waitSync: false,
     });
     await refused.until(() => refused.fences.length > 0);
@@ -326,10 +330,14 @@ describe('clients from before the fence', () => {
       r.room = { ...r.room, generation: `${r.room.generation}x` };
     });
     a.type(6, ' after');
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for the update to arrive (a fixed sleep raced it under load).
+    let records: { kind: string }[] = [];
+    for (let i = 0; i < 50 && records.length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      records = (await recoveryList(id)).records;
+    }
     await flush(id);
     expect(textOf(await storedState(id))).toBe('before');
-    const { records } = await recoveryList(id);
     expect(records.map((r) => r.kind)).toEqual(['capture']);
     a.close();
   });
