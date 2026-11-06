@@ -128,10 +128,10 @@ export function QuickStart() {
       <Code source={SNIPPETS.install} />
       <P>
         jot installs every Lexical package from the same build while <C>@lexical/y</C> has no
-        release: a nightly, or a pull request's pkg.pr.new build until the nightly has it;{' '}
-        <C>pnpm bump-lexical</C> moves the pin. <C>@y/y</C> is a peer dependency pinned to the
-        release candidate the binding is tested with. Its type declarations don't type-check on
-        their own, so set <C>skipLibCheck: true</C>.
+        release: the pkg.pr.new build of a <C>main</C> commit (a nightly or a pull request's build
+        works too); <C>pnpm bump-lexical</C> moves the pin. <C>@y/y</C> is a peer dependency pinned
+        to the release candidate the binding is tested with. Its type declarations don't type-check
+        on their own, so set <C>skipLibCheck: true</C>.
       </P>
       <P>
         Next, see <DocLink slug="content-in-yjs">how the note is stored</DocLink>, or read the{' '}
