@@ -73,6 +73,7 @@ describe("the inspector's rows", () => {
     expect(root?.kind === 'root' && root.attrs).toEqual(
       expect.arrayContaining([
         { key: 'lexical-y:1', value: 'true' },
+        { key: 'lexical-y:3', value: 'true' },
         { key: 'k:heading', value: '"line"' },
         { key: 'k:list', value: '"group|listType"' },
       ]),
@@ -101,10 +102,18 @@ describe("the inspector's rows", () => {
         { key: 'l', value: '0' },
       ]),
     );
-    expect(link?.kind === 'line' && link.segments[1]).toMatchObject({
-      text: 'the docs',
-      attrs: [{ key: 'w:link', value: expect.stringContaining('https://lexical.dev') }],
-    });
+    // Layout 3 pairs each format run's end with its opener: the raw tree shows
+    // the run's closing marker (`[n]`, n naming the opener) on what follows it.
+    expect(link?.kind === 'line' && link.segments).toEqual([
+      { text: 'See ', attrs: [{ key: 'f:bold', value: '[11]' }] },
+      {
+        text: 'the docs',
+        attrs: [
+          { key: 'f:bold', value: '[11]' },
+          { key: 'w:link', value: expect.stringContaining('https://lexical.dev') },
+        ],
+      },
+    ]);
     // A paragraph's marker has no type.
     expect(paragraph).toMatchObject({ text: 'one\ntwo', marker: [] });
     expect(visibleText('one\ntwo\tx')).toBe('one↵two⇥x');

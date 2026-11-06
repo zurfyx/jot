@@ -4,13 +4,34 @@ import { exports } from 'cloudflare:workers';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
+import { createYServerLayoutUpgrade } from '@lexical/y';
+
+import { type Handshake, handshakeParams } from '../shared/fence';
 import { noteSocketPath } from '../shared/ids';
 import {
   MESSAGE_AWARENESS,
+  MESSAGE_NOTE_FENCE,
   MESSAGE_NOTE_STATUS,
   MESSAGE_SYNC,
   NOTE_STATUS_REJECTED,
 } from '../shared/protocol';
+
+/** This release's handshake for a fresh replica (no generation, no material). */
+export function freshHandshake(overrides: Partial<Handshake> = {}): Handshake {
+  return {
+    ...createYServerLayoutUpgrade().handshake({ generation: null, material: false }),
+    ...overrides,
+  };
+}
+
+export interface ConnectOptions {
+  /** The handshake to present; null for a client from before the fence. Default: fresh. */
+  handshake?: Handshake | null;
+  /** Wait for the server's sync step 2 (default true). */
+  waitSync?: boolean;
+  /** Content to hold before connecting (an offline replica's own edits). */
+  prepare?: (doc: Y.Doc) => void;
+}
 
 /**
  * A minimal y-websocket client for Durable Object tests: a Yjs 14 document
@@ -25,10 +46,15 @@ export class TestClient {
   rejections = 0;
   closed: CloseEvent | null = null;
   readonly awarenessMessages: Uint8Array[] = [];
+  /** The note's fence verdicts, in order (MESSAGE_NOTE_FENCE). */
+  readonly fences: { verdict: number; generation: string; initialize: boolean }[] = [];
+  /** Every sync payload the server sent (step 2s and updates), for "nothing of the room" checks. */
+  readonly received: Uint8Array[] = [];
   private listeners = new Set<() => void>();
 
-  private constructor(socket: WebSocket) {
+  private constructor(socket: WebSocket, prepare?: (doc: Y.Doc) => void) {
     this.socket = socket;
+    prepare?.(this.doc);
     socket.addEventListener('message', (event) => {
       this.onMessage(new Uint8Array(event.data as ArrayBuffer));
       this.notify();
@@ -54,22 +80,28 @@ export class TestClient {
     return doc;
   }
 
-  static async connect(noteId: string): Promise<TestClient> {
-    const response = await exports.default.fetch(`http://jot.test${noteSocketPath(noteId)}`, {
-      headers: { Upgrade: 'websocket' },
-    });
+  static async connect(noteId: string, options: ConnectOptions = {}): Promise<TestClient> {
+    const handshake = options.handshake === undefined ? freshHandshake() : options.handshake;
+    const query =
+      handshake === null ? '' : `?${new URLSearchParams(handshakeParams(handshake)).toString()}`;
+    const response = await exports.default.fetch(
+      `http://jot.test${noteSocketPath(noteId)}${query}`,
+      { headers: { Upgrade: 'websocket' } },
+    );
     const socket = response.webSocket;
     if (socket === null || socket === undefined) {
       throw new Error(`expected a WebSocket, got ${response.status}`);
     }
     socket.binaryType = 'arraybuffer';
     socket.accept();
-    const client = new TestClient(socket);
+    const client = new TestClient(socket, options.prepare);
     const encoder = encoding.createEncoder();
     encoding.writeVarUint(encoder, MESSAGE_SYNC);
     syncProtocol.writeSyncStep1(encoder, client.doc);
     client.send(encoding.toUint8Array(encoder));
-    await client.until(() => client.synced);
+    if (options.waitSync !== false) {
+      await client.until(() => client.synced);
+    }
     return client;
   }
 
@@ -123,6 +155,11 @@ export class TestClient {
       if (type === MESSAGE_SYNC) {
         const encoder = encoding.createEncoder();
         encoding.writeVarUint(encoder, MESSAGE_SYNC);
+        const peek = decoding.createDecoder(decoder.arr);
+        peek.pos = decoder.pos;
+        if (decoding.readVarUint(peek) !== syncProtocol.messageYjsSyncStep1) {
+          this.received.push(decoding.readVarUint8Array(peek));
+        }
         const subtype = syncProtocol.readSyncMessage(decoder, encoder, this.doc, this);
         if (subtype === syncProtocol.messageYjsSyncStep2) {
           this.synced = true;
@@ -130,6 +167,11 @@ export class TestClient {
         if (encoding.length(encoder) > 1) {
           this.send(encoding.toUint8Array(encoder));
         }
+      } else if (type === MESSAGE_NOTE_FENCE) {
+        const verdict = decoding.readVarUint(decoder);
+        const generation = decoding.readVarString(decoder);
+        const initialize = decoding.readVarUint(decoder) === 1;
+        this.fences.push({ verdict, generation, initialize });
       } else if (type === MESSAGE_AWARENESS) {
         this.awarenessMessages.push(decoding.readVarUint8Array(decoder));
       } else if (type === MESSAGE_NOTE_STATUS) {

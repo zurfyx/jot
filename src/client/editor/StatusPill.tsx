@@ -86,9 +86,19 @@ export function useNoteStatus(session: NoteSession): { label: string; tone: Tone
   const workOffline = useSignal(session.workOffline);
   const pending = useSignal(session.pendingEdits);
   const merged = useSignal(session.merged);
+  const fence = useSignal(session.fence);
   const size = formatBytes(bytes);
   const near = cap === 'warn' ? 'warn' : 'ok';
 
+  if (fence === 'handing-off' || fence === 'saved') {
+    return { label: 'Saving offline edits…', tone: 'muted' };
+  }
+  if (fence === 'failed') {
+    return { label: 'Offline edits not saved', tone: 'bad' };
+  }
+  if (fence === 'reload') {
+    return { label: 'Reload to edit', tone: 'warn' };
+  }
   if (status === 'readonly') {
     return { label: 'Read only', tone: 'warn' };
   }

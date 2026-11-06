@@ -3,12 +3,20 @@ import * as Y from '@y/y';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 
+import { createYServerLayoutUpgrade } from '@lexical/y';
+
+import { handshakeParams } from '../src/shared/fence';
 import { MESSAGE_SYNC } from '../src/shared/protocol';
+
+/** This release's handshake for a replica with nothing of its own (D34). */
+const FRESH = new URLSearchParams(
+  handshakeParams(createYServerLayoutUpgrade().handshake({ generation: null, material: false })),
+).toString();
 
 /** Joins note `id` from Node over the real protocol and syncs its document. */
 async function syncRaw(baseURL: string, id: string) {
   const doc = new Y.Doc();
-  const socket = new WebSocket(`${baseURL.replace(/^http/, 'ws')}/api/n/${id}/ws`);
+  const socket = new WebSocket(`${baseURL.replace(/^http/, 'ws')}/api/n/${id}/ws?${FRESH}`);
   socket.binaryType = 'arraybuffer';
   const send = (build: (encoder: encoding.Encoder) => void) => {
     const encoder = encoding.createEncoder();

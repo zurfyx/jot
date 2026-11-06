@@ -86,6 +86,9 @@ nofollow` and, with the links that create a note, disallowed in `robots.txt`; on
 - **Notes are small.** A note holds up to 2 MB of Yjs state. At 1.6 MB the page says
   "This note is almost full"; when an edit no longer fits, the page goes read only and says
   "This note is full. Start a new note to keep writing." (D05).
+- **Offline edits are never lost.** If a note changed underneath a page that was offline
+  (it was created again after expiring, or upgraded to a newer layout), the page's edits
+  are saved apart under ⋯ → Offline edits, read only, to copy back in, for 90 days (D34).
 - **Newer notes open read only.** A note written in a document layout this version of the
   binding can't write opens read only rather than being misread.
 

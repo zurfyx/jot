@@ -49,13 +49,15 @@ export function ContentInYjs() {
       <H2>Reading the tree</H2>
       <Ul>
         <Li>
-          <B>The root's attributes:</B> <C>lexical-y:1</C> = <C>true</C> records the layout version
-          the note needs, and <C>k:&lt;type&gt;</C> records how each element type is stored, on its
-          first write.
+          <B>The root's attributes:</B> <C>lexical-y:&lt;n&gt;</C> = <C>true</C> records each layout
+          version the note needs (<C>lexical-y:3</C> today), and <C>k:&lt;type&gt;</C> records how
+          each element type is stored, on its first write.
         </Li>
         <Li>
           <B>Text</B> carries its formats: <C>f:bold</C>, <C>f:italic</C>. A link is a format
-          wrapper, <C>w:link</C>, whose value holds the link's fields.
+          wrapper, <C>w:link</C>, whose value holds the link's fields. A run ends at a closing
+          marker, the same key with <C>[n]</C> naming the run it closes, so the tree shows it on the
+          text that follows; that text is not formatted.
         </Li>
         <Li>
           <B>A ¶ marker</B> ends a line: <C>t</C> is its type (left out for a paragraph) and{' '}

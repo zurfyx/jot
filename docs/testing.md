@@ -23,9 +23,17 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   draft stays; denied storage or a refused lock never throw, and `newNotePath` still gives
   a fresh note; a stored copy reads back as its Yjs update, and anything else (bad JSON, an
   empty state, bad base64, bytes that aren't an update) reads as nothing; only
-  `jot:pending:` keys count as copies; a copy adds nothing to a server that holds it,
-  deletions included (also when the server collected the deleted content), and adds to
-  one missing an insert or a deletion;
+  `jot:pending:` keys count as copies;
+- the generation fence's wire forms (`src/shared/fence.test.ts`): the handshake round-trips
+  through the socket URL, is absent for a client from before the fence and refused when
+  malformed; the upload envelope round-trips and refuses trailing bytes, other versions
+  and bad fields; the handoff (`editor/handoff.test.ts`) quiesces first, uploads the same
+  bytes on every retry with backoff, resolves only on an acknowledgement of exactly that
+  upload (a bare hash, or one for another note, replica, generation or version, is not),
+  keeps a draft only for what could not be committed, stops at a refusal, and a copy gives
+  up after its attempts; a record's source view renders with jot's nodes
+  (`recovery/render.test.ts`), one recording a higher schema version too, and bytes that
+  are no state say so;
 - confirmation: the server's state vector confirms inserts it covers, never deletes;
 - blame: two peers' documents turn into lines of runs (a heading, bold text, a line break,
   a list, typing inside someone else's line), matching Lexical's lines; shares in
@@ -213,6 +221,24 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
   `X-Robots-Tag: noindex, nofollow`.
 
+The generation fence (D34, `src/worker/fence.test.ts`):
+
+- the incarnation is made at the first visit, kept across eviction, inherited by a note
+  that had a stored row, and new after the expiry alarm (a copy of the earlier note is then
+  stale);
+- every verdict: admit, bootstrap, stale (another, unknown or no generation with edits; an
+  unreadable layout with edits; another seed layout with edits), refuse-layout, and a
+  malformed handshake (400); a fenced socket receives no sync payload at all;
+- a client from before the fence is admitted as before on an inherited note, and captured
+  on a new one, gc on and off: its whole document kept, the signal built on it (its own
+  text survives, nested content and its deletions included), nothing of the note sent, the
+  note untouched, the record listed as holding new edits, the raw export served;
+- an admitted socket whose generation is no longer the note's has its updates kept, not
+  applied;
+- uploads: the hash checked, the acknowledgement after the write, the same upload once,
+  records surviving eviction, their source view served whole, 2.6 MB stored in two parts and given back whole, malformed (400) and
+  oversized (413) uploads refused.
+
 ## End to end (`pnpm e2e`)
 
 Playwright (Chromium) against its own dev server on port 5174: the real client, Worker and
@@ -294,10 +320,11 @@ Durable Objects, over real WebSockets.
   shows up in the next new note exactly once (its two lines, no extra empty one), reaches
   a second browser, and is cleared; with the editor chunk held back, a start claims
   nothing and the draft survives the page closing; with `localStorage` throwing, `/new` and
-  "Start a new note" still open fresh notes; a `jot:pending:<id>` copy reaches its own note
-  (not the new one) when a note page opens, and is cleared; a copy the server already
-  holds, with a deletion, is cleared and changes nothing; a copy for a full note is
-  refused, cleared, and its note is not dialled again by the next page;
+  "Start a new note" still open fresh notes; a leftover draft lands in the new note's
+  offline edits, once; a `jot:pending:<id>` copy reaches its own note's offline edits (not
+  either note) when a note page opens, shows as this browser's and as another visitor's
+  elsewhere, and is cleared; a copy the server already holds, with a deletion, is cleared
+  and asks nobody to look at it; a copy is uploaded once, not on every page;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
 - blame, with two people in separate browser contexts: off, nothing is painted; on,
@@ -345,7 +372,15 @@ Durable Objects, over real WebSockets.
 - scrollbars, in light and dark: the page, the ⋯ menu, the docs nav and its code blocks
   compute a transparent track, a thin width and the theme's thumb; the landing page's dark
   code block has the light thumb;
-- a note in a newer layout opens read only with its banner.
+- a note a newer jot wrote opens read only with its banner (Aa disabled);
+- the generation fence (`e2e/fence.spec.ts`): a page offline while its note moved on (a
+  development-only route gives the note a new incarnation and closes its sockets) hands
+  its edits off and reconnects into the note as it is; its edits are under its banner and
+  ⋯ → Offline edits (another visitor's in another browser), read only, and never in the
+  note; Dismiss is remembered; a client from before the fence, on a note it may not join,
+  receives only the signal and an empty sync step 2, keeps its own text, and its document
+  shows under Offline edits; a note this release cannot read reloads the page once, then
+  says so.
 - the keyboard and pointer paths between features: Aa from the keyboard (the first item
   takes the focus, arrows wrap past the last enabled item, Home goes back, Enter applies
   and gives the caret to the note); Aa → Link focuses its field and Esc returns to the

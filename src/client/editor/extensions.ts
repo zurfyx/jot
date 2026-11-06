@@ -1,7 +1,5 @@
-import { CodeExtension } from '@lexical/code-core';
 import { TabIndentationExtension } from '@lexical/extension';
-import { ClickableLinkExtension, LinkExtension } from '@lexical/link';
-import { CheckListExtension, ListExtension } from '@lexical/list';
+import { ClickableLinkExtension } from '@lexical/link';
 import {
   BOLD_ITALIC_STAR,
   BOLD_ITALIC_UNDERSCORE,
@@ -21,8 +19,6 @@ import {
   type Transformer,
   UNORDERED_LIST,
 } from '@lexical/markdown';
-import { RichTextExtension } from '@lexical/rich-text';
-import { TableExtension } from '@lexical/table';
 import * as stylex from '@stylexjs/stylex';
 import {
   $getRoot,
@@ -32,6 +28,7 @@ import {
   mergeRegister,
 } from 'lexical';
 
+import { jotNodesExtension } from '../../shared/nodes';
 import { colors, fonts } from '../theme/tokens.stylex';
 import { cellScope, editorScope } from './editor.stylex';
 
@@ -370,13 +367,8 @@ export const jotEditorExtension = defineExtension({
   namespace: 'jot',
   theme: editorTheme,
   dependencies: [
-    RichTextExtension,
-    ListExtension,
-    CheckListExtension,
-    CodeExtension,
-    LinkExtension,
+    jotNodesExtension,
     configExtension(ClickableLinkExtension, { newTab: true }),
-    configExtension(TableExtension, { hasCellMerge: false, hasCellBackgroundColor: false }),
     configExtension(TabIndentationExtension, { maxIndent: 6 }),
     MarkdownShortcutsExtension,
     TitleExtension,

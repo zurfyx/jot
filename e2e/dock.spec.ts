@@ -1,3 +1,9 @@
+import { RichTextExtension } from '@lexical/rich-text';
+import { seedYState } from '@lexical/y/headless';
+import * as Y from '@y/y';
+import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
+
+import { SCHEMA_VERSION } from '../src/shared/schema';
 import { editor, expect, freshNoteId, openNote, test } from './helpers';
 import { writeRawNote } from './raw-client';
 
@@ -137,11 +143,14 @@ test('⌘⇧C copies the note link', async ({ context, page }) => {
 
 test('Aa is disabled on a read-only note', async ({ page, baseURL }) => {
   const id = freshNoteId();
-  await writeRawNote(baseURL!, id, (doc) => {
-    const root = doc.get('lexical-y');
-    root.setAttr('lexical-y:99', true);
-    root.insert(0, 'From the future');
-  });
+  // A note a newer jot wrote: this release reads it, read only (D29).
+  const written = seedYState(
+    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 },
+    () => {
+      $getRoot().append($createParagraphNode().append($createTextNode('From a newer jot')));
+    },
+  );
+  await writeRawNote(baseURL!, id, (doc) => Y.applyUpdate(doc, written));
   await page.goto(`/n/${id}`);
   await expect(page.getByTestId('status-pill')).toHaveText('Read only');
   await expect(page.getByTestId('dock').getByRole('button', { name: 'Format' })).toBeDisabled();

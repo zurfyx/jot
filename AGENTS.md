@@ -29,7 +29,7 @@ pnpm e2e:docker       # Playwright in CI's image, with the visual suite (screens
 pnpm build            # client assets + Worker bundle in dist/, then the prerendered pages (D31), the sitemap and llms.txt (D32)
 pnpm og-images        # redraw the link-preview cards in public/og/ (after a page's title or description changes)
 pnpm exec wrangler deploy --dry-run   # after pnpm build: checks the deploy bundle
-pnpm bump-lexical <pr-or-sha>         # then pnpm install
+pnpm bump-lexical <pr-or-sha>         # or <version> <sha>; then pnpm install
 ```
 
 After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
@@ -39,10 +39,10 @@ After changing bindings in `wrangler.jsonc`, regenerate the Worker types:
 
 - TypeScript strict everywhere; `pnpm typecheck` green before every commit.
 - **Single package.** No workspace: a package is earned.
-- **Lexical comes from one pkg.pr.new commit** (D04). Every `lexical` and `@lexical/*`
-  URL in `package.json` and the `overrides` in `pnpm-workspace.yaml` names the same sha;
-  change them only with `scripts/bump-lexical.mjs`. `pnpm why lexical` must show one
-  version.
+- **Lexical comes from one build** (D04): an exact npm version, or a pkg.pr.new commit.
+  Every `lexical` and `@lexical/*` entry in `package.json` and the `overrides` in
+  `pnpm-workspace.yaml` names the same one; change them only with
+  `scripts/bump-lexical.mjs`. `pnpm why lexical` must show one version.
 - **`@y/y` is pinned exactly** (`14.0.0-rc.29`), matching `@lexical/y`'s peer dependency.
   The relay uses `@y/y` too, never yrs (D03).
 - **The landing page, the docs and the 404 page are prerendered** (D31) by

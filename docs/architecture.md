@@ -19,15 +19,16 @@ prerendered files (D31): `/` is `index.html` and `/docs/blame` is `docs/blame/in
 path no file answers gets the prerendered `404.html` with a 404 (`not_found_handling:
 "404-page"`), an unknown docs page included.
 
-| Route               | Behaviour                                                         |
-| ------------------- | ----------------------------------------------------------------- |
-| `GET /n/:id`        | Valid id: the note page's shell (`n/shell.html`). Otherwise 400.  |
-| `GET /new`          | The shell: the client picks the new note (and `?example`).        |
-| `GET /404`          | The 404 page, with a 404.                                         |
-| `GET /api/n/:id/ws` | Valid id and a WebSocket upgrade: forwarded to the note's object. |
-|                     | Invalid id: 400. No upgrade: 426.                                 |
-| `/api/*` otherwise  | 404                                                               |
-| anything else       | static assets; no file: `404.html`, 404                           |
+| Route                 | Behaviour                                                                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /n/:id`          | Valid id: the note page's shell (`n/shell.html`). Otherwise 400.                                                                                                                  |
+| `GET /new`            | The shell: the client picks the new note (and `?example`).                                                                                                                        |
+| `GET /404`            | The 404 page, with a 404.                                                                                                                                                         |
+| `GET /api/n/:id/ws`   | Valid id and a WebSocket upgrade: forwarded to the note's object.                                                                                                                 |
+|                       | Invalid id: 400. No upgrade: 426.                                                                                                                                                 |
+| `/api/n/:id/recovery` | The note's offline edits (D34): `POST` an upload, `GET` the list; `GET .../<seq>/view` (the record's source view, Yjs bytes) and `.../<seq>/raw`. Forwarded to the note's object. |
+| `/api/*` otherwise    | 404                                                                                                                                                                               |
+| anything else         | static assets; no file: `404.html`, 404                                                                                                                                           |
 
 A valid id is 22 base64url characters encoding 128 bits, and nothing else: there are no
 fixed ids (D02, D15). The Worker passes the id to the object in the `x-jot-note` header.
@@ -64,6 +65,37 @@ clients (D03).
   and its sender gets a note-status message with the rejected flag.
 - **Expiry.** Each connection sets the alarm to now + 90 days. When it fires with nobody
   connected, the object deletes all storage; with someone connected it reschedules (D06).
+- **Generation fence** (D34). A `room` row holds the note's incarnation (128 random bits,
+  made at the first visit that finds none, again after an expiry), whether it was
+  inherited (the note had a stored row when the fence shipped), its seed contract and its
+  generation, stored and never recomputed from the document per update. Every socket
+  presents a handshake in its URL; `checkYSession` (`@lexical/y/server`, behind the
+  adapter `library.ts`) decides, and the verdict and generation ride in the socket's
+  attachment, so they survive hibernation. Only admitted sockets of the note's generation
+  receive updates and awareness, and an update is applied only if its socket's generation
+  is still the note's; anything else a fenced socket sends goes to a record. A socket
+  without a handshake is admitted as before on an inherited, never-migrated note;
+  elsewhere it is captured: the object sends sync step 1 with an empty state vector, keeps
+  the client's step 2 as a standalone snapshot and every later update as a delta, then
+  sends an update built on that snapshot that records `lexical-y-schema:<n + 1>` (the
+  client's binding turns read only) and an empty step 2. The update is never applied to the
+  note; a collision with the client's own ids is kept and signalled again.
+- **Offline edits** (D34). `quarantine.ts`: `records` and `record_parts` (parts of at most
+  1.9 MB, under the 2 MB row cap), and `bases` for the migrations to come. An upload is
+  checked against the SHA-256 its header names, stored in one transaction, and answered
+  with its acknowledgement (`shared/fence.ts`'s `UploadAcknowledgement`, `@lexical/y/server`'s
+  `YRecordAcknowledgement` version 1: the note, the replica and its source generation, the
+  record and its hash, plus the upload's SHA-256): the object holds a response until its
+  writes are durable, so the answer is durable; the same upload twice is one record. `/view` serves a record's source view (its
+  snapshot, deltas and queue in one scratch document) migrated on that copy through the
+  bundled steps to the layout this build's pages read, as Yjs bytes, so a record an earlier
+  jot made at layout 1 still shows: the object imports no Lexical, only `@lexical/y/server`,
+  the runner and the steps. Records past 90 days are pruned;
+  256 records or 64 MB per note answer further uploads with 507.
+- **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
+  instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
+  step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a
+  hash of the note id. Nothing is written.
 - **Robustness.** Any malformed frame (text, unknown type, truncated varint, bad awareness
   JSON, undecodable update) closes that socket with 1007 and leaves the others alone.
   Clients reconnect with backoff and re-sync with the sync steps. No socket handler
@@ -81,12 +113,13 @@ clients (D03).
 The y-websocket protocol, as `@y/websocket@4.0.0-rc.2` speaks it, plus one message of
 jot's own. Every frame starts with a varuint message type.
 
-| Type | Name            | Direction | Body                                                      |
-| ---- | --------------- | --------- | --------------------------------------------------------- |
-| 0    | sync            | both      | y-protocols sync: step 1 (state vector), step 2, update   |
-| 1    | awareness       | both      | y-protocols awareness update                              |
-| 3    | query awareness | to server | none; the server answers with every known state           |
-| 64   | note status     | to client | varuint stored bytes, varuint flags (1 = update rejected) |
+| Type | Name            | Direction | Body                                                                                                                                       |
+| ---- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0    | sync            | both      | y-protocols sync: step 1 (state vector), step 2, update                                                                                    |
+| 1    | awareness       | both      | y-protocols awareness update                                                                                                               |
+| 3    | query awareness | to server | none; the server answers with every known state                                                                                            |
+| 64   | note status     | to client | varuint stored bytes, varuint flags (1 = update rejected)                                                                                  |
+| 65   | note fence      | to client | varuint verdict (0 admit, 1 bootstrap, 2 stale, 3 refuse-layout), varstring generation, varuint may seed; only to sockets with a handshake |
 
 A note's Y.Doc has two roots: `lexical-y`, the editor's content in `@lexical/y`'s layout,
 and `jot-people` (`PEOPLE_ROOT`), the people registry blame reads (D19). The relay treats
@@ -146,21 +179,42 @@ logged and skipped. The landing page's `RecentNotes` reads the list with
 is empty, refreshes its times every minute while visible, and opens a note through
 `landing/open.ts` with its row as the card.
 
-**Migration from local drafts** (D23). An earlier version kept an unshared draft in
+**Migration from local drafts** (D23, D34). An earlier version kept an unshared draft in
 `jot:draft` and, until the relay confirmed it, a shared note's copy in `jot:pending:<id>`
 (localStorage, `{ id, state }` with the Yjs state in base64). `newNotePath()`, called when a
 start commits to opening (`landing/open.ts` calls it after the editor chunk loads), copies a
 leftover `jot:draft` to the new note's `jot:pending:<id>` under the Web Lock
 `jot:legacy-draft`, re-reading the draft inside it, and removes the draft only once the copy
 reads back; it never rejects, so storage or lock failures just open the note. `editor/legacy.ts`
-runs when a note page opens: each `jot:pending:<id>` is pushed to its note by a headless
-client, an empty `Y.Doc` and a `WebsocketProvider` with no presence. The server's sync step 2
-(its whole state, against an empty state vector) and every later update are mirrored into a
-gc-off document; once synced, `copyAddsTo` applies the copy to a scratch copy of the mirror.
-No change means the server has it all, and the copy is removed; otherwise the copy is
-written to the document, the provider sends it, and the check repeats on the echo. A note
-status with the rejected flag removes the copy too (the note is full); after 30 s without
-either, the copy stays for the next page.
+runs when a note page opens: each `jot:pending:<id>` has no generation the note can check, so
+it is uploaded to its note's offline edits as a record of its own (`uploadMaterial`, the
+handoff's upload), never merged into the note, and removed once the object acknowledges it
+or refuses it for good; after four failed attempts it stays for the next page.
+
+**The generation fence** (D34). `session.ts` keeps the generation the page's document
+belongs to, adopted when a full sync with the note completes, and presents it in the
+socket URL: the version 1 handshake `@lexical/y`'s layout upgrade handle builds
+(`shared/fence.ts`: `f` its version, `g`, `m`, `lo`, `hi`, `seed`, and `ft` its features
+when it has any; `@y/websocket` re-reads `provider.params` on every reconnect). This
+release's `@lexical/y` reads layout 3 and up (MIN_LAYOUT 3) and its object migrates no note
+(`layoutUpgrade: null`), so a note stored at layout 1 or 2 opens read only. The note's verdict (message 65) comes first: admit
+and bootstrap sync as before; refuse-layout reloads the page once (a guard in
+sessionStorage, `jot:fence-reload:<id>`), then shows "This note was upgraded. Reload to
+keep editing."; stale runs the handoff (`editor/handoff.ts`): the provider stops,
+`onBeforeHandoff` listeners stop the example's peers and jot AI, `binding.quiesce()`
+commits what the editor holds and stops the binding writing, and the whole document (plus
+a draft only for what could not be committed) is uploaded with its SHA-256 and retried with
+the same bytes until the object acknowledges exactly that upload: the same note, replica,
+source generation and SHA-256 (`acknowledges`); a bare hash acknowledges nothing. Then `onReplace` has `NotePage`
+open a fresh session (its effect is keyed on the id and a generation key), which bootstraps
+from the note. The uploaded hash is kept in sessionStorage (`jot:uploaded:<id>`).
+`editor/recovery/` is the feature that shows records: a banner for this browser's own
+(matched by `jot:clients` or an uploaded hash; Dismiss is remembered in
+`jot:recovery-seen:<id>`) and ⋯ → Offline edits for every record that holds something the
+note lacks; a record renders read only, with Copy text and Export (the raw bytes):
+`recovery/render.ts`, a chunk only the recovery view loads, reads the record's source view
+headless (`readYState`) with `jotNodesExtension` (`shared/nodes.ts`, jot's node set without
+styles or DOM) and the higher of jot's schema version and the one the view records.
 
 **`editor/session.ts`** creates a note session for an id: a `Y.Doc`, an `Awareness`, the
 editor with `YCollabExtension`, a `WebsocketProvider`, and signals for connection, sync,

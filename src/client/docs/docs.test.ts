@@ -5,6 +5,7 @@ import { matchRoute } from '../router';
 import { excerpt } from './excerpt';
 import { highlight } from './highlight';
 import { DOCS_GROUPS, DOCS_PAGES, docsPath, findDocsPage, neighbours } from './pages';
+import pkg from '../../../package.json';
 import { LEXICAL_SHA, LEXICAL_Y_README, SNIPPETS, sourceUrl } from './sources';
 
 describe('the docs pages', () => {
@@ -102,6 +103,10 @@ describe('the code blocks', () => {
 
   it('install the same packages jot does', () => {
     expect(SNIPPETS.install.code).toContain('@y/y@14.0.0-rc.29');
-    expect(SNIPPETS.install.code).toMatch(/pkg\.pr\.new\/meta\/lexical\/@lexical\/y@[0-9a-f]{40}/);
+    // The pinned build, as jot's package.json names it.
+    const pinned = pkg.dependencies['@lexical/y'];
+    expect(SNIPPETS.install.code).toContain(
+      pinned.startsWith('https://') ? pinned : `@lexical/y@${pinned}`,
+    );
   });
 });

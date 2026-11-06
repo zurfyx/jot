@@ -409,6 +409,8 @@ function AskPanel({ ai }: { ai: AiState }) {
 export function AskAISurface({ session }: { session: NoteSession }) {
   const ai = aiState(session);
   useEffect(() => () => ai.stop(), [ai]);
+  // A handoff (D34) stops every writer of the page's document first.
+  useEffect(() => session.onBeforeHandoff(() => ai.stop()), [session, ai]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isBusy(ai.phase.peek())) {

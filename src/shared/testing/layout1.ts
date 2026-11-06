@@ -1,0 +1,23 @@
+/**
+ * Layout 1 note states as main 23ddbfc7's `@lexical/y` seeds them with jot's node set
+ * (generated once; never regenerated), for the layout 3 migration tests.
+ */
+export const LAYOUT1_NOTES = {
+  shared:
+    'AQXZ0u7s25vlAgAoAQlsZXhpY2FsLXkLbGV4aWNhbC15OjEBeCgBCWxleGljYWwteRJsZXhpY2FsLXktc2NoZW1hOjEBeCgBCWxleGljYWwteQtrOnBhcmFncmFwaAF3BGxpbmUEAQlsZXhpY2FsLXkMU2hhcmVkIHN0YXJ0h9nS7uzbm+UCDgMCwrYA',
+  topic:
+    'AQWolenl4bbXBQAoAQlsZXhpY2FsLXkLbGV4aWNhbC15OjEBeCgBCWxleGljYWwteRJsZXhpY2FsLXktc2NoZW1hOjEBeCgBCWxleGljYWwteQtrOnBhcmFncmFwaAF3BGxpbmUEAQlsZXhpY2FsLXkFVG9waWOHqJXp5eG21wUHAwLCtgA=',
+  twoLines:
+    'AQes77n8jelLACgBCWxleGljYWwteQtsZXhpY2FsLXk6MQF4KAEJbGV4aWNhbC15EmxleGljYWwteS1zY2hlbWE6MQF4KAEJbGV4aWNhbC15C2s6cGFyYWdyYXBoAXcEbGluZQQBCWxleGljYWwteQpGaXJzdCBsaW5lh6zvufyN6UsMAwLCtoSs77n8jelLDQtTZWNvbmQgbGluZYes77n8jelLGAMCwrYA',
+  rich: 'ASKItYa+uMq2DQAoAQlsZXhpY2FsLXkLbGV4aWNhbC15OjEBeCgBCWxleGljYWwteRJsZXhpY2FsLXktc2NoZW1hOjEBeCgBCWxleGljYWwteQlrOmhlYWRpbmcBdwRsaW5lKAEJbGV4aWNhbC15C2s6cGFyYWdyYXBoAXcEbGluZSgBCWxleGljYWwteQZrOmxpbmsBdxtmb3JtYXR8dXJsLHRhcmdldCxyZWwsdGl0bGUoAQlsZXhpY2FsLXkHazpxdW90ZQF3BGxpbmUoAQlsZXhpY2FsLXkGazpsaXN0AXcOZ3JvdXB8bGlzdFR5cGUoAQlsZXhpY2FsLXkKazpsaXN0aXRlbQF3BGxpbmUEAQlsZXhpY2FsLXkFVGl0bGWHiLWGvrjKtg0MAwLCtoaItYa+uMq2DQ0GZjpib2xkBHRydWWEiLWGvrjKtg0OCkJvbGQgc3RhcnSGiLWGvrjKtg0YBmY6Ym9sZARudWxshIi1hr64yrYNGREgdGhlbiBwbGFpbiwgYW5kIIaItYa+uMq2DSoGdzpsaW5rHXsidXJsIjoiaHR0cHM6Ly9sZXhpY2FsLmRldiJ9hIi1hr64yrYNKwZhIGxpbmuGiLWGvrjKtg0xBnc6bGluawRudWxsh4i1hr64yrYNMgMCwraEiLWGvrjKtg0zB0EgcXVvdGWHiLWGvrjKtg06AwLCtoSItYa+uMq2DTsDT25lh4i1hr64yrYNPgMCwraEiLWGvrjKtg0/A1R3b4eItYa+uMq2DUIDAsK2KACItYa+uMq2DQ0BdAF3B2hlYWRpbmcoAIi1hr64yrYNOwF0AXcFcXVvdGUoAIi1hr64yrYNPwF0AXcIbGlzdGl0ZW0oAIi1hr64yrYNPwFnAXcEbGlzdCgAiLWGvrjKtg0/Cmc6bGlzdFR5cGUBdwZidWxsZXQoAIi1hr64yrYNPwFsAX0AKACItYa+uMq2DUMBdAF3CGxpc3RpdGVtKACItYa+uMq2DUMBZwF3BGxpc3QoAIi1hr64yrYNQwpnOmxpc3RUeXBlAXcGYnVsbGV0KACItYa+uMq2DUMBbAF9AAA=',
+} as const;
+
+/** One of those states, decoded. */
+export function layout1Note(name: keyof typeof LAYOUT1_NOTES): Uint8Array {
+  const binary = atob(LAYOUT1_NOTES[name]);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    out[i] = binary.charCodeAt(i);
+  }
+  return out;
+}

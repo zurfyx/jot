@@ -1,3 +1,9 @@
+import { RichTextExtension } from '@lexical/rich-text';
+import { seedYState } from '@lexical/y/headless';
+import * as Y from '@y/y';
+import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
+
+import { SCHEMA_VERSION } from '../../src/shared/schema';
 import { writeRawNote } from '../raw-client';
 import { GERARD, expect, freshNoteId, pageFor, rest, shoot, test } from './setup';
 
@@ -8,11 +14,15 @@ import { GERARD, expect, freshNoteId, pageFor, rest, shoot, test } from './setup
 
 test('a read-only note', async ({ context, baseURL }) => {
   const id = freshNoteId();
-  await writeRawNote(baseURL!, id, (doc) => {
-    const root = doc.get('lexical-y');
-    root.setAttr('lexical-y:99', true);
-    root.insert(0, 'From the future');
-  });
+  // A note a newer jot wrote (D29). One whose layout this release cannot read
+  // reloads instead (D34): fence-reload in recovery.spec.ts.
+  const written = seedYState(
+    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 },
+    () => {
+      $getRoot().append($createParagraphNode().append($createTextNode('From the future')));
+    },
+  );
+  await writeRawNote(baseURL!, id, (doc) => Y.applyUpdate(doc, written));
   const page = await pageFor(context, GERARD);
   await page.goto(`/n/${id}`);
   await expect(page.getByTestId('status-pill')).toHaveText('Read only');
