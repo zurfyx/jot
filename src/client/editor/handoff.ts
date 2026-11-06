@@ -138,7 +138,17 @@ export async function handOff(
   input: HandoffInput,
   deps: UploadDeps = defaultDeps,
 ): Promise<HandoffResult> {
-  const { state, draft } = input.binding.quiesce();
+  let quiesced: ReturnType<YBinding['quiesce']>;
+  try {
+    quiesced = input.binding.quiesce();
+  } catch (error) {
+    // `quiesce()` refuses an editor state that does not serialize as JSON
+    // (a TypeError, before it stops anything): the page keeps its edits on
+    // screen, as for a refused upload.
+    console.error('jot: the handoff could not quiesce the editor', error);
+    return 'refused';
+  }
+  const { state, draft } = quiesced;
   const upload: Upload = {
     session: sessionId(),
     replica: 'tab',

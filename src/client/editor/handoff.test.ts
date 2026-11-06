@@ -117,6 +117,31 @@ describe('the handoff', () => {
     expect(upload.source.generation).toBe('g/-');
   });
 
+  it('is refused, uploading nothing, when quiesce() refuses the editor state', async () => {
+    vi.stubGlobal('sessionStorage', memoryStorage());
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const b = {
+      quiesce: () => {
+        throw new TypeError('the editor state does not serialize as JSON');
+      },
+    } as unknown as Parameters<typeof handOff>[0]['binding'];
+    let posts = 0;
+    const result = await handOff(
+      { noteId: 'n', binding: b, generation: null, clients: [] },
+      {
+        fetch: (async () => {
+          posts++;
+          return new Response('ok');
+        }) as typeof fetch,
+        sleep: async () => {},
+      },
+    );
+    expect(result).toBe('refused');
+    expect(posts).toBe(0);
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it('stops at a refusal, and gives up after the attempts a copy gets', async () => {
     vi.stubGlobal('sessionStorage', memoryStorage());
     const { binding: b } = binding();
