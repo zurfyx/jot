@@ -280,6 +280,63 @@ describe('NoteRoom', () => {
     witness.close();
   });
 
+  it('loads stored bytes whole: text a client integrated across a missing update stays (D112)', async () => {
+    // A writes four inserts, one update each. B never gets the first: it
+    // integrates "bb" and holds "ccc" (which depends on the first) pending.
+    // C syncs from B, then gets "dd" in an update of its own: Yjs integrates
+    // it past the blocked "ccc", and C types "X" after it. C's bytes hold
+    // "dd" and "X" behind the gap, so a plain applyUpdate holds them pending.
+    const mk = (clientID: number, state: Uint8Array | null = null) => {
+      const doc = new Y.Doc();
+      doc.clientID = clientID;
+      doc.cleanupFormatting = false;
+      if (state !== null) {
+        Y.applyUpdate(doc, state);
+      }
+      return doc;
+    };
+    const seed = mk(999);
+    seed.get('text').insert(0, 'ABCDEFGH');
+    const seedState = Y.encodeStateAsUpdate(seed);
+    const a = mk(1000, seedState);
+    const updates: Uint8Array[] = [];
+    a.on('update', (u: Uint8Array) => updates.push(u));
+    const after = (doc: Y.Doc, left: string, text: string) =>
+      doc.get('text').insert(doc.get('text').toString().indexOf(left) + left.length, text);
+    after(a, 'A', 'aaaaaa');
+    after(a, 'C', 'bb');
+    after(a, 'Aa', 'ccc');
+    after(a, 'G', 'dd');
+    const b = mk(2000, seedState);
+    Y.applyUpdate(b, updates[1]!);
+    Y.applyUpdate(b, updates[2]!);
+    const c = mk(3000, seedState);
+    Y.applyUpdate(c, Y.encodeStateAsUpdate(b, Y.encodeStateVector(c)));
+    Y.applyUpdate(c, updates[3]!);
+    after(c, 'dd', 'X');
+    expect(c.get('text').toString()).toBe('ABCbbDEFGddXH');
+    const state = Y.encodeStateAsUpdate(c);
+    const plain = new Y.Doc();
+    Y.applyUpdate(plain, state);
+    expect(plain.get('text').toString()).toBe('ABCbbDEFGH');
+
+    // Stored as the note, then loaded by the object (after an eviction).
+    const id = generateNoteId();
+    await runInDurableObject(stubFor(id), (_room: NoteRoom, s) => {
+      s.storage.sql.exec(
+        'INSERT INTO note (id, name, state, saved_at) VALUES (0, ?, ?, ?)',
+        id,
+        state.buffer.slice(state.byteOffset, state.byteOffset + state.byteLength),
+        Date.now(),
+      );
+    });
+    await evictDurableObject(stubFor(id));
+    const shown = await runInDurableObject(stubFor(id), (room: NoteRoom) =>
+      (room as unknown as { doc: Y.Doc }).doc.get('text').toString(),
+    );
+    expect(shown).toBe('ABCbbDEFGddXH');
+  });
+
   it('keeps the format items the clients keep, and writes nothing of its own', async () => {
     // Ana bolds "A" while Bea deletes it: the bold's format items stay around
     // the deleted text. The clients keep them (@lexical/y turns Yjs's format

@@ -157,26 +157,30 @@ export class NoteRoom extends DurableObject<Env> {
   /** Loads the stored state into a fresh gc-on document. */
   private load(): void {
     this.ensureSchema();
-    this.resetDoc();
     const rows = this.ctx.storage.sql
       .exec<{ name: string; state: ArrayBuffer }>('SELECT name, state FROM note WHERE id = 0')
       .toArray();
     const row = rows[0];
+    this.resetDoc(row === undefined ? null : new Uint8Array(row.state));
     if (row !== undefined) {
       this.noteId = row.name;
-      Y.applyUpdate(this.doc, new Uint8Array(row.state), this);
       // Re-encoding from a gc-on document compacts what was stored (D05).
       this.size = Y.encodeStateAsUpdate(this.doc).byteLength;
     }
     this.room = readRoom(this.ctx.storage.sql);
   }
 
-  private resetDoc(): void {
+  /**
+   * A fresh relay document, holding `state` when given. `@lexical/y/server`'s
+   * createYDoc: garbage collected, with Yjs's format cleanup off, which would
+   * otherwise delete format items the clients keep (around deleted text, say)
+   * and send those deletions out as the room's own edit; and it loads stored
+   * bytes whole, text a client integrated across a missing update included,
+   * which a plain applyUpdate would hold pending.
+   */
+  private resetDoc(state: Uint8Array | null = null): void {
     this.doc?.destroy();
-    // @lexical/y's relay document: garbage collected, with Yjs's format cleanup
-    // off, which would otherwise delete format items the clients keep (around
-    // deleted text, say) and send those deletions out as the room's own edit.
-    this.doc = createYDoc();
+    this.doc = createYDoc(state);
     this.size = 0;
     this.pending = 0;
     this.doc.on('update', (update: Uint8Array) => {
