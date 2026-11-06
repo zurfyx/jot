@@ -22,15 +22,15 @@ pnpm install
 pnpm dev          # http://localhost:5173: the client, the Worker and its Durable Objects
 ```
 
-| Command             | What it does                                                   |
-| ------------------- | -------------------------------------------------------------- |
-| `pnpm typecheck`    | TypeScript, strict, client + worker + tooling                  |
-| `pnpm lint`         | ESLint                                                         |
-| `pnpm format:check` | Prettier                                                       |
-| `pnpm test`         | Vitest: unit tests, and the Durable Object inside workerd      |
-| `pnpm e2e`          | Playwright against the dev server                              |
-| `pnpm build`        | Production build of the client and the Worker                  |
-| `pnpm bump-lexical` | `pnpm bump-lexical <pr-or-sha>`: move Lexical to another build |
+| Command             | What it does                                                                        |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm typecheck`    | TypeScript, strict, client + worker + tooling                                       |
+| `pnpm lint`         | ESLint                                                                              |
+| `pnpm format:check` | Prettier                                                                            |
+| `pnpm test`         | Vitest: unit tests, and the Durable Object inside workerd                           |
+| `pnpm e2e`          | Playwright against the dev server                                                   |
+| `pnpm build`        | Production build of the client and the Worker                                       |
+| `pnpm bump-lexical` | `pnpm bump-lexical <pr-or-sha>` or `<version> <sha>`: move Lexical to another build |
 
 ## Deploys
 

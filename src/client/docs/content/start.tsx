@@ -127,10 +127,11 @@ export function QuickStart() {
       <H2>Install</H2>
       <Code source={SNIPPETS.install} />
       <P>
-        <C>@lexical/y</C> isn't on npm yet, so jot installs every Lexical package from the same
-        pkg.pr.new build of its pull request; <C>pnpm bump-lexical &lt;pr-or-sha&gt;</C> moves the
-        pin. <C>@y/y</C> is a peer dependency pinned to the release candidate the binding is tested
-        with. Its type declarations don't type-check on their own, so set <C>skipLibCheck: true</C>.
+        jot installs every Lexical package at the same version, a nightly while <C>@lexical/y</C>
+        has no release; <C>pnpm bump-lexical &lt;version&gt; &lt;sha&gt;</C> moves the pin (a pull
+        request's pkg.pr.new build works too). <C>@y/y</C> is a peer dependency pinned to the
+        release candidate the binding is tested with. Its type declarations don't type-check on
+        their own, so set <C>skipLibCheck: true</C>.
       </P>
       <P>
         Next, see <DocLink slug="content-in-yjs">how the note is stored</DocLink>, or read the{' '}

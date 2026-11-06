@@ -1,44 +1,65 @@
 # pnpm settings only. This is a single package, not a workspace: there is
 # no `packages:` list. pnpm 11+ reads settings here, not from package.json.
 
-# Every lexical and @lexical/* package comes from one pkg.pr.new commit, so
-# the app holds a single copy of Lexical (D04). scripts/bump-lexical.mjs
-# rewrites these together with package.json.
+# Every lexical and @lexical/* package comes from one Lexical build (an exact
+# npm version, or a pkg.pr.new commit), so the app holds a single copy of
+# Lexical (D04). scripts/bump-lexical.mjs rewrites these together with
+# package.json.
 overrides:
-  '@lexical/a11y': https://pkg.pr.new/meta/lexical/@lexical/a11y@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/code': https://pkg.pr.new/meta/lexical/@lexical/code@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/devtools-core': https://pkg.pr.new/meta/lexical/@lexical/devtools-core@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/file': https://pkg.pr.new/meta/lexical/@lexical/file@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/hashtag': https://pkg.pr.new/meta/lexical/@lexical/hashtag@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/headless': https://pkg.pr.new/meta/lexical/@lexical/headless@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/history': https://pkg.pr.new/meta/lexical/@lexical/history@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/link': https://pkg.pr.new/meta/lexical/@lexical/link@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/list': https://pkg.pr.new/meta/lexical/@lexical/list@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/mark': https://pkg.pr.new/meta/lexical/@lexical/mark@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/markdown': https://pkg.pr.new/meta/lexical/@lexical/markdown@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/offset': https://pkg.pr.new/meta/lexical/@lexical/offset@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/overflow': https://pkg.pr.new/meta/lexical/@lexical/overflow@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/plain-text': https://pkg.pr.new/meta/lexical/@lexical/plain-text@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/react': https://pkg.pr.new/meta/lexical/@lexical/react@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/rich-text': https://pkg.pr.new/meta/lexical/@lexical/rich-text@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/table': https://pkg.pr.new/meta/lexical/@lexical/table@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/text': https://pkg.pr.new/meta/lexical/@lexical/text@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/y': https://pkg.pr.new/meta/lexical/@lexical/y@89cccdae84f74f7ffdfc05775700322d84f9c751
-  '@lexical/yjs': https://pkg.pr.new/meta/lexical/@lexical/yjs@89cccdae84f74f7ffdfc05775700322d84f9c751
-  'lexical': https://pkg.pr.new/meta/lexical/lexical@89cccdae84f74f7ffdfc05775700322d84f9c751
+  '@lexical/a11y': 0.53.1-nightly.20261106.0
+  '@lexical/clipboard': 0.53.1-nightly.20261106.0
+  '@lexical/code': 0.53.1-nightly.20261106.0
+  '@lexical/code-core': 0.53.1-nightly.20261106.0
+  '@lexical/devtools-core': 0.53.1-nightly.20261106.0
+  '@lexical/dragon': 0.53.1-nightly.20261106.0
+  '@lexical/extension': 0.53.1-nightly.20261106.0
+  '@lexical/file': 0.53.1-nightly.20261106.0
+  '@lexical/hashtag': 0.53.1-nightly.20261106.0
+  '@lexical/headless': 0.53.1-nightly.20261106.0
+  '@lexical/history': 0.53.1-nightly.20261106.0
+  '@lexical/html': 0.53.1-nightly.20261106.0
+  '@lexical/internal': 0.53.1-nightly.20261106.0
+  '@lexical/link': 0.53.1-nightly.20261106.0
+  '@lexical/list': 0.53.1-nightly.20261106.0
+  '@lexical/mark': 0.53.1-nightly.20261106.0
+  '@lexical/markdown': 0.53.1-nightly.20261106.0
+  '@lexical/offset': 0.53.1-nightly.20261106.0
+  '@lexical/overflow': 0.53.1-nightly.20261106.0
+  '@lexical/plain-text': 0.53.1-nightly.20261106.0
+  '@lexical/react': 0.53.1-nightly.20261106.0
+  '@lexical/rich-text': 0.53.1-nightly.20261106.0
+  '@lexical/selection': 0.53.1-nightly.20261106.0
+  '@lexical/table': 0.53.1-nightly.20261106.0
+  '@lexical/text': 0.53.1-nightly.20261106.0
+  '@lexical/utils': 0.53.1-nightly.20261106.0
+  '@lexical/y': 0.53.1-nightly.20261106.0
+  '@lexical/yjs': 0.53.1-nightly.20261106.0
+  'lexical': 0.53.1-nightly.20261106.0
 
-# pkg.pr.new packages depend on each other by URL.
+# pkg.pr.new packages depend on each other by URL (when Lexical comes from
+# pkg.pr.new).
 blockExoticSubdeps: false
 
 allowBuilds:
   esbuild: true
   workerd: true
   sharp: true
+
+minimumReleaseAgeExclude:
+  - '@lexical/a11y@0.53.1-nightly.20261106.0'
+  - '@lexical/clipboard@0.53.1-nightly.20261106.0'
+  - '@lexical/code-core@0.53.1-nightly.20261106.0'
+  - '@lexical/dragon@0.53.1-nightly.20261106.0'
+  - '@lexical/extension@0.53.1-nightly.20261106.0'
+  - '@lexical/html@0.53.1-nightly.20261106.0'
+  - '@lexical/internal@0.53.1-nightly.20261106.0'
+  - '@lexical/link@0.53.1-nightly.20261106.0'
+  - '@lexical/list@0.53.1-nightly.20261106.0'
+  - '@lexical/markdown@0.53.1-nightly.20261106.0'
+  - '@lexical/rich-text@0.53.1-nightly.20261106.0'
+  - '@lexical/selection@0.53.1-nightly.20261106.0'
+  - '@lexical/table@0.53.1-nightly.20261106.0'
+  - '@lexical/text@0.53.1-nightly.20261106.0'
+  - '@lexical/utils@0.53.1-nightly.20261106.0'
+  - '@lexical/y@0.53.1-nightly.20261106.0'
+  - lexical@0.53.1-nightly.20261106.0

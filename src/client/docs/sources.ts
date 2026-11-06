@@ -24,8 +24,8 @@ import pkg from '../../../package.json';
 import { excerpt } from './excerpt';
 
 export const REPO_URL = 'https://github.com/zurfyx/jot';
-/** The Lexical commit jot pins (D04), from package.json. */
-export const LEXICAL_SHA = /@([0-9a-f]{40})$/.exec(pkg.dependencies['@lexical/y'])?.[1] ?? 'main';
+/** The Lexical commit jot's pinned build carries (D04), from package.json. */
+export const LEXICAL_SHA: string = pkg.lexicalCommit;
 const LEXICAL_Y_TREE = `https://github.com/meta/lexical/tree/${LEXICAL_SHA}/packages/lexical-y`;
 const LEXICAL_Y_BLOB = `https://github.com/meta/lexical/blob/${LEXICAL_SHA}/packages/lexical-y`;
 /** `@lexical/y`'s README at that commit: setup, storage and the wire format. */
@@ -66,14 +66,17 @@ function from(path: string, raw: string, start: string, label = path): CodeSourc
 }
 
 /**
- * What jot itself installs: every Lexical package from the same pkg.pr.new
- * build (D04), and the pinned Yjs 14 release candidate.
+ * What jot itself installs: every Lexical package from the same build (D04),
+ * and the pinned Yjs 14 release candidate.
  */
 function installCommand(): string {
   const deps: Record<string, string> = pkg.dependencies;
   const lexical = ['lexical', '@lexical/extension', '@lexical/rich-text', '@lexical/y'];
+  // A pkg.pr.new URL installs as it is; a version as `name@version`.
+  const spec = (name: string, value: string | undefined) =>
+    value === undefined ? name : value.startsWith('https://') ? value : `${name}@${value}`;
   const packages = [
-    ...lexical.map((name) => deps[name] ?? name),
+    ...lexical.map((name) => spec(name, deps[name])),
     `@y/y@${deps['@y/y']}`,
     `@y/websocket@${deps['@y/websocket']}`,
   ];
