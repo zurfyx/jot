@@ -127,9 +127,9 @@ export function QuickStart() {
       <H2>Install</H2>
       <Code source={SNIPPETS.install} />
       <P>
-        jot installs every Lexical package at the same version, a nightly while <C>@lexical/y</C>
-        has no release; <C>pnpm bump-lexical &lt;version&gt; &lt;sha&gt;</C> moves the pin (a pull
-        request's pkg.pr.new build works too). <C>@y/y</C> is a peer dependency pinned to the
+        jot installs every Lexical package from the same build while <C>@lexical/y</C> has no
+        release: a nightly, or a pull request's pkg.pr.new build until the nightly has it;{' '}
+        <C>pnpm bump-lexical</C> moves the pin. <C>@y/y</C> is a peer dependency pinned to the
         release candidate the binding is tested with. Its type declarations don't type-check on
         their own, so set <C>skipLibCheck: true</C>.
       </P>

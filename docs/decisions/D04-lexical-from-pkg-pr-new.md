@@ -13,8 +13,10 @@ on `main` and every PR commit to pkg.pr.new, and a nightly of `main` to npm.
 - Every `lexical` and `@lexical/*` dependency comes from **one build**: an exact npm
   version (a release, or a nightly such as `0.53.1-nightly.20261106.0`), or one commit's
   pkg.pr.new build by its full-sha URL (`https://pkg.pr.new/meta/lexical/<package>@<sha>`),
-  for a pull request not on `main` yet. Currently the nightly `0.53.1-nightly.20261106.0`,
-  which carries the whole `@lexical/y` stack including the layout migration API and layout 3.
+  for a pull request not on `main` yet, or merged since the last nightly. Currently
+  meta/lexical#9818's build (`99eedf6`), the merged load-repair fix, until the nightly
+  carries it; the nightly before it (`0.53.1-nightly.20261106.0`) was the first with the
+  whole `@lexical/y` stack (the layout migration API and layout 3).
 - Full shas for pkg.pr.new, not 7-character ones: those packages name their own Lexical
   dependencies by full-sha URL, so matching them keeps one resolution per package.
 - `overrides` in `pnpm-workspace.yaml` pin every `@lexical/*` package (direct or
