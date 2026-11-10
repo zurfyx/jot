@@ -60,9 +60,12 @@ test('the inspector with a typed quote and code block', async ({ context }) => {
   await page.keyboard.type('> Bring a quote');
   await page.keyboard.press('Enter');
   await page.keyboard.type('``` ');
+  // The first code block fetches the highlighter (D35); type once it is in.
+  await expect(editor.locator('code').last()).toHaveAttribute('data-gutter', '1');
   await page.keyboard.type('const answer = 42;');
   await expect(editor.locator('blockquote')).toHaveText('Bring a quote');
   await expect(editor.locator('code').last()).toHaveText('const answer = 42;');
+  await expect(editor.locator('code .jot-token-number')).toHaveText(['42']);
   await rest(page);
   await shootElement(editor, 'docs-inspector-typed');
 });

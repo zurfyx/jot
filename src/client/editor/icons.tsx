@@ -152,6 +152,16 @@ const PATHS = {
       />
     </>
   ),
+  chevron: (
+    <path
+      d="M4.5 6.5L8 10l3.5-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
   more: (
     <>
       <circle cx="3.5" cy="8" r="1.3" fill="currentColor" />

@@ -75,6 +75,30 @@ describe('chunk boundaries', () => {
     expect([...inspector.packages].some(isEngine)).toBe(true);
   });
 
+  it('keeps the code highlighter out of every page: only its lazy chunk imports it (D35)', () => {
+    const importers = Object.keys(SOURCES).filter(
+      (file) =>
+        !file.endsWith('.test.ts') &&
+        !file.startsWith('/src/docs/snippets/') &&
+        staticGraph(file).packages.has('@lexical/code-prism'),
+    );
+    expect(importers).toEqual(['/src/client/editor/code/highlight.ts']);
+    for (const entry of [
+      '/src/client/main.tsx',
+      '/src/client/editor/NotePage.tsx',
+      '/src/client/docs/Inspector.tsx',
+    ]) {
+      const { files, packages } = staticGraph(entry);
+      expect(packages.has('@lexical/code-prism')).toBe(false);
+      expect(packages.has('prismjs')).toBe(false);
+      expect(files.has('/src/client/editor/code/highlight.ts')).toBe(false);
+    }
+    // The note page does reach the extension that fetches it.
+    expect(staticGraph('/src/client/editor/NotePage.tsx').files).toContain(
+      '/src/client/editor/code/extension.ts',
+    );
+  });
+
   it('keeps WebLLM out of every page: only its worker imports it', () => {
     const importers = Object.keys(SOURCES).filter(
       (file) =>

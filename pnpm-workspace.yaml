@@ -10,6 +10,7 @@ overrides:
   '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/code': https://pkg.pr.new/meta/lexical/@lexical/code@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8
+  '@lexical/code-prism': https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/devtools-core': https://pkg.pr.new/meta/lexical/@lexical/devtools-core@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@c33348e5fa3a9dc978633cf864ce62860317e3f8

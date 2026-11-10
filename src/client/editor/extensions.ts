@@ -30,6 +30,7 @@ import {
 
 import { jotNodesExtension } from '../../shared/nodes';
 import { colors, fonts } from '../theme/tokens.stylex';
+import { CodeHighlightExtension } from './code/extension';
 import { cellScope, editorScope } from './editor.stylex';
 
 /** Markdown shortcuts while typing: `# `, `- `, `[] `, `> `, ```` ``` ````, `**b**`, `` `c` ``, links. */
@@ -140,6 +141,34 @@ const styles = stylex.create({
     lineHeight: 1.6,
     tabSize: 2,
     whiteSpace: 'pre-wrap',
+  },
+  // A code block's tokens (D35): Prism's token types, in five syntax colours
+  // and the text's own; comments and punctuation recede.
+  tokenComment: {
+    color: colors['--muted'],
+    fontStyle: 'italic',
+  },
+  tokenPunctuation: {
+    color: colors['--muted'],
+  },
+  tokenKeyword: {
+    color: colors['--syntax-keyword'],
+  },
+  tokenString: {
+    color: colors['--syntax-string'],
+  },
+  tokenNumber: {
+    color: colors['--syntax-number'],
+  },
+  tokenFunction: {
+    color: colors['--syntax-function'],
+  },
+  tokenTag: {
+    color: colors['--syntax-tag'],
+  },
+  tokenImportant: {
+    color: colors['--syntax-keyword'],
+    fontWeight: 650,
   },
   list: {
     marginTop: 0,
@@ -280,6 +309,68 @@ function cls(name: string, { className }: { className?: string }): string {
   return className === undefined ? name : `${name} ${className}`;
 }
 
+/** Prism's token types (what a CodeHighlightNode stores), by the look each takes. */
+const TOKEN_TYPES: [readonly string[], string, stylex.StyleXStyles][] = [
+  [
+    ['comment', 'prolog', 'doctype', 'doctype-tag', 'name', 'cdata'],
+    'comment',
+    styles.tokenComment,
+  ],
+  [
+    ['punctuation', 'namespace', 'interpolation-punctuation', 'blockquote', 'list'],
+    'punctuation',
+    styles.tokenPunctuation,
+  ],
+  [
+    ['keyword', 'atrule', 'rule', 'directive', 'directive-hash', 'macro', 'omit'],
+    'keyword',
+    styles.tokenKeyword,
+  ],
+  [
+    ['string', 'char', 'attr-value', 'template-string', 'template-punctuation', 'code-snippet'],
+    'string',
+    styles.tokenString,
+  ],
+  [['number', 'boolean', 'constant', 'symbol', 'unit', 'regex'], 'number', styles.tokenNumber],
+  [['regex-source', 'regex-delimiter', 'regex-flags'], 'number', styles.tokenNumber],
+  [
+    [
+      'function',
+      'function-definition',
+      'function-variable',
+      'class-name',
+      'type-definition',
+      'builtin',
+    ],
+    'function',
+    styles.tokenFunction,
+  ],
+  [
+    [
+      'tag',
+      'attr-name',
+      'property',
+      'selector',
+      'variable',
+      'deleted',
+      'title',
+      'annotation',
+      'decorator',
+      'attribute',
+    ],
+    'tag',
+    styles.tokenTag,
+  ],
+  [['important', 'bold'], 'important', styles.tokenImportant],
+];
+
+const codeHighlight: Record<string, string> = Object.fromEntries(
+  TOKEN_TYPES.flatMap(([types, name, style]) => {
+    const className = cls(`jot-token-${name}`, stylex.props(style));
+    return types.map((type) => [type, className]);
+  }),
+);
+
 /** The title's classes, for the placeholder's first line. */
 export const titleStyle = styles.title;
 
@@ -292,6 +383,7 @@ export const editorTheme: EditorThemeClasses = {
   paragraph: cls('jot-p', stylex.props(styles.p)),
   quote: cls('jot-quote', stylex.props(styles.quote)),
   code: cls('jot-codeblock', stylex.props(styles.codeblock)),
+  codeHighlight,
   heading: {
     h1: cls('jot-h1', stylex.props(styles.h1)),
     h2: cls('jot-h2', stylex.props(styles.h2)),
@@ -372,6 +464,7 @@ export const jotEditorExtension = defineExtension({
     configExtension(TabIndentationExtension, { maxIndent: 6 }),
     MarkdownShortcutsExtension,
     TitleExtension,
+    CodeHighlightExtension,
   ],
   onError: (error) => {
     console.error(error);

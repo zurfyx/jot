@@ -30,6 +30,7 @@ included; with no script at all, the prerendered pages follow `prefers-color-sch
 | `--blame-faded`, `--blame-faded-opacity` | how much of their colour people out of blame's focus keep |
 | `--ai`, `--ai-tint`                      | jot AI's violet (`--peer-2`); the tint on Ask AI's target |
 | `--scrollbar`                            | the scrollbar thumb, on a transparent track               |
+| `--syntax-*`                             | a code block's keywords, strings, numbers, names and tags |
 
 The landing page scopes a second set on its root (`landing` in `tokens.stylex.ts`, its light
 values in `themes.ts`, its dark values in `globals.css` on `data-scope="landing"`, so they
@@ -92,6 +93,13 @@ playground needs: no toolbar is always there.
   to the nearest point of that line; above the title, into the first line. Controls,
   links, images, menus and banners keep their clicks, a press outside an open menu only
   closes it, a selection drag keeps its selection, and nothing scrolls.
+- **Code blocks** (D35) sit on `--hover` in Geist Mono, highlighted in five syntax colours
+  (`--syntax-keyword` violet, `--syntax-string` green, `--syntax-number` teal,
+  `--syntax-function` amber, `--syntax-tag` pink, brighter in dark) and the text's own
+  ink; comments are muted italic and punctuation muted. The block holding the caret shows
+  its language in its top right corner, a quiet native picker in `--muted` with a
+  chevron ("TypeScript ⌄"), on the block's own background; it is gone while the note is
+  read only.
 - **Top right,** floating on the page colour: the avatars of the people here (initials on
   their `--peer-*` colour, up to four, then "+N"; hidden under 640px), the status pill, then
   Share.
