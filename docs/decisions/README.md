@@ -68,6 +68,7 @@ How expensive is this to get wrong?
 | [D32](D32-sitemap-robots-and-llms-txt.md)               | A sitemap, robots.txt and llms.txt, built from the route data as static files       | LOW    | `DECIDED`  |
 | [D33](D33-first-paint-priority-and-caching.md)          | The app's script at low priority; hashed assets cached for a year                   | LOW    | `DECIDED`  |
 | [D34](D34-generation-fence-and-offline-edits.md)        | A generation fence per note; offline edits it cannot take wait under Offline edits  | MED    | `PROPOSED` |
+| [D35](D35-code-highlighting-with-prism-on-demand.md)    | Code highlighting with Prism, in a chunk fetched with a note's first code block     | LOW    | `PROPOSED` |
 
 ## Superseded
 

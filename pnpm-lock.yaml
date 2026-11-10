@@ -167,6 +167,7 @@ overrides:
   '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/code': https://pkg.pr.new/meta/lexical/@lexical/code@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8
+  '@lexical/code-prism': https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/devtools-core': https://pkg.pr.new/meta/lexical/@lexical/devtools-core@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@c33348e5fa3a9dc978633cf864ce62860317e3f8
   '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@c33348e5fa3a9dc978633cf864ce62860317e3f8
@@ -206,6 +207,9 @@ importers:
       '@lexical/code-core':
         specifier: https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8
         version: https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
+      '@lexical/code-prism':
+        specifier: https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8
+        version: https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
       '@lexical/extension':
         specifier: https://pkg.pr.new/meta/lexical/@lexical/extension@c33348e5fa3a9dc978633cf864ce62860317e3f8
         version: https://pkg.pr.new/meta/lexical/@lexical/extension@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
@@ -907,6 +911,15 @@ packages:
 
   '@lexical/code-core@https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8':
     resolution: {integrity: sha512-WK5EED6yN8cBzZdYrLP4TD8UbKnJVFkVtG8zK+TfcG2sRtE0/YiYOYGuZwvNkLDkU+uR5qRMyuczBQzVXBu2pA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8}
+    version: 0.53.1-main.gc33348e
+    peerDependencies:
+      typescript: '>=5.2'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/code-prism@https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8':
+    resolution: {integrity: sha512-0pwUOvLFVUhH6TH2dWts9cjl33ylJ/TcM2BuadNvzi1BjynFfmPhajAo7rvjXQ/xpz/f2wA5Zkp2IJFdqoA1vw==, tarball: https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8}
     version: 0.53.1-main.gc33348e
     peerDependencies:
       typescript: '>=5.2'
@@ -1809,6 +1822,10 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
+
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
@@ -2575,6 +2592,15 @@ snapshots:
       '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
       '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
       lexical: https://pkg.pr.new/meta/lexical/lexical@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
+
+  '@lexical/code-prism@https://pkg.pr.new/meta/lexical/@lexical/code-prism@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)':
+    dependencies:
+      '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
+      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
+      lexical: https://pkg.pr.new/meta/lexical/lexical@c33348e5fa3a9dc978633cf864ce62860317e3f8(typescript@6.0.3)
+      prismjs: 1.30.0
     optionalDependencies:
       typescript: 6.0.3
 
@@ -3413,6 +3439,8 @@ snapshots:
   prelude-ls@1.2.1: {}
 
   prettier@3.9.10: {}
+
+  prismjs@1.30.0: {}
 
   punycode@2.3.1: {}
 

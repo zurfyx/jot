@@ -41,6 +41,46 @@ test('a note with rich content', async ({ context }) => {
   await shoot(page, 'note-rich', { fullPage: true });
 });
 
+test('a highlighted code block and its language picker', async ({ context }) => {
+  const page = await pageFor(context, GERARD);
+  await openNote(page, freshNoteId());
+  await editor(page).click();
+  await page.keyboard.type('Snippets');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('```ts ');
+  // The first code block fetches the highlighter (D35); type once it is in.
+  const code = editor(page).locator('code.jot-codeblock');
+  await expect(code).toHaveAttribute('data-gutter', '1');
+  // Enter keeps the line's indent, so the closing brace takes it back.
+  for (const keys of [
+    '// Greets a reader',
+    'Enter',
+    'function greet(name: string) {',
+    'Enter',
+    '  return `Hello, ${name}!`;',
+    'Enter',
+    'Backspace',
+    'Backspace',
+    '}',
+    'Enter',
+    'const count = 42;',
+  ]) {
+    if (keys === 'Enter' || keys === 'Backspace') {
+      await page.keyboard.press(keys);
+    } else {
+      await page.keyboard.type(keys);
+    }
+  }
+  await expect(code).toHaveText(
+    '// Greets a reader\nfunction greet(name: string) {\n  return `Hello, ${name}!`;\n}\nconst count = 42;',
+    { useInnerText: true },
+  );
+  await expect(code.locator('.jot-token-number')).toHaveText(['42']);
+  await expect(page.getByRole('combobox', { name: 'Code language' })).toHaveValue('typescript');
+  await rest(page);
+  await shoot(page, 'note-code');
+});
+
 test('the dock, and its Aa and ⋯ menus', async ({ context }) => {
   const page = await pageFor(context, GERARD);
   await openNote(page, freshNoteId());

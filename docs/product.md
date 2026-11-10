@@ -37,7 +37,8 @@ version of the engine.
   note link to join it." line. It says which note it opens, or that the text isn't a note
   link or code.
 - **Write together.** Rich text with headings, bold, italic, underline, strikethrough,
-  inline code, links, bulleted, numbered and todo lists, quotes, code blocks and tables.
+  inline code, links, bulleted, numbered and todo lists, quotes, code blocks (highlighted,
+  with a language picker) and tables.
   Markdown shortcuts while typing; **Aa** in the bottom dock for block types and formats;
   a ⌘K menu (New note, Copy link, Toggle theme, Insert table, Go home). Collaborators'
   carets show their name and colour, and their avatars sit top right.

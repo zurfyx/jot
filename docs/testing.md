@@ -192,6 +192,17 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   with jot's name and summary, names the site, and lists every docs page under its group
   in reading order with its Markdown link and its line, then the full text; and
   `llms-full.txt` holds every page in order under its address.
+- code blocks (D35, `editor/code/*.test.ts`): the highlighter is fetched only once a code
+  block appears (typed, in the note as it opens, beside other blocks, or in a whole new
+  state), once, and fetched and registered only while the editor is editable (a read-only
+  note with code fetches nothing until it turns editable); an editor disposed while
+  it loads gets nothing, disposing unregisters it, and a failed fetch is tried again with
+  the next change to a code block; every token type Prism makes for a sample of each listed
+  language has a colour (or is meant to keep the text's); the picker's list is
+  `@lexical/code-prism`'s, each with a grammar, aliases (`ts`, `python`) read as their
+  language, and a block with no language read as JavaScript; and, from the source,
+  only the lazy `editor/code/highlight.ts` imports `@lexical/code-prism`, which no page,
+  note or inspector reaches statically;
 - the build's `_headers` rules (D33, `scripts/headers.test.ts`): a content-hashed name is
   told from any other; each text file gets its type and each hashed asset a year's
   `immutable` caching, file by file, with no pattern, nothing for HTML and nothing for a
@@ -415,6 +426,14 @@ Durable Objects, over real WebSockets.
   and its Reconnect from the keyboard; ⋯ → Work offline from the keyboard keeps the menu
   open; Share from the keyboard; the feature tabs' Home, End and wrapping arrows with one
   tab in the tab order; the landing page's tab order; the docs' Pages button on a phone;
+- code blocks (D35, `code.spec.ts`): a note without one never asks for the highlighter;
+  ` ```ts ` fetches it, and code typed then shows its keywords, numbers and comments
+  in their colours; a second page shows the same code with the same tokens, a line it
+  types arrives highlighted, and both typing into the block at once converge on one text
+  and one set of tokens; the picker shows the language, Plain text takes the colours away
+  on both pages and Python brings them back as Python, and the picker goes when the caret
+  leaves the block; a note that opens with a code block fetches the highlighter, shows the
+  block as stored, and highlights it once it is edited;
 - the docs: every page renders with no em dashes; code blocks have their file name, a
   GitHub link and a working Copy; the nav, Previous and Next and in-page links move without
   a reload; an unknown docs page is the 404 page, whose link goes home; the landing page
@@ -439,6 +458,9 @@ pages, a note's shell and `/new`, `robots.txt`, the sitemap, the `llms` files, t
 copies, a preview image, the favicon); every page, the 404 page and the shell load
 the app's one module script with `fetchpriority="low"`, and every docs page's
 `modulepreload` links carry it too.
+
+The code highlighter (D35, `code.spec.ts`): Prism and its grammars are one chunk of their
+own, and no other chunk carries Prism; a note page loads its own chunk but not that one.
 
 What crawlers and assistants read (D32, `discovery.spec.ts`), the guard. They are static
 files, the same on every host, a Preview included (where Cloudflare's `noindex` makes
@@ -544,7 +566,7 @@ and dark, at 1440x900 and 390x844.
   hovered, Show all and Clear all's question;
 - a note: empty; with every block and format (headings, the three lists with a checked
   to-do, a quote, a code block, a table, a link, bold, italic, underline, strikethrough and
-  inline code); the dock, Aa, Aa's link field, ⋯, Note info, the AI model setting, ⌘K,
+  inline code); a highlighted code block with its language picker; the dock, Aa, Aa's link field, ⋯, Note info, the AI model setting, ⌘K,
   Share after a copy (the page's timers held, so "Link copied" is still up at the capture),
   and focus rings from the keyboard;
 - the status pill in each state, with the top bar: Synced, Connecting, Offline with edits
@@ -555,7 +577,7 @@ and dark, at 1440x900 and 390x844.
 - Ask AI: the panel, the download question on a phone, the download's progress, the
   unavailable message, and jot AI's caret after it writes;
 - every docs page, whole, the phone's page list, the inspector following a hovered row, and
-  the inspector with a typed quote and code block (its own size at every width);
+  the inspector with a typed quote and highlighted code block (its own size at every width);
 - a read-only note, a malformed link and the 404 page.
 
 `e2e/visual/motion.spec.ts` runs in the light 1440 project only. For the landing page's

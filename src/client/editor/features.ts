@@ -3,6 +3,7 @@ import type { ComponentType, RefObject } from 'react';
 import { AskAIDockItem, AskAISurface } from './ai/AskAI';
 import { ModelMenuItem, ModelPanel } from './ai/ModelPanel';
 import { BlameChip, BlameMenuToggle, BlameSurface } from './blame/Blame';
+import { CodeLanguagePicker } from './code/CodeLanguage';
 import { ExampleBanner, ExampleSurface, ReplayDemoItem } from './example/Example';
 import { RecoveryBanner, RecoveryMenuItem, RecoveryPanel } from './recovery/Recovery';
 import type { NoteSession } from './session';
@@ -13,7 +14,8 @@ import type { NoteSession } from './session';
  * setting in `menuPanel`; blame puts its chip in
  * `dockEnd`, Show blame in `menuTop`, its margin in `surface`, and flashes
  * blame from `session.onReconnect`; the example note puts its banner in
- * `banner`, Replay demo in `menuTop` and runs its demo from `surface`.
+ * `banner`, Replay demo in `menuTop` and runs its demo from `surface`; code
+ * blocks put their language picker in `surface`.
  */
 export interface NoteFeature {
   id: string;
@@ -50,6 +52,8 @@ export const NOTE_FEATURES: readonly NoteFeature[] = [
   },
   { id: 'blame', dockEnd: BlameChip, menuTop: BlameMenuToggle, surface: BlameSurface },
   { id: 'example', banner: ExampleBanner, menuTop: ReplayDemoItem, surface: ExampleSurface },
+  // The language picker on the code block the caret is in (D35).
+  { id: 'code', surface: CodeLanguagePicker },
   // Offline edits the note could not take (D34).
   {
     id: 'recovery',

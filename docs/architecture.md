@@ -430,7 +430,19 @@ URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWor
   and draw carets and selections over the page. `people.tsx` lists the same states for the
   avatars and Note info.
 - `extensions.ts`: rich text, lists and checklists, links, code blocks
-  (`@lexical/code-core`, no highlighting), tables, tab indentation and markdown shortcuts.
+  (`@lexical/code-core`), tables, tab indentation and markdown shortcuts, and the theme
+  that maps each node type, and each of Prism's token types, to its classes.
+- `code/` (D35): syntax highlighting, fetched on demand. `extension.ts` watches each
+  commit's changed nodes for the first code block (the note opened with one, a
+  collaborator added one, or ` ``` ` made one) and only then imports `highlight.ts`,
+  its own chunk: `@lexical/code-prism`, Prism and its grammars, about 19 KB gzipped. It
+  fetches and registers the highlighter only while the editor is editable. The tokens are stored in the
+  note, written by whoever edits a block: `@lexical/y` doesn't write the pass Lexical makes
+  over existing nodes when a transform registers, so a block written without the
+  highlighter shows as stored until someone edits it. `CodeLanguage.tsx` (a `surface`) is
+  the language picker on the block holding the caret; `languages.ts` is the list it
+  offers, a copy of `@lexical/code-prism`'s so the picker needs nothing from the lazy
+  chunk.
 
 **The landing page** and the note page are separate chunks: the editor, Lexical and Yjs load
 only on a note page (`loadNote.ts`). The landing page prefetches that chunk when

@@ -46,6 +46,11 @@
   --peer-7: #a3e635;
   --ai: var(--peer-2);
   --ai-tint: color-mix(in srgb, var(--peer-2) 18%, transparent);
+  --syntax-keyword: #c4a1ff;
+  --syntax-string: #7ee2a0;
+  --syntax-number: #5fd4e8;
+  --syntax-function: #f2b56b;
+  --syntax-tag: #f58bc3;
   --blame-faded: 28%;
   --blame-faded-opacity: 0.32;
   --landing-bg: #0d1020;
@@ -91,6 +96,11 @@
   --peer-7: #a3e635;
   --ai: var(--peer-2);
   --ai-tint: color-mix(in srgb, var(--peer-2) 18%, transparent);
+  --syntax-keyword: #c4a1ff;
+  --syntax-string: #7ee2a0;
+  --syntax-number: #5fd4e8;
+  --syntax-function: #f2b56b;
+  --syntax-tag: #f58bc3;
   --blame-faded: 28%;
   --blame-faded-opacity: 0.32;
   --landing-bg: #0d1020;
