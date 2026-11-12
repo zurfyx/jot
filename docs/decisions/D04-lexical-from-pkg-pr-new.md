@@ -16,9 +16,10 @@ on `main` and every PR commit to pkg.pr.new, and a nightly of `main` to npm.
   for a `main` commit (`0.53.1-main.g<sha>`) or a pull request. Use the long form
   (`pkg.pr.new/meta/lexical/<package>@<sha>`): the short form (`pkg.pr.new/<package>@<sha>`)
   does not resolve every package, and the packages name each other by the long form.
-  Currently `main` at `c33348e` (`0.53.1-main.gc33348e`), which carries the whole
-  `@lexical/y` stack (the layout migration API, layout 3) and its load-repair fix
-  (meta/lexical#9818).
+  Currently `main` at `e2836f0` (`0.53.1-main.ge2836f0`), which carries the whole
+  `@lexical/y` stack (the layout migration API, layout 3) with its load-repair and
+  composition-hold fixes, and the markdown shortcut fix for a node replaced before its
+  queued update runs (meta/lexical#9868).
 - Full shas for pkg.pr.new, not 7-character ones: those packages name their own Lexical
   dependencies by full-sha URL, so matching them keeps one resolution per package.
 - `overrides` in `pnpm-workspace.yaml` pin every `@lexical/*` package (direct or
