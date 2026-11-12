@@ -1,4 +1,5 @@
 import { buildEditorFromExtensions } from '@lexical/extension';
+import { $isListNode } from '@lexical/list';
 import { createYDoc, YCollabExtension } from '@lexical/y';
 import * as Y from '@y/y';
 import {
@@ -14,7 +15,7 @@ import {
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { jotEditorExtension } from '../extensions';
-import { $replaceBlocks } from './markdown';
+import { $blocksToMarkdown, $replaceBlocks } from './markdown';
 import { $applyTextDiff, diffWords, type Hunk } from './textDiff';
 import { SCHEMA_VERSION } from '../../../shared/schema';
 
@@ -277,5 +278,143 @@ describe('a rewrite racing a peer', () => {
     sync(page.doc, ai.doc);
     expect(rootText(page.editor)).toBe('ALPHA beXta GAMMA');
     expect(rootText(ai.editor)).toBe('ALPHA beXta GAMMA');
+  });
+});
+
+describe('rewrites that keep the text they do not change', () => {
+  const SEED = 'target alpha beta gamma delta';
+  function seeded() {
+    const page = createClient('page');
+    update(page.editor, () =>
+      $getRoot()
+        .clear()
+        .append($createParagraphNode().append($createTextNode(SEED))),
+    );
+    return page;
+  }
+  /** The first block's kind and its text runs, as [text, format]. */
+  const shape = (editor: LexicalEditor) =>
+    editor.getEditorState().read(() => {
+      const block = $getRoot().getFirstChild() as ElementNode;
+      const holder = $isListNode(block) ? (block.getFirstChild() as ElementNode) : block;
+      return {
+        kind: block.getType(),
+        runs: holder
+          .getChildren()
+          .map((node) => [node.getTextContent(), (node as TextNode).getFormat()]),
+        blocks: $getRoot().getChildrenSize(),
+      };
+    });
+  const rewrite = (editor: LexicalEditor, markdown: string) =>
+    update(editor, () => {
+      $replaceBlocks([$getRoot().getFirstChild() as ElementNode], markdown);
+    });
+
+  it('makes the block read as the reply, for random runs and formats', () => {
+    const editor = plainEditor();
+    const next = random(11);
+    const FORMATS = [0, 0, 0, 1, 2, 3, 4];
+    const runs = () =>
+      Array.from({ length: 1 + Math.floor(next() * 4) }, () =>
+        // No tabs: the editor makes them tab nodes, which Markdown formats apart.
+        $createTextNode(`${sentence(next).replace(/\t/g, ' ').trim() || 'w'} `).setFormat(
+          FORMATS[Math.floor(next() * FORMATS.length)]!,
+        ),
+      );
+    for (let round = 0; round < 200; round++) {
+      const result = update(editor, () => {
+        const reply = $createParagraphNode().append(...runs());
+        const old = $createParagraphNode().append(...runs());
+        $getRoot().clear().append(reply, old);
+        const markdown = $blocksToMarkdown([reply]);
+        $replaceBlocks([old], markdown);
+        const written = $getRoot().getLastChild() as ElementNode;
+        return { markdown, written: $blocksToMarkdown([written]), same: written.is(old) };
+      });
+      expect(result.written, result.markdown).toBe(result.markdown);
+      expect(result.same).toBe(true);
+    }
+  });
+
+  it('bolds a word without writing any text again', () => {
+    const page = seeded();
+    const ai = createClient('ai', page.doc);
+    rewrite(ai.editor, '**target** alpha beta gamma delta');
+    sync(page.doc, ai.doc);
+    expect(shape(page.editor).runs).toEqual([
+      ['target', 1],
+      [' alpha beta gamma delta', 0],
+    ]);
+    // jot AI's client holds only the bold's two format markers: no text.
+    expect(liveInserts(page.doc, ai.doc.clientID)).toBe(2);
+  });
+
+  it("keeps a peer's concurrent deletion when it bolds a word", () => {
+    const page = seeded();
+    const ai = createClient('ai', page.doc);
+    update(page.editor, () => {
+      firstText().spliceText(SEED.length - ' delta'.length, ' delta'.length, '', false);
+    });
+    rewrite(ai.editor, '**target** alpha beta gamma delta');
+    sync(page.doc, ai.doc);
+    expect(shape(page.editor).runs).toEqual([
+      ['target', 1],
+      [' alpha beta gamma', 0],
+    ]);
+    expect(shape(ai.editor)).toEqual(shape(page.editor));
+  });
+
+  it("keeps a peer's concurrent bold when it turns the block into a list", () => {
+    const page = seeded();
+    const ai = createClient('ai', page.doc);
+    update(page.editor, () => {
+      const [word] = firstText().splitText('target'.length);
+      word!.toggleFormat('bold');
+    });
+    rewrite(ai.editor, '- target alpha beta gamma delta');
+    sync(page.doc, ai.doc);
+    expect(shape(page.editor)).toEqual({
+      kind: 'list',
+      runs: [
+        ['target', 1],
+        [' alpha beta gamma delta', 0],
+      ],
+      blocks: 1,
+    });
+    expect(shape(ai.editor)).toEqual(shape(page.editor));
+  });
+
+  it('merges two rewrites of one block made at once, without doubling the text', () => {
+    const page = seeded();
+    const one = createClient('one', page.doc);
+    const two = createClient('two', page.doc);
+    rewrite(one.editor, '- target alpha beta gamma delta');
+    rewrite(two.editor, '**target** alpha beta gamma delta');
+    sync(page.doc, one.doc);
+    sync(page.doc, two.doc);
+    sync(page.doc, one.doc);
+    for (const client of [page, one, two]) {
+      expect(rootText(client.editor)).toBe(SEED);
+    }
+    expect(shape(page.editor)).toEqual({
+      kind: 'list',
+      runs: [
+        ['target', 1],
+        [' alpha beta gamma delta', 0],
+      ],
+      blocks: 1,
+    });
+  });
+
+  it('writes the first block of a longer reply in place', () => {
+    const page = seeded();
+    const ai = createClient('ai', page.doc);
+    update(page.editor, () => {
+      firstText().spliceText(SEED.length - ' delta'.length, ' delta'.length, '', false);
+    });
+    rewrite(ai.editor, `${SEED}\n\nAdded by jot AI.`);
+    sync(page.doc, ai.doc);
+    expect(rootText(page.editor)).toBe('target alpha beta gamma\n\nAdded by jot AI.');
+    expect(rootText(ai.editor)).toBe(rootText(page.editor));
   });
 });
