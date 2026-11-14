@@ -50,8 +50,8 @@ export function ContentInYjs() {
       <Ul>
         <Li>
           <B>The root's attributes:</B> <C>lexical-y:&lt;n&gt;</C> = <C>true</C> records each layout
-          version the note needs (<C>lexical-y:3</C> today), and <C>k:&lt;type&gt;</C> records how
-          each element type is stored, on its first write.
+          the note has been stored in (a new note records only <C>lexical-y:4</C>), and{' '}
+          <C>k:&lt;type&gt;</C> records how each element type is stored, on its first write.
         </Li>
         <Li>
           <B>Text</B> carries its formats: <C>f:bold</C>, <C>f:italic</C>. A link is a format

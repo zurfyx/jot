@@ -114,6 +114,29 @@ test('markdown shortcuts and the Aa menu format text', async ({ page }) => {
   await expect(menu).toBeHidden();
 });
 
+test('the quote shortcut: "> " starts a quote, a lone ">" stays text', async ({ page }) => {
+  await openNote(page, freshNoteId());
+  await editor(page).click();
+  await page.keyboard.type('> quoted');
+  await expect(editor(page).locator('blockquote')).toHaveText('quoted');
+  // Enter at the end of a quote starts a paragraph.
+  await page.keyboard.press('Enter');
+  // A lone ">" is text, and Enter after it keeps it once, outside a quote.
+  await page.keyboard.type('>');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('next');
+  // A ">" just before bold text: Enter between them splits the line, nothing added.
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('>');
+  await page.keyboard.press('ControlOrMeta+B');
+  await page.keyboard.type('B');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Enter');
+  await expect(editor(page).locator('blockquote')).toHaveCount(1);
+  await expect(editor(page).locator(':scope > p')).toHaveText(['>', 'next', '>', 'B']);
+  await expect(editor(page).locator('.jot-bold')).toHaveText('B');
+});
+
 test('the command menu toggles the theme', async ({ page }) => {
   await openNote(page, freshNoteId());
   const before = await page.evaluate(() => document.documentElement.dataset.theme);

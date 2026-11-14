@@ -11,19 +11,20 @@ import {
 import * as Y from '@y/y';
 
 import { layout1Note, type LAYOUT1_NOTES } from '../src/shared/testing/layout1';
+import { layout3Note, type LAYOUT3_NOTES } from '../src/shared/testing/layout3';
 import { expect } from './helpers';
 import { writeRawNote } from './raw-client';
 
 /**
  * Helpers for tests that run a release change end to end (D34): another
- * jot build's pages served to a browser, a note's floor raised, a layout 1
- * note written as an earlier release stored it.
+ * jot build's pages served to a browser, a note's floor raised, a layout 1 or
+ * layout 3 note written as an earlier release stored it.
  */
 
 /**
- * The layout a migration takes a layout 1 note to: this build's floor once a
- * release raises it (3 with identity's layout 3), else 2 (the 1to2 step,
- * through the development-only test setting).
+ * The layout a migration takes a note to: this build's floor (layout 4), or 2
+ * (the 1to2 step, through the development-only test setting) in a release
+ * whose floor is 1.
  */
 export const TARGET = Math.max(MIN_LAYOUT, 2);
 
@@ -87,14 +88,35 @@ export async function setFloor(baseURL: string, id: string, floor: number) {
   await response.text();
 }
 
-/** Stores a layout 1 note as an earlier release did, its floor held at 1 until a test raises it. */
+/**
+ * Stores a layout 1 note as an earlier release did, its floor held at 1 until a test raises
+ * it. Returns the state it stored.
+ */
 export async function storeLayout1Note(
   baseURL: string,
   id: string,
   name: keyof typeof LAYOUT1_NOTES,
-) {
+): Promise<Uint8Array> {
+  const state = layout1Note(name);
   await setFloor(baseURL, id, 1);
-  await writeRawNote(baseURL, id, (doc) => Y.applyUpdate(doc, layout1Note(name)));
+  await writeRawNote(baseURL, id, (doc) => Y.applyUpdate(doc, state));
+  return state;
+}
+
+/**
+ * Stores a layout 3 note as the release before layout 4 seeded it, its floor held at 3
+ * (pages of that release open it) until a test raises it. Returns the state it stored:
+ * this build's raw reader is refused a layout 3 note.
+ */
+export async function storeLayout3Note(
+  baseURL: string,
+  id: string,
+  name: keyof typeof LAYOUT3_NOTES,
+): Promise<Uint8Array> {
+  const state = layout3Note(name);
+  await setFloor(baseURL, id, 3);
+  await writeRawNote(baseURL, id, (doc) => Y.applyUpdate(doc, state));
+  return state;
 }
 
 /** A person: their name and colour, kept in their browser before the page loads. */

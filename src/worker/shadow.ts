@@ -1,5 +1,5 @@
 /**
- * Shadow receipts (D34): a dry run of the layout 3 migration on real notes,
+ * Shadow receipts (D34): a dry run of the bundled layout migration on real notes,
  * writing nothing. Once per Durable Object instance, a note that is opened
  * is migrated on a copy and the receipt is logged; the stored note, its
  * generation and every client are untouched. Off unless the Worker's

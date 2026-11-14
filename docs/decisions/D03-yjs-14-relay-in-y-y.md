@@ -17,12 +17,12 @@ The relay is written with `@y/y`, pinned exactly to `14.0.0-rc.29`, the version
 
 ## Why not yrs
 
-- yrs before 0.28 misreads the 53-bit client ids Yjs 14 generates (`@lexical/y` has a
-  `clientIDRange: 'uint32'` escape hatch for exactly this).
+- yrs before 0.28 misreads the 53-bit client ids Yjs 14 generates, and `@lexical/y` writes
+  only those (it has no 32-bit mode).
 - One implementation on both ends means one set of semantics: what the server merges is
   what clients merge.
 
 ## Later
 
-A yrs-backed relay could be an optional compatibility mode (with `uint32` client ids) if a
-reason appears. Not planned.
+A yrs-backed relay (yrs 0.28 or later) could be an optional compatibility mode if a reason
+appears. Not planned.

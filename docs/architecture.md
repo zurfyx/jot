@@ -116,7 +116,7 @@ clients (D03).
   this build's pages read (`migrateYState`), for rendering only.
 - **Shadow receipts** (D34, off unless the `JOT_SHADOW_RECEIPTS` var is `"1"`): once per
   instance, a stored note under 1 MB is migrated on a copy to the layout the last bundled
-  step reaches (`steps.ts`: `1to2` and `2to3`, layout 3) and the receipt is logged with a
+  step reaches (`steps.ts`: `1to2`, `2to3` and `3to4`, layout 4) and the receipt is logged with a
   hash of the note id. Nothing is written.
 - **Robustness.** Any malformed frame (text, unknown type, truncated varint, bad awareness
   JSON, undecodable update) closes that socket with 1007 and leaves the others alone.
@@ -218,8 +218,9 @@ belongs to, adopted when a full sync with the note completes, and presents it in
 socket URL: the version 1 handshake `@lexical/y`'s layout upgrade handle builds
 (`shared/fence.ts`: `f` its version, `g`, `m`, `lo`, `hi`, `seed`, and `ft` its features
 when it has any; `@y/websocket` re-reads `provider.params` on every reconnect). This
-release's `@lexical/y` reads layout 3 and up (MIN_LAYOUT 3) and its object migrates no note
-(`layoutUpgrade: null`), so a note stored at layout 1 or 2 opens read only. The note's verdict (message 65) comes first: admit
+release's `@lexical/y` reads and writes layout 4 only (MIN_LAYOUT 4), and a new note records only
+`lexical-y:4`; the binding gets the same handle as `layoutUpgrade`, since a note stored at
+layout 1, 2 or 3 is migrated by its object on its first open, before any page is served. The note's verdict (message 65) comes first: admit
 and bootstrap sync as before; refuse-layout reloads the page once (a guard in
 sessionStorage, `jot:fence-reload:<id>`), then shows "This note was upgraded. Reload to
 keep editing."; stale runs the handoff (`editor/handoff.ts`): the provider stops,

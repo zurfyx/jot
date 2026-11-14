@@ -3,7 +3,7 @@
  * migrated state rebuilt as new Yjs items, with Yjs types only (no Lexical,
  * so the Worker stays Yjs-only). Every live item of every top-level type is
  * copied as it is, in order, under the new document's own client id:
- * strings, embeds, format items (their keys and values unchanged: layout 3
+ * strings, embeds, format items (their keys and values unchanged: layout 4's
  * ends name keys, not ids) and nested types, and every live attribute.
  * Deleted items and tombstones are not copied, so the copy is the state
  * without its history. Every id changes: relative positions, blame

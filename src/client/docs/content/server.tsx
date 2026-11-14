@@ -211,7 +211,7 @@ export function ServerSideEditing() {
         It throws a <C>YHeadlessError</C> with a code: <C>'not-initialized'</C> for a note that was
         never seeded, <C>'read-only'</C> for a newer schema version or layout, or node types the
         editor doesn't register, and <C>'foreign-roots'</C> for an update that writes anywhere else.
-        If updates pass through yrs older than 0.28, set <C>clientIDRange: 'uint32'</C>.
+        Client ids are Yjs 14's 53-bit ids, so updates that pass through yrs need yrs 0.28 or later.
       </P>
       <H2>In a relay like jot's</H2>
       <P>

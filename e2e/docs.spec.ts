@@ -121,7 +121,7 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   const box = (await last.boundingBox())!;
   await last.click({ position: { x: box.width - 4, y: box.height / 2 } });
   await page.keyboard.type(' Ana does.');
-  // Layout 3: the bold run above ends at a closing marker (`[n]`), shown on
+  // Layout 4: the bold run above ends at a closing marker (`[n]`), shown on
   // the text that follows it.
   await expect(tree).toContainText(/"Who brings snacks\? Ana does\."\{f:bold: \[\d+\]\} ¶/);
   await page.keyboard.press('Enter');

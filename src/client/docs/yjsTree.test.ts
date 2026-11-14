@@ -72,12 +72,15 @@ describe("the inspector's rows", () => {
     expect(root?.kind).toBe('root');
     expect(root?.kind === 'root' && root.attrs).toEqual(
       expect.arrayContaining([
-        { key: 'lexical-y:1', value: 'true' },
-        { key: 'lexical-y:3', value: 'true' },
+        { key: 'lexical-y:4', value: 'true' },
         { key: 'k:heading', value: '"line"' },
         { key: 'k:list', value: '"group|listType"' },
       ]),
     );
+    // A new note records only the layout it is written in (layout 4).
+    expect(
+      root?.kind === 'root' && root.attrs.filter((a) => /^lexical-y:\d+$/.test(a.key)),
+    ).toEqual([{ key: 'lexical-y:4', value: 'true' }]);
 
     const [heading, morning, link, paragraph] = lines(rows);
     expect(heading).toMatchObject({
@@ -102,7 +105,7 @@ describe("the inspector's rows", () => {
         { key: 'l', value: '0' },
       ]),
     );
-    // Layout 3 pairs each format run's end with its opener: the raw tree shows
+    // Each format run's end is paired with its opener (layouts 3 and 4): the raw tree shows
     // the run's closing marker (`[n]`, n naming the opener) on what follows it.
     expect(link?.kind === 'line' && link.segments).toEqual([
       { text: 'See ', attrs: [{ key: 'f:bold', value: '[11]' }] },

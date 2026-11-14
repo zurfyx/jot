@@ -10,26 +10,28 @@ import {
   serveBuild,
   setFloor,
   storeLayout1Note,
+  storeLayout3Note,
   TARGET,
 } from './release';
 
 /**
- * Release R+1 (D34) end to end: a layout 1 note, a tab offline with edits,
- * the note's floor raised, its first open migrates it in place (to layout 2
- * with the 1to2 step, or to 3 once the library's floor is 3), and the offline
- * tab hands its edits off: they wait under Offline edits (replay at the note
- * is deferred until @lexical/y ships it).
+ * Release R+1 (D34) end to end: a note as release R stored it (layout 3, as
+ * every live note is before layout 4; layout 1 in a release whose floor is
+ * 1), a tab offline with edits, the note's floor raised, its first open
+ * migrates it in place (to layout 4), and the offline tab hands its edits off:
+ * they wait under Offline edits (replay at the note is deferred until
+ * @lexical/y ships it).
  *
- * The offline tab is this build, or, with JOT_E2E_R_DIST (the dist/client of
- * a release R build), an R page: the realistic case at layout 3, where no
- * R+1 page reads layout 1. After its handoff an R page is refused the newer
- * layout and reloads; the test then serves it this build, as a deploy does.
+ * The offline tab is an R page (JOT_E2E_R_DIST, the dist/client of a release
+ * R build): no R+1 page reads the layout R writes. After its handoff it is
+ * refused the newer layout and reloads; the test then serves it this build,
+ * as a deploy does.
  */
 const R_DIST = process.env.JOT_E2E_R_DIST || undefined;
 
 test.skip(
   MIN_LAYOUT > 2 && !R_DIST,
-  'at layout 3 the offline tab must be an R page: set JOT_E2E_R_DIST to the dist/client of an R build',
+  'past layout 2 the offline tab must be an R page: set JOT_E2E_R_DIST to the dist/client of an R build',
 );
 
 interface OfflineTab {
@@ -104,7 +106,11 @@ test('a note migrates on its first open; a tab offline across it keeps its edits
   baseURL,
 }) => {
   const id = freshNoteId();
-  await storeLayout1Note(baseURL!, id, 'shared');
+  const stored = layoutsOf(
+    TARGET > 2
+      ? await storeLayout3Note(baseURL!, id, 'shared')
+      : await storeLayout1Note(baseURL!, id, 'shared'),
+  );
   const b = await offlineTab(context, playwright, baseURL!, null);
   await openNote(b.page, id);
   await expect(editor(b.page)).toContainText('Shared start');
@@ -122,7 +128,8 @@ test('a note migrates on its first open; a tab offline across it keeps its edits
   await migrate(a, baseURL!, id);
   await expect(editor(a)).toContainText('Shared start');
   expect(layoutsOf(await readRawNote(baseURL!, id))).toEqual(
-    ['lexical-y-epoch', ...Array.from({ length: TARGET }, (_, i) => `lexical-y:${i + 1}`)].sort(),
+    // What it recorded, plus the migration's epoch and the layout it reached.
+    [...stored, 'lexical-y-epoch', `lexical-y:${TARGET}`].sort(),
   );
   await expect(editor(a)).not.toContainText('Written offline');
 

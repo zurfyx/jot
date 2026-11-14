@@ -265,7 +265,7 @@ export function recoveryState(record: YQuarantineRecord, base: Uint8Array | null
     if (!view.complete && base !== null) {
       Y.applyUpdate(view.doc, base);
     }
-    // Every root of a scratch copy migrated to this build's floor (layout 3);
+    // Every root of a scratch copy migrated to this build's floor (layout 4);
     // anything the migration splits out is not rendered.
     return migrateYState(Y.encodeStateAsUpdate(view.doc), LAYOUT_STEPS, {
       roots: SERVED_ROOTS,
