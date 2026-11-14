@@ -6,10 +6,10 @@ import { SHADOW_LAYOUT } from './steps';
 
 describe('shadow receipts (D34)', () => {
   it('migrate a copy of a layout 1 note to the last bundled layout and report it', () => {
-    // A note as an earlier jot seeded it (this release seeds layout 3).
+    // A note as an earlier jot seeded it (this release seeds layout 4).
     const receipt = shadowReceipt('tag', layout1Note('rich'));
     expect(receipt).toMatchObject({ note: 'tag', ok: true, from: 1, changed: true, pending: 0 });
-    expect(SHADOW_LAYOUT).toBe(3);
+    expect(SHADOW_LAYOUT).toBe(4);
   });
 
   it('skip a note over the size cap', () => {

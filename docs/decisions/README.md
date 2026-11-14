@@ -30,12 +30,13 @@ How expensive is this to get wrong?
 
 ## Tier 1: hard to reverse
 
-| ID                                                   | Decision                                                      | Radius | Status    |
-| ---------------------------------------------------- | ------------------------------------------------------------- | ------ | --------- |
-| [D01](D01-workers-sqlite-durable-object-per-note.md) | Workers + one SQLite Durable Object per note, Hibernation API | HIGH   | `DECIDED` |
-| [D02](D02-the-link-is-the-key.md)                    | The link is the key; 128-bit ids; no fixed ids                | HIGH   | `DECIDED` |
-| [D03](D03-yjs-14-relay-in-y-y.md)                    | Yjs 14 relay in `@y/y`, not yrs                               | HIGH   | `DECIDED` |
-| [D05](D05-two-megabyte-cap.md)                       | 2 MB cap (Cloudflare's row limit), warn at 1.6 MB, compaction | HIGH   | `DECIDED` |
+| ID                                                   | Decision                                                          | Radius | Status     |
+| ---------------------------------------------------- | ----------------------------------------------------------------- | ------ | ---------- |
+| [D01](D01-workers-sqlite-durable-object-per-note.md) | Workers + one SQLite Durable Object per note, Hibernation API     | HIGH   | `DECIDED`  |
+| [D02](D02-the-link-is-the-key.md)                    | The link is the key; 128-bit ids; no fixed ids                    | HIGH   | `DECIDED`  |
+| [D03](D03-yjs-14-relay-in-y-y.md)                    | Yjs 14 relay in `@y/y`, not yrs                                   | HIGH   | `DECIDED`  |
+| [D05](D05-two-megabyte-cap.md)                       | 2 MB cap (Cloudflare's row limit), warn at 1.6 MB, compaction     | HIGH   | `DECIDED`  |
+| [D36](D36-layout-4-migrated-on-first-open.md)        | Notes move to `@lexical/y` layout 4, migrated on their first open | HIGH   | `PROPOSED` |
 
 ## Tier 2: moderate
 

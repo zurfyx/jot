@@ -1,6 +1,6 @@
 /**
  * Layout 1 note states as main 23ddbfc7's `@lexical/y` seeds them with jot's node set
- * (generated once; never regenerated), for the layout 3 migration tests.
+ * (generated once; never regenerated), for the migration tests.
  */
 export const LAYOUT1_NOTES = {
   shared:
