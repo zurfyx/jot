@@ -232,17 +232,31 @@ real Worker and `NoteRoom` inside workerd with SQLite storage (D11). A small Yjs
 - note and API responses (400, 404, 426 and the 101 upgrade) carry
   `X-Robots-Tag: noindex, nofollow`.
 
-Migration (D34, `src/worker/migration.test.ts`, with the 1to2 and 2to3 steps and the
-floor of 3): a layout 1 note migrates in place on its first open (layout 3 and an epoch
-recorded, its generation naming that migration, its text unchanged, its base kept, one in-place transition) and a
-second open writes nothing; an update applied just before is in the migrated state (the
-seal) and its socket closes with 4000; a replica at the old generation is stale and gets
-nothing; a note with an unreadable root is stuck and admits nobody; a layout 1
-record's view is migrated for rendering and nothing is stored; the fresh copy of a note
-migrated to layout 2 or 3 has the same live items in order, unit for unit (formats, a
-deleted word's history gone, `jot-people` kept), no id of the original, and reads the
-same; a note whose migrated state passes a lowered cap becomes a fresh document under
-a new incarnation.
+Migration (D34, D36, `src/worker/migration.test.ts`, with the 1to2, 2to3 and 3to4 steps
+and the floor of 4): a layout 1 note migrates in place on its first open (layout 4 and an
+epoch recorded, its generation naming that migration, its text unchanged, its base kept,
+one in-place transition) and a second open writes nothing; an update applied just before
+is in the migrated state (the seal) and its socket closes with 4000; a replica at the old
+generation is stale and gets nothing; a note with an unreadable root is stuck and admits
+nobody; a layout 1 record's view is migrated for rendering and nothing is stored; the
+fresh copy of a note migrated to layout 2, 3 or 4 has the same live items in order, unit
+for unit (formats, a deleted word's history gone, `jot-people` kept), no id of the
+original, and reads the same; a note whose migrated state passes a lowered cap becomes a
+fresh document under a new incarnation.
+
+Layout 3 notes, as every live note is before layout 4 (`src/shared/testing/layout3.ts`:
+states the layout 3 release seeded and edited with jot's node set, every node type and
+format jot stores, edits by three writers, and what that release's editor read from each):
+served at the layout 3 floor, a page of that release bootstraps; after the deploy the
+first open migrates the note to layout 4 in place, and it reads exactly as the layout 3
+release read it (editor state JSON, the client's copy too), with every character, marker
+and node keeping its Yjs id and none added, `jot-people` untouched, one transition, the
+same bytes on the next open, and this release can edit it (unmigrated, its editor refuses
+it). A layout 3 page open across the deploy is closed with 4000 at the migration (its last
+edit in the migrated note); reloaded as the same release it is refused the layout, and one
+holding edits against the old generation is stale; neither receives anything of the note,
+and its handoff is a record whose view renders at layout 4 while the note stays byte for
+byte. A page from before the fence receives only the read-only signal.
 
 The generation fence (D34, `src/worker/fence.test.ts`):
 
@@ -325,6 +339,8 @@ Durable Objects, over real WebSockets.
   below the text on a touch screen writes at the end; a press outside an open menu only closes it (the caret stays put), a click
   beside the dock writes, and a drag from the text onto the blank page keeps its selection;
 - markdown shortcuts, and Aa's Bold and Link (no toolbar appears over a selection);
+- the quote shortcut: `> ` starts a quote, Enter after it starts a paragraph, and a lone
+  `>`, or one just before bold text, stays text through Enter, with nothing added;
 - the dock: Aa's block types (Heading 2, Todo list, Code), the ⋯ items (Show blame first),
   Escape, the Dark theme switch, and arrow keys in ⋯;
 - Note info shows a size matching the pill, both people with "(you)" and "editing", and
@@ -405,12 +421,13 @@ Durable Objects, over real WebSockets.
   shows under Offline edits; a note this release cannot read reloads the page once, then
   says so;
 - migration end to end (`e2e/migration.spec.ts`, a development-only test setting holds one
-  note's floor at 1 for the Worker until the test raises it to 3; the offline tab must be a
-  page that can edit layout 1, an R build's `dist/client` in `JOT_E2E_R_DIST`, else the spec
-  skips): a layout 1 note, a tab offline with an edit, the floor raised, the next open
-  migrates it (layout 3 recorded), the offline tab
-  reconnects and hands off: its edit stays out of the note, under Offline edits (the banner
-  and the record's view, the bold kept), and both tabs keep editing the migrated note.
+  note's floor at 3 for the Worker until the test raises it to 4; the offline tab must be a
+  page of the release before, which edits layout 3, an R build's `dist/client` in
+  `JOT_E2E_R_DIST`, else the spec skips, as it does in CI): a layout 3 note, an R tab
+  offline with an edit, the floor raised, the next open migrates it (layout 4 and an epoch
+  recorded), the offline tab reconnects and hands off, is refused the newer layout and
+  loads this build: its edit stays out of the note, under Offline edits (the banner and the
+  record's view, the bold kept), and both tabs keep editing the migrated note.
 - the keyboard and pointer paths between features: Aa from the keyboard (the first item
   takes the focus, arrows wrap past the last enabled item, Home goes back, Enter applies
   and gives the caret to the note); Aa → Link focuses its field and Esc returns to the

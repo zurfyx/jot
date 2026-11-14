@@ -721,7 +721,7 @@ export class NoteRoom extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  /** Shadow receipts (D34): a logged dry run of the layout 3 migration, once per instance. */
+  /** Shadow receipts (D34): a logged dry run of the bundled layout migration, once per instance. */
   private shadow(id: string): void {
     const flag = (this.env as unknown as Record<string, unknown>).JOT_SHADOW_RECEIPTS;
     if (flag !== '1' || this.shadowed || !this.hasStoredRow()) {

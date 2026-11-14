@@ -1,16 +1,23 @@
 import { evictDurableObject, runInDurableObject } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
-import { readYState } from '@lexical/y/headless';
+import { editYState, readYState } from '@lexical/y/headless';
 import { prepareYRoom } from '@lexical/y/server';
 import * as Y from '@y/y';
-import { $getEditor } from 'lexical';
+import { $createParagraphNode, $createTextNode, $getEditor, $getRoot } from 'lexical';
 import { describe, expect, it } from 'vitest';
 
-import { encodeUpload, sha256Hex, type Upload, UPLOAD_HASH_HEADER } from '../shared/fence';
+import {
+  encodeUpload,
+  type Handshake,
+  sha256Hex,
+  type Upload,
+  UPLOAD_HASH_HEADER,
+} from '../shared/fence';
 import { generateNoteId } from '../shared/ids';
 import { jotNodesExtension } from '../shared/nodes';
 import { layout1Note } from '../shared/testing/layout1';
-import { FENCE_REFUSE_LAYOUT, FENCE_STALE } from '../shared/protocol';
+import { LAYOUT3_READS, LAYOUT3_RELEASE_HANDSHAKE, layout3Note } from '../shared/testing/layout3';
+import { FENCE_BOOTSTRAP, FENCE_REFUSE_LAYOUT, FENCE_STALE } from '../shared/protocol';
 import { SCHEMA_VERSION } from '../shared/schema';
 import { freshCopy } from './copy';
 import type { NoteRoom } from './room';
@@ -18,16 +25,17 @@ import { LAYOUT_FLOOR, LAYOUT_STEPS } from './steps';
 import { freshHandshake, TestClient } from './test-client';
 
 /**
- * Release R+1 (D34): a note below the floor migrates on its first open, an
- * offline replica's edits are replayed at the note as a checked edit, and a
- * note whose migrated state passes the cap becomes a fresh document under a
- * new incarnation. Run with the 1to2 step and a per-note floor of 2, so the
- * whole path runs on the layouts of today.
+ * A release that raises the floor (D34): a note below it migrates on its first
+ * open, an offline replica's edits wait under Offline edits, and a note whose
+ * migrated state passes the cap becomes a fresh document under a new
+ * incarnation. Layout 1 notes run the whole bundled chain (1to2, 2to3, 3to4);
+ * layout 3 notes, the ones live before layout 4, are seeded by that release's
+ * `@lexical/y` (`layout3.ts`) and met by its pages' handshake.
  */
 
 /**
  * A release R client (D34): it reads layouts 1 and 2 and seeds layout 1, so it
- * can open a note before its migration in any release, layout 3 included.
+ * can open a note before its migration in any release, layout 4 included.
  */
 function connectR(id: string) {
   return TestClient.connect(id, { handshake: freshHandshake({ layouts: [1, 2], seed: 1 }) });
@@ -38,12 +46,12 @@ function stubFor(id: string) {
 }
 
 /**
- * The layout the tests migrate to: the Worker's floor once a release raises it
- * (3 with identity's layout 3), else 2 through the test setting (the 1to2 step).
+ * The layout the tests migrate to: the Worker's floor (layout 4), or 2 through
+ * the test setting in a release whose floor is 1.
  */
 const TARGET = Math.max(LAYOUT_FLOOR, 2);
 
-/** Every layout the bundled steps reach from layout 1 (2, and 3 once `2to3` ships). */
+/** Every layout the bundled steps reach from layout 1 (2, 3 and 4). */
 const REACHABLE = LAYOUT_STEPS.map((step) => step.to);
 
 /** The layout records and the epoch a note migrated from layout 1 to TARGET carries. */
@@ -83,12 +91,12 @@ function layoutsOf(state: Uint8Array): string[] {
 
 /**
  * Writes a stored row, as a note saved by an earlier release, its floor held
- * at 1 until a test raises it (else a release whose floor is 3 migrates it at
- * the first visit).
+ * at `floor` (default 1) until a test raises it (else this release migrates it
+ * at the first visit).
  */
-async function storeNote(id: string, state: Uint8Array): Promise<void> {
+async function storeNote(id: string, state: Uint8Array, floor = 1): Promise<void> {
   await runInDurableObject(stubFor(id), (room: NoteRoom, s) => {
-    room.testSettings({ floor: 1 });
+    room.testSettings({ floor });
     s.storage.sql.exec(
       `CREATE TABLE IF NOT EXISTS note (id INTEGER PRIMARY KEY CHECK (id = 0), name TEXT NOT NULL,
         state BLOB NOT NULL, saved_at INTEGER NOT NULL)`,
@@ -381,6 +389,208 @@ describe('the 2 MB fallback', () => {
     expect(note.byteLength).toBeLessThan(before.byteLength * 0.8);
     expect(textOf(note)).toContain('a'.repeat(400));
     expect(layoutsOf(note)).toContain(`lexical-y:${TARGET}`);
+    a.close();
+  });
+});
+
+/** The note config this build reads with: jot's node set and schema version. */
+const JOT = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION };
+
+/** What this build's editor reads from a state (editor state JSON); throws when read only. */
+function readJot(state: Uint8Array): unknown {
+  return readYState(state, JOT, () => $getEditor().getEditorState().toJSON());
+}
+
+/**
+ * Every live content unit under the editor's root, by its Yjs id: characters,
+ * markers, embeds and nested nodes (format items, which a layout step rewrites,
+ * left out), with its value. A migration in place keeps every one.
+ */
+function contentUnits(state: Uint8Array): Map<string, string> {
+  const out = new Map<string, string>();
+  const walk = (node: Y.Node) => {
+    for (let it = node._start; it !== null; it = it.right) {
+      if (it.deleted || it.content instanceof Y.ContentFormat) {
+        continue;
+      }
+      const c = it.content;
+      if (c instanceof Y.ContentType) {
+        out.set(`${it.id.client}:${it.id.clock}`, `type:${(c.type as Y.Node).name}`);
+        walk(c.type as Y.Node);
+        continue;
+      }
+      c.getContent().forEach((unit, i) => {
+        out.set(`${it.id.client}:${it.id.clock + i}`, JSON.stringify(unit));
+      });
+    }
+  };
+  walk(rootOf(state).get('lexical-y'));
+  return out;
+}
+
+/** The deploy of this release: the note's floor is the Worker's again (layout 4). */
+function deploy(id: string): Promise<void> {
+  return runInDurableObject(stubFor(id), (_room: NoteRoom, s) => {
+    s.storage.sql.exec("DELETE FROM test_settings WHERE key = 'floor'");
+  });
+}
+
+/** A page of the layout 3 release: it reads layout 3 only and seeds layout 3. */
+function connectLayout3Page(id: string, overrides: Partial<Handshake> = {}) {
+  return TestClient.connect(id, {
+    handshake: { ...LAYOUT3_RELEASE_HANDSHAKE, ...overrides },
+    waitSync: false,
+  });
+}
+
+describe('a layout 3 note (live before this release) after the deploy', () => {
+  it('is what this release migrates, to layout 4', () => {
+    expect(LAYOUT_FLOOR).toBe(4);
+    expect(LAYOUT_STEPS.map((step) => [step.from, step.to])).toEqual([
+      [1, 2],
+      [2, 3],
+      [3, 4],
+    ]);
+  });
+
+  it.each(['shared', 'rich'] as const)(
+    'migrates on its first open (%s): reads exactly as the layout 3 release read it, every content id kept',
+    async (name) => {
+      const id = generateNoteId();
+      const before = layout3Note(name);
+      // Before the deploy: the note at layout 3, served at the layout 3 floor
+      // to a layout 3 page, which bootstraps from it.
+      await storeNote(id, before, 3);
+      const page = await connectLayout3Page(id);
+      await page.until(() => page.synced);
+      expect(page.fences[0]!.verdict).toBe(FENCE_BOOTSTRAP);
+      const old = (await identity(id))!;
+      page.close();
+      expect(layoutsOf(before)).toEqual(['lexical-y:1', 'lexical-y:3']);
+      // This release's editor does not read layout 3: unmigrated, it is read only.
+      expect(() => readJot(before)).toThrow();
+
+      await deploy(id);
+      await evictDurableObject(stubFor(id));
+      const a = await TestClient.connect(id);
+      const after = await stored(id);
+      expect(layoutsOf(after)).toEqual(
+        ['lexical-y-epoch', 'lexical-y:1', 'lexical-y:3', 'lexical-y:4'].sort(),
+      );
+      // The content, exactly: what the layout 3 release's editor read, and the
+      // client's copy reads the same.
+      expect(readJot(after)).toEqual(LAYOUT3_READS[name]);
+      expect(readJot(Y.encodeStateAsUpdate(a.doc))).toEqual(LAYOUT3_READS[name]);
+      // In place: every character, marker and node keeps its Yjs id, and none is added.
+      const was = contentUnits(before);
+      const now = contentUnits(after);
+      expect(now.size).toBe(was.size);
+      for (const [key, value] of was) {
+        expect(now.get(key), key).toBe(value);
+      }
+      // Other roots are not the editor's: untouched.
+      expect(rootOf(after).get('jot-people').getAttrs()).toEqual(
+        rootOf(before).get('jot-people').getAttrs(),
+      );
+      // A new generation naming the migration, the old state kept as its base, once.
+      const room = (await identity(id))!;
+      expect(room.incarnation).toBe(old.incarnation);
+      expect(room.generation).not.toBe(old.generation);
+      expect(room.generation.startsWith('g1:')).toBe(true);
+      expect(a.fences[0]!.generation).toBe(room.generation);
+      expect(await count(id, 'bases')).toBe(1);
+      expect(await transitionKinds(id)).toEqual(['in-place']);
+      a.close();
+      await evictDurableObject(stubFor(id));
+      const b = await TestClient.connect(id);
+      expect(sameBytes(await stored(id), after)).toBe(true);
+      expect(await transitionKinds(id)).toEqual(['in-place']);
+      b.close();
+      // Editable at layout 4.
+      const edited = editYState(
+        after,
+        JOT,
+        () => {
+          $getRoot().append($createParagraphNode().append($createTextNode('After the bump')));
+        },
+        { writer: null },
+      ).state;
+      expect(JSON.stringify(readJot(edited))).toContain('After the bump');
+    },
+  );
+
+  it('fences a layout 3 page across the deploy: closed at the migration, then refused, or stale with edits; nothing of the note reaches it', async () => {
+    const id = generateNoteId();
+    await storeNote(id, layout3Note('shared'), 3);
+    const page = await connectLayout3Page(id);
+    await page.until(() => page.synced);
+    const old = page.fences[0]!.generation;
+    // An edit the page made just before the deploy is in the note it migrates.
+    insertAt(page.doc, firstLineLength(page.doc), ' just now');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await deploy(id);
+    const a = await TestClient.connect(id);
+    await page.until(() => page.closed !== null);
+    expect(page.closed!.code).toBe(4000);
+    expect(textOf(await stored(id))).toContain('Shared start just now');
+    expect(layoutsOf(await stored(id))).toContain('lexical-y:4');
+
+    // Its reload, still the layout 3 release: refused the layout it can't read.
+    const fresh = await connectLayout3Page(id);
+    await fresh.until(() => fresh.fences.length > 0);
+    expect(fresh.fences[0]!.verdict).toBe(FENCE_REFUSE_LAYOUT);
+    expect(fresh.received).toEqual([]);
+    fresh.close();
+
+    // A layout 3 page that kept edits made against the old generation: stale,
+    // so it hands them off; they wait under Offline edits, never in the note.
+    const stale = await connectLayout3Page(id, { generation: old, material: true });
+    await stale.until(() => stale.fences.length > 0);
+    expect(stale.fences[0]!.verdict).toBe(FENCE_STALE);
+    expect(stale.received).toEqual([]);
+    stale.close();
+    const note = await stored(id);
+    const offline = offlineEdit(layout3Note('shared'), ' offline', true);
+    const { seq } = await upload(id, {
+      ...handoff(offline.snapshot, old, [offline.client]),
+      source: {
+        incarnation: null,
+        generation: old,
+        layouts: [...LAYOUT3_RELEASE_HANDSHAKE.layouts],
+        schemaVersion: SCHEMA_VERSION,
+        renderer: 'jot',
+      },
+    });
+    expect(sameBytes(await stored(id), note)).toBe(true);
+    const view = await exports.default.fetch(`http://jot.test/api/n/${id}/recovery/${seq}/view`);
+    expect(view.status).toBe(200);
+    const shown = new Uint8Array(await view.arrayBuffer());
+    expect(layoutsOf(shown)).toContain('lexical-y:4');
+    expect(textOf(shown)).toContain('Shared start offline');
+    a.close();
+  });
+
+  it('turns a page from before the fence read only on the migrated note, sending it nothing of the note', async () => {
+    const id = generateNoteId();
+    await storeNote(id, layout3Note('shared'));
+    await deploy(id);
+    await evictDurableObject(stubFor(id));
+    const a = await TestClient.connect(id);
+    expect(layoutsOf(await stored(id))).toContain('lexical-y:4');
+    const old = await TestClient.connect(id, { handshake: null, waitSync: false });
+    await old.until(() => old.synced);
+    expect(old.doc.get('lexical-y').getAttr(`lexical-y-schema:${SCHEMA_VERSION + 1}`)).toBe(true);
+    const scratch = new Y.Doc();
+    for (const payload of old.received) {
+      Y.applyUpdate(scratch, payload);
+    }
+    expect(Object.keys(scratch.get('lexical-y').getAttrs())).toEqual([
+      `lexical-y-schema:${SCHEMA_VERSION + 1}`,
+    ]);
+    expect((scratch.get('lexical-y').toJSON() as { children?: unknown[] }).children ?? []).toEqual(
+      [],
+    );
+    old.close();
     a.close();
   });
 });
