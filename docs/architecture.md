@@ -266,7 +266,7 @@ device": View, Export, Remove) and every record of the note that holds something
 capture or a record renders read only, with Copy text and Export (the raw bytes):
 `recovery/render.ts`, a chunk only the recovery view loads, reads a capture's frozen editor
 JSON, or a state (a record's source view, a capture made from storage) headless
-(`readYState`) with `jotNodesExtension` (`shared/nodes.ts`, jot's node set without styles
+(`readYState`) with `jotNodesExtension` (`shared/nodes.ts`, jot's node set and block ids, without styles
 or DOM) and the higher of jot's schema version and the one the view records.
 
 **`editor/session.ts`** creates a note session for an id: a `Y.Doc`, an `Awareness`, the
@@ -462,7 +462,13 @@ URL('./worker.ts', import.meta.url))`, or, in dev builds, `window.__jotWebLLMWor
   avatars and Note info.
 - `extensions.ts`: rich text, lists and checklists, links, code blocks
   (`@lexical/code-core`), tables, tab indentation and markdown shortcuts, and the theme
-  that maps each node type, and each of Prism's token types, to its classes.
+  that maps each node type, and each of Prism's token types, to its classes. The node
+  types come from `shared/nodes.ts`, with block ids (D38): `BlockIdExtension`
+  (`repairTransforms: false`) stores a random 21-character id on each block's marker
+  (`s:blockId`, about 46 bytes a block); a block stored without one shows an id derived
+  from its Yjs identity, the same on every client, until its next edit stores it. Every
+  writer (the page, the example's and jot AI's in-tab peers) and every reader (recovery,
+  the offline reports) gets them there.
 - `code/` (D35): syntax highlighting, fetched on demand. `extension.ts` watches each
   commit's changed nodes for the first code block (the note opened with one, a
   collaborator added one, or ` ``` ` made one) and only then imports `highlight.ts`,

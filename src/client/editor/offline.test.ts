@@ -229,7 +229,11 @@ describe('a note page with edits the server has not taken', () => {
     expect(entry!.report.ok).toBe(true);
     const report = entry!.report.ok ? entry!.report.value : null;
     expect(JSON.stringify(report!.fragment)).toContain('Written offline');
-    // jot's blocks carry no ids: nothing is replayed, the panel offers Copy.
+    // Blocks carry ids (D38), so the added block is replayable: what the
+    // replay stage and leftovers will act on. At stage persist nothing is applied.
+    const added = report!.blocks.find((block) => block.change === 'added');
+    expect(added?.id).toMatch(/^[\w-]{21}$/);
+    expect(added?.replayable).toBe(true);
     expect(entry!.replay?.applied ?? []).toEqual([]);
     expect(JSON.stringify(fresh.editor.getEditorState().toJSON())).not.toContain('Written offline');
   });

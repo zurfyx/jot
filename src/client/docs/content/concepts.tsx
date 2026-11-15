@@ -60,8 +60,9 @@ export function ContentInYjs() {
           text that follows; that text is not formatted.
         </Li>
         <Li>
-          <B>A ¶ marker</B> ends a line: <C>t</C> is its type (left out for a paragraph) and{' '}
-          <C>p:&lt;field&gt;</C> its schema fields, like a heading's <C>p:tag</C>.
+          <B>A ¶ marker</B> ends a line: <C>t</C> is its type (left out for a paragraph),{' '}
+          <C>p:&lt;field&gt;</C> its schema fields, like a heading's <C>p:tag</C>, and{' '}
+          <C>s:blockId</C> the block's id (<C>BlockIdExtension</C>, NodeState).
         </Li>
         <Li>
           <B>List items</B> are lines in a group: <C>g</C> names the group's type, <C>g:listType</C>{' '}

@@ -113,7 +113,10 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   const tree = page.getByTestId('inspector-tree');
   const editor = page.getByTestId('inspector-editor');
   await expect(tree).toContainText('lexical-y');
-  await expect(tree).toContainText('"Agenda" ¶ {t: "heading", p:tag: "h2"}');
+  // Every marker carries its block's id (D38).
+  await expect(tree).toContainText(
+    /"Agenda" ¶ \{t: "heading", p:tag: "h2", s:blockId: "[\w-]{21}"\}/,
+  );
   await expect(tree).toContainText('"with demos"{f:bold: true}');
 
   // Type at the end of the last line, then start a heading with a shortcut.
@@ -127,7 +130,9 @@ test('the inspector shows the Yjs tree and follows typing', async ({ page }) => 
   await page.keyboard.press('Enter');
   await page.keyboard.type('## Budget');
   const budget = tree.getByTestId('inspector-row').filter({ hasText: /"Budget/ });
-  await expect(budget).toContainText('{t: "heading", p:tag: "h2"}');
+  // Key order follows the writes: the id, stored when the line was made, comes first here.
+  await expect(budget).toContainText(/s:blockId: "[\w-]{21}"/);
+  await expect(budget).toContainText('t: "heading", p:tag: "h2"');
   // The caret's line is the highlighted row.
   await expect(budget).toHaveAttribute('data-active', 'true');
 
@@ -166,7 +171,7 @@ test('Tab leaves the inspector instead of indenting', async ({ page }) => {
   await page.keyboard.press('Tab');
   await expect(editor).not.toBeFocused();
   await expect(page.getByTestId('inspector-tree')).toContainText(
-    /"Who brings snacks\?"\{f:bold: \[\d+\]\} ¶ \{\}/,
+    /"Who brings snacks\?"\{f:bold: \[\d+\]\} ¶ \{s:blockId: "[\w-]{21}"\}/,
   );
 });
 

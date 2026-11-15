@@ -35,11 +35,14 @@ export const ANA: Person = { name: 'Ana', color: 1, rank: 2 };
 
 /**
  * Makes `context` this person: their name and colour in localStorage, the
- * clock fixed, and Yjs client ids that sort by rank. `@y/y` draws a client id
- * as `(a & 0x1fffff) * 2^32 + b` from a `Uint32Array(8)`, and nothing else in
- * jot asks for eight 32-bit words at once, so only client ids change: bit 20
- * is always set (every id encodes to the same number of bytes), then the
- * rank, then a per-page counter, then random bits that keep ids unique.
+ * clock fixed, Yjs client ids that sort by rank, and block ids that repeat
+ * from run to run. `@y/y` draws a client id as `(a & 0x1fffff) * 2^32 + b`
+ * from a `Uint32Array(8)`, and nothing else in jot asks for eight 32-bit
+ * words at once, so only client ids change: bit 20 is always set (every id
+ * encodes to the same number of bytes), then the rank, then a per-page
+ * counter, then random bits that keep ids unique. `BlockIdExtension` draws a
+ * block id from a `Uint8Array(21)` (D38), shown by the docs' inspector: it
+ * becomes the rank and a per-page counter, unique on the page.
  */
 export async function asPerson(context: BrowserContext, person: Person): Promise<void> {
   await context.clock.setFixedTime(FIXED_TIME);
@@ -52,11 +55,20 @@ export async function asPerson(context: BrowserContext, person: Person): Promise
     }
     const original = Crypto.prototype.getRandomValues;
     let counter = 0;
+    let blocks = 0;
     Crypto.prototype.getRandomValues = function <T extends ArrayBufferView | null>(array: T): T {
       const result = original.call(this, array as never) as T;
       if (array instanceof Uint32Array && array.length === 8) {
         counter = (counter + 1) & 0xff;
         array[0] = 0x100000 | (rank << 16) | (counter << 8) | (array[0]! & 0xff);
+      } else if (array instanceof Uint8Array && array.length === 21) {
+        // Each byte is read as one of 64 characters (its low six bits).
+        blocks++;
+        array.fill(0);
+        array[0] = rank;
+        for (let i = 20, n = blocks; i > 0 && n > 0; i--, n = Math.floor(n / 64)) {
+          array[i] = n % 64;
+        }
       }
       return result;
     };

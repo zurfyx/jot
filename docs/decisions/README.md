@@ -71,6 +71,7 @@ How expensive is this to get wrong?
 | [D34](D34-generation-fence-and-offline-edits.md)        | A generation fence per note; offline edits it cannot take wait under Offline edits  | MED    | `PROPOSED` |
 | [D35](D35-code-highlighting-with-prism-on-demand.md)    | Code highlighting with Prism, in a chunk fetched with a note's first code block     | LOW    | `PROPOSED` |
 | [D37](D37-unsent-edits-on-this-device.md)               | Unsent edits are kept on this device (`@lexical/y/offline`); records are a fallback | MED    | `PROPOSED` |
+| [D38](D38-block-ids.md)                                 | Every block stores an id (`BlockIdExtension`); old notes show derived ids           | MED    | `PROPOSED` |
 
 ## Superseded
 
