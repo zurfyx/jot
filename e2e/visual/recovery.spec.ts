@@ -16,25 +16,31 @@ import {
   test,
 } from './setup';
 
-/** The generation fence's screens (D34): offline edits saved apart, and the reload notice. */
+/**
+ * The generation fence's screens (D34, D37): offline edits saved apart on this
+ * device, the upload where there is no store, edits not saved on this device,
+ * and the reload notice.
+ */
 
 async function replaceIncarnation(page: Page, id: string) {
   const response = await page.request.post(`/api/test/n/${id}/replace-incarnation`);
   expect(response.status()).toBe(200);
 }
 
-/** Gerard writes offline while the note moves on; returns his page once his edits are saved apart. */
-async function savedApart(page: Page, id: string) {
+/** Someone writes offline while the note moves on; returns once their edits are saved apart. */
+async function savedApart(page: Page, id: string, line = 'Written on the train', intro = true) {
   await openNote(page, id);
   await editor(page).click();
-  await page.keyboard.type('A shared plan');
+  if (intro) {
+    await page.keyboard.type('A shared plan');
+  }
   await expect(page.getByTestId('status-pill')).toContainText('Synced');
   await page.getByTestId('status-pill').click();
   await expect(page.getByTestId('status-pill')).toHaveText(/^Offline/);
   await editor(page).click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('Enter');
-  await page.keyboard.insertText('Written on the train');
+  await page.keyboard.insertText(line);
   await replaceIncarnation(page, id);
   await chrome(page).getByRole('button', { name: 'Reconnect' }).click();
   await expect(page.getByTestId('recovery-banner')).toBeVisible({ timeout: 15_000 });
@@ -56,23 +62,31 @@ test('offline edits saved apart: viewed', async ({ context }) => {
   await shoot(page, 'recovery-viewed');
 });
 
-test('offline edits under ⋯ → Offline edits, in another browser', async ({
+test('offline edits under ⋯ → Offline edits, on this device and in the note', async ({
   context,
   otherContext,
 }) => {
   const id = freshNoteId();
-  const page = await pageFor(context, GERARD);
-  await savedApart(page, id);
+  // Ana's browser has no store: her offline edits wait in the note, for everyone.
+  await otherContext.addInitScript(() => {
+    Object.defineProperty(window, 'indexedDB', { value: undefined });
+  });
   const ana = await pageFor(otherContext, ANA);
-  await openNote(ana, id);
-  await openMore(ana);
-  await ana.getByTestId('recovery-item').click();
-  await expect(ana.getByTestId('recovery-row')).toHaveCount(1);
-  await rest(ana);
-  await shoot(ana, 'recovery-panel');
+  await savedApart(ana, id, 'Ana, offline');
+  const page = await pageFor(context, GERARD);
+  await savedApart(page, id, 'Written on the train', false);
+  await openMore(page);
+  await page.getByTestId('recovery-item').click();
+  await expect(page.getByTestId('recovery-row')).toHaveCount(2);
+  await rest(page);
+  await shoot(page, 'recovery-panel');
 });
 
 test('saving offline edits', async ({ context }) => {
+  // No store on this device: the edits are uploaded to the note (D34).
+  await context.addInitScript(() => {
+    Object.defineProperty(window, 'indexedDB', { value: undefined });
+  });
   const page = await pageFor(context, GERARD);
   const id = freshNoteId();
   await openNote(page, id);
@@ -92,6 +106,30 @@ test('saving offline edits', async ({ context }) => {
   await expect(page.getByTestId('status-pill')).toHaveText('Saving offline edits…');
   await rest(page);
   await shoot(page, 'recovery-saving');
+});
+
+test('edits not saved on this device', async ({ context }) => {
+  // The store opens, then refuses every write (a full disk).
+  await context.addInitScript(() => {
+    const refuse = () => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    };
+    IDBObjectStore.prototype.put = refuse;
+    IDBObjectStore.prototype.add = refuse;
+  });
+  const page = await pageFor(context, GERARD);
+  await openNote(page, freshNoteId());
+  await editor(page).click();
+  await page.keyboard.type('A shared plan');
+  await expect(page.getByTestId('status-pill')).toContainText('Synced');
+  await page.getByTestId('status-pill').click();
+  await editor(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.insertText('Written on the train');
+  await expect(page.getByText('aren’t being saved on this device')).toBeVisible();
+  await rest(page);
+  await shoot(page, 'offline-not-saved');
 });
 
 test('a note this release cannot read', async ({ context, baseURL }) => {

@@ -81,7 +81,11 @@ clients (D03).
   client's binding turns read only) and an empty step 2. The update is never applied to the
   note; a collision with the client's own ids is kept and signalled again.
 - **Offline edits** (D34). `quarantine.ts`: `records` and `record_parts` (parts of at most
-  1.9 MB, under the 2 MB row cap), and `bases` for the migrations to come. An upload is
+  1.9 MB, under the 2 MB row cap), and `bases` for the migrations to come. Records hold
+  what reaches the server: the captures of pages from before the fence, and uploads from
+  pages that cannot keep their edits on their device (no IndexedDB there, or it refused the
+  capture) or that run the release before D37 (they still upload). This release's pages
+  keep their own on their device (D37). An upload is
   checked against the SHA-256 its header names, stored in one transaction, and answered
   with its acknowledgement (`shared/fence.ts`'s `UploadAcknowledgement`, `@lexical/y/server`'s
   `YRecordAcknowledgement` version 1: the note, the replica and its source generation, the
@@ -109,7 +113,7 @@ clients (D03).
   Yjs types only, so the history goes; ids, cursors and blame attribution are lost for that
   note; still over the cap, it is stuck). The Worker imports no Lexical: the layout
   constants come from `@lexical/y/server`.
-- **No replay yet** (D34). A handoff is kept as a record and shown read only; nothing is
+- **No replay yet** (D34). An uploaded handoff is kept as a record and shown read only; nothing is
   replayed onto the note: the `@lexical/y` this release pins ships no replay (it comes
   with meta/lexical#9771). `/view` serves the record's source view (`sourceView`, a record
   this release reads) migrated on a scratch copy through the bundled steps to the layout
@@ -201,7 +205,7 @@ logged and skipped. The landing page's `RecentNotes` reads the list with
 is empty, refreshes its times every minute while visible, and opens a note through
 `landing/open.ts` with its row as the card.
 
-**Migration from local drafts** (D23, D34). An earlier version kept an unshared draft in
+**Migration from local drafts** (D23, D37). An earlier version kept an unshared draft in
 `jot:draft` and, until the relay confirmed it, a shared note's copy in `jot:pending:<id>`
 (localStorage, `{ id, state }` with the Yjs state in base64). `newNotePath()`, called when a
 start commits to opening (`landing/open.ts` calls it after the editor chunk loads), copies a
@@ -209,9 +213,30 @@ leftover `jot:draft` to the new note's `jot:pending:<id>` under the Web Lock
 `jot:legacy-draft`, re-reading the draft inside it, and removes the draft only once the copy
 reads back; it never rejects, so storage or lock failures just open the note. `editor/legacy.ts`
 runs when a note page opens: each `jot:pending:<id>` has no generation the note can check, so
-it is uploaded to its note's offline edits as a record of its own (`uploadMaterial`, the
-handoff's upload), never merged into the note, and removed once the object acknowledges it
-or refuses it for good; after four failed attempts it stays for the next page.
+it becomes a capture of its note on this device (`offline.ts`'s `captureLegacyCopy`, reason
+`legacy`, no base), never merged into the note, and is removed once stored. Without a store
+here it is uploaded to the note's offline edits as a record of its own (`uploadMaterial`),
+removed once the object acknowledges it or refuses it for good; after four failed attempts
+it stays for the next page.
+
+**Unsent edits on this device** (D37). `editor/offline.ts` opens one `@lexical/y/offline`
+store per page (IndexedDB `lexical-y-offline`; none in a browser without IndexedDB: stage
+`off`, edits live in the page). Before a note page builds its session, `prepareNote` reads
+the newest slot of the note (key: the note id) with rows no live tab holds (`load({writers:
+'gone'})`: a page that reloaded or closed, never another open tab's), and the session's
+document starts from it, its generation that slot's epoch. `session.ts` attaches the offline
+session to the binding (`collab.collab`) at stage `replay`, `keep: 'unsynced'` and no write
+delay, and flushes it on `pagehide`: every local edit is written as it is made, and
+`markSynced()` runs whenever the page is synced and the server has echoed every local
+update, which deletes what is stored. The note's generation is the session's epoch: an admit
+or bootstrap verdict calls `serverEpoch(generation)` (a never-synced slot adopts it); a stale
+one calls it with the note's new generation, which freezes the binding and moves what it
+holds into a capture. After the first confirmed sync, the session runs
+`recoverYOfflineEdits` (slots left at another epoch by closed tabs become captures too),
+prunes captures older than 90 days, and drops (and deletes) those the note already holds all
+of (`holdsNothingNew`: every item and deletion in the note's snapshot). jot's blocks carry no
+ids, so the reports match blocks by position and nothing is replayed; `onError` sets
+`offline.problem`, which the page shows while edits are waiting.
 
 **The generation fence** (D34). `session.ts` keeps the generation the page's document
 belongs to, adopted when a full sync with the note completes, and presents it in the
@@ -223,21 +248,26 @@ release's `@lexical/y` reads and writes layout 4 only (MIN_LAYOUT 4), and a new 
 layout 1, 2 or 3 is migrated by its object on its first open, before any page is served. The note's verdict (message 65) comes first: admit
 and bootstrap sync as before; refuse-layout reloads the page once (a guard in
 sessionStorage, `jot:fence-reload:<id>`), then shows "This note was upgraded. Reload to
-keep editing."; stale runs the handoff (`editor/handoff.ts`): the provider stops,
-`onBeforeHandoff` listeners stop the example's peers and jot AI, `binding.quiesce()`
-commits what the editor holds and stops the binding writing, and the whole document (plus
-a draft only for what could not be committed) is uploaded with its SHA-256 and retried with
-the same bytes until the object acknowledges exactly that upload: the same note, replica,
-source generation and SHA-256 (`acknowledges`); a bare hash acknowledges nothing. Then `onReplace` has `NotePage`
-open a fresh session (its effect is keyed on the id and a generation key), which bootstraps
-from the note. The uploaded hash is kept in sessionStorage (`jot:uploaded:<id>`).
-`editor/recovery/` is the feature that shows records: a banner for this browser's own
-(matched by `jot:clients` or an uploaded hash; Dismiss is remembered in
-`jot:recovery-seen:<id>`) and ⋯ → Offline edits for every record that holds something the
-note lacks; a record renders read only, with Copy text and Export (the raw bytes):
-`recovery/render.ts`, a chunk only the recovery view loads, reads the record's source view
-headless (`readYState`) with `jotNodesExtension` (`shared/nodes.ts`, jot's node set without
-styles or DOM) and the higher of jot's schema version and the one the view records.
+keep editing."; stale stops the provider, has `onBeforeHandoff` listeners stop the example's
+peers and jot AI, and gives the edits to the offline session (`serverEpoch` with the new
+generation): it freezes the binding and stores a capture on this device (D37). Only where
+that cannot happen (no store here: stage `off`; or the store refused the capture) does the
+page upload instead (`editor/handoff.ts`): `binding.quiesce()`, or the frozen capture,
+gives the whole document (plus a draft only for what could not be committed), uploaded with
+its SHA-256 and retried with the same bytes until the object acknowledges exactly that
+upload: the same note, replica, source generation and SHA-256 (`acknowledges`); a bare hash
+acknowledges nothing. The uploaded hash is kept in sessionStorage (`jot:uploaded:<id>`).
+Then `onReplace` has `NotePage` open a fresh session (its effect is keyed on the id and a
+generation key), which bootstraps from the note and recovers the capture.
+`editor/recovery/` shows both kinds: a banner for this browser's own (its captures, and the
+records matched by `jot:clients` or an uploaded hash; Dismiss is remembered in
+`jot:recovery-seen:<id>`), and ⋯ → Offline edits, listing this device's captures ("On this
+device": View, Export, Remove) and every record of the note that holds something it lacks; a
+capture or a record renders read only, with Copy text and Export (the raw bytes):
+`recovery/render.ts`, a chunk only the recovery view loads, reads a capture's frozen editor
+JSON, or a state (a record's source view, a capture made from storage) headless
+(`readYState`) with `jotNodesExtension` (`shared/nodes.ts`, jot's node set without styles
+or DOM) and the higher of jot's schema version and the one the view records.
 
 **`editor/session.ts`** creates a note session for an id: a `Y.Doc`, an `Awareness`, the
 editor with `YCollabExtension`, a `WebsocketProvider`, and signals for connection, sync,
@@ -472,8 +502,8 @@ editor on a local `Y.Doc` beside the `lexical-y` root as rows (`yjsTree.ts`), wh
 pair in document order with the editor's line elements (`lines.ts`). Its editor adds a
 theme of its own over jot's, so its blocks take the article's smaller sizes.
 
-There is no Yjs 14 IndexedDB provider yet, so a note's offline edits live in memory
-until the socket reconnects (D13).
+A note's edits the server has not taken are kept on this device until it has them (D37:
+`editor/offline.ts`, under "Unsent edits on this device" above).
 
 **Prerendering** (D31). The landing page, every docs page and the 404 page are HTML at
 build time; a note's page is not. `main.tsx` hydrates a root that has children

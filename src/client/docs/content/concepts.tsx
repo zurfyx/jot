@@ -208,10 +208,26 @@ export function Offline() {
       <Code source={SNIPPETS.reconnect} />
       <H2>Where offline edits live</H2>
       <P>
-        In memory. There's no Yjs 14 IndexedDB provider yet, so a note's unsynced edits stay in the
-        page until the socket is back, and closing its tab while offline loses them. A full note is
-        the one exception to "nothing is lost": an edit that would pass{' '}
-        <DocLink slug="size">2 MB</DocLink> is refused when it arrives.
+        On this device, until the server has them. Every note runs <C>@lexical/y/offline</C>
+        &rsquo;s offline session with <C>keep: &apos;unsynced&apos;</C>: each edit goes to IndexedDB
+        as it is made, under the note&rsquo;s id and the generation its document belongs to, and is
+        deleted once the server has sent it back. A page reloaded, or a tab closed, with edits
+        waiting starts from them next time and syncs them. It reads only rows no open tab holds:
+      </P>
+      <Code source={SNIPPETS.prepareNote} />
+      <P>
+        The note&rsquo;s generation is the session&rsquo;s epoch: the server names it before any
+        sync message, on every connection (<C>session.serverEpoch</C>). When the note moved on
+        meanwhile (it was migrated to a newer layout, or created again after it expired), the edits
+        never merge: the session freezes the editor and keeps them as a capture, the page opens the
+        note afresh, and <C>recoverYOfflineEdits</C> lists them under ⋯ → Offline edits, read only,
+        to copy back in. jot&rsquo;s blocks carry no ids, so nothing is reapplied for you.
+      </P>
+      <P>
+        A browser without IndexedDB keeps the edits in the page, as before; if the note moves on,
+        they go to the note&rsquo;s own offline edits instead. A full note is the one exception to
+        &ldquo;nothing is lost&rdquo;: an edit that would pass <DocLink slug="size">2 MB</DocLink>{' '}
+        is refused when it arrives.
       </P>
     </>
   );

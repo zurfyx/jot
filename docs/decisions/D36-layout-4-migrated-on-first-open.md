@@ -28,8 +28,8 @@ out of the migrated note.
   exactly as that release read it, and every character, marker and node keeps its Yjs id.
 - Not adopted here: `QuoteContainerNode` (a quote stored as a container: every stored quote,
   a line, would open read only under the replacement until reseeded, so it needs its own
-  schema bump and decision), `@lexical/y/offline` (D13 stays deferred until jot chooses
-  to keep notes on the device) and the new setup API (the existing one keeps working).
+  schema bump and decision), `@lexical/y/offline` (a decision of its own:
+  D37) and the new setup API (the existing one keeps working).
 
 ## Why
 

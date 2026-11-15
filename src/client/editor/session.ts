@@ -12,6 +12,13 @@ import {
   type YBindingStatus,
   YCollabExtension,
 } from '@lexical/y';
+import {
+  attachYOfflineSession,
+  recoverYOfflineEdits,
+  type YOfflineRecovered,
+  type YOfflineSession,
+  type YOfflineStage,
+} from '@lexical/y/offline';
 import { Awareness } from '@y/protocols/awareness';
 import { WebsocketProvider } from '@y/websocket';
 import * as Y from '@y/y';
@@ -35,7 +42,15 @@ import { excludeServerState, type Unconfirmed } from './confirm';
 import { REGISTRY_ORIGIN } from './blame/registry';
 import { jotEditorExtension } from './extensions';
 import { localUser } from './presence';
-import { handOff, type HandoffResult } from './handoff';
+import { handOff, handOffCapture, type HandoffResult } from './handoff';
+import {
+  OFFLINE_CONFIG,
+  OFFLINE_STAGE,
+  OFFLINE_WRITE_DELAY_MS,
+  holdsNothingNew,
+  type PreparedNote,
+  pruneCaptures,
+} from './offline';
 import { compactedSize } from './size';
 
 /** The note's socket. */
@@ -47,11 +62,26 @@ export const MERGED_FLASH_MS = 4000;
 /**
  * The generation fence (D34), as the page sees it: `ok`; `handing-off` (the
  * note moved on while this page held edits made against an earlier one: they
- * are being saved to the note's offline edits); `saved` (they are; the page
- * opens the note afresh); `reload` (this release cannot open the note);
- * `failed` (the edits could not be saved: the page keeps them read only).
+ * are being saved, on this device (D37) or, without a store here, to the
+ * note's offline edits); `saved` (they are; the page opens the note afresh);
+ * `reload` (this release cannot open the note); `failed` (the edits could not
+ * be saved: the page keeps them read only).
  */
 export type Fence = 'ok' | 'handing-off' | 'saved' | 'reload' | 'failed';
+
+/** Unsent edits on this device (D37): the note's offline session and what it captured. */
+export interface NoteOffline {
+  /** `off` when this browser has no store (edits then live in the page, as before). */
+  stage: YOfflineStage;
+  /** Why edits are not being saved on this device, while a write keeps failing. */
+  problem: ReadonlySignal<string | null>;
+  /** This device's captures of the note, with their reports; null until the first sync. */
+  captures: ReadonlySignal<YOfflineRecovered[] | null>;
+  /** Gathers the captures again (after one is removed, or another tab's arrives). */
+  refresh(): Promise<void>;
+  /** Removes a capture from this device. */
+  remove(captureId: string): Promise<void>;
+}
 
 export interface ReconnectEvent {
   /** The person had chosen Work offline (rather than losing the network). */
@@ -99,6 +129,8 @@ export interface NoteSession {
   onBeforeHandoff(listener: () => void): () => void;
   /** Called once a handoff is acknowledged: the page replaces this session with a fresh one. */
   onReplace(listener: () => void): () => void;
+  /** Unsent edits on this device (D37). */
+  offline: NoteOffline;
   /** The note's link. */
   link(): string;
   dispose(): void;
@@ -112,9 +144,21 @@ function socketBase(): string {
   return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}`;
 }
 
-/** Opens note `id`: its document, editor and provider. */
-export function createNoteSession(id: string): NoteSession {
-  const doc = createYDoc();
+const NOTHING_PREPARED: PreparedNote = { store: null, problem: null, loaded: null };
+
+/**
+ * Opens note `id`: its document, editor and provider. `prepared` is what this
+ * device holds for it (offline.ts's `prepareNote`): a document with edits the
+ * server had not taken starts from them, at the generation they were made
+ * against, and the note's verdict decides whether they sync (D37).
+ */
+export function createNoteSession(
+  id: string,
+  prepared: PreparedNote = NOTHING_PREPARED,
+): NoteSession {
+  const stored =
+    prepared.loaded !== null && prepared.loaded.state !== null ? prepared.loaded : null;
+  const doc = createYDoc(stored?.state ?? null);
 
   const editor = buildEditorFromExtensions(
     defineExtension({
@@ -138,6 +182,41 @@ export function createNoteSession(id: string): NoteSession {
     }),
   );
   const collab = getExtensionDependencyFromEditor(editor, YCollabExtension).output;
+
+  // Unsent edits on this device (D37): only what the server has not taken.
+  const offlineStage: YOfflineStage = prepared.store === null ? 'off' : OFFLINE_STAGE;
+  const offlineProblem = signal<string | null>(null);
+  const offlineCaptures = signal<YOfflineRecovered[] | null>(null);
+  const offline: YOfflineSession = attachYOfflineSession({
+    binding: collab.collab,
+    store: prepared.store,
+    key: id,
+    epoch: stored?.epoch ?? null,
+    loaded: stored ?? undefined,
+    stage: offlineStage,
+    keep: 'unsynced',
+    writeDelay: OFFLINE_WRITE_DELAY_MS,
+    onError: (error) => {
+      offlineProblem.value = error.message;
+    },
+  });
+  // A write that succeeds again clears the problem.
+  const onAfterTransaction = () => {
+    if (offlineProblem.peek() !== null) {
+      void offline.flush().then((result) => {
+        if (result.ok && offline.persisted) {
+          offlineProblem.value = null;
+        }
+      });
+    }
+  };
+  if (prepared.store !== null) {
+    doc.on('afterTransaction', onAfterTransaction);
+  }
+  const onPageHide = () => {
+    void offline.flush();
+  };
+  window.addEventListener('pagehide', onPageHide);
 
   const awareness = new Awareness(doc);
   awareness.setLocalStateField('user', localUser());
@@ -163,9 +242,11 @@ export function createNoteSession(id: string): NoteSession {
   // content belongs to (adopted only when a sync with the note completes),
   // whether it holds anything of its own (local writes), and every client id
   // that wrote into it locally (the editor's, a peer's in this tab).
-  let generation: string | null = null;
+  let generation: string | null = stored?.epoch ?? null;
   let offered: string | null = null;
-  let localWrites = false;
+  // A stored document holds this device's edits (a never-synced one holds
+  // nothing else).
+  let localWrites = stored !== null && (stored.hasUnsyncedEdits || stored.epoch === null);
   const ownClients = new Set<number>();
   // `@lexical/y` builds the handshake (version 1: this release's layouts,
   // seed layout and features); never by hand.
@@ -237,7 +318,7 @@ export function createNoteSession(id: string): NoteSession {
     decoding.readVarUint(decoder);
     if (verdict === FENCE_STALE) {
       offered = null;
-      startHandoff();
+      startHandoff(roomGeneration);
     } else if (verdict === FENCE_REFUSE_LAYOUT) {
       offered = null;
       provider.disconnect();
@@ -245,11 +326,20 @@ export function createNoteSession(id: string): NoteSession {
       reloadOnce(id);
     } else {
       offered = roomGeneration;
+      // The note's generation is the offline session's epoch (D37): a
+      // document that never synced adopts it. Admitted, the document is of
+      // this generation, so the session agrees; should it not, its edits
+      // are captured and the page opens the note afresh, as for stale.
+      void offline.serverEpoch(roomGeneration).then((result) => {
+        if (result.kind === 'moved') {
+          startHandoff(roomGeneration);
+        }
+      });
     }
   };
 
   let handoff: Promise<HandoffResult> | null = null;
-  const startHandoff = () => {
+  const startHandoff = (roomGeneration: string) => {
     provider.disconnect();
     if (handoff !== null) {
       return;
@@ -262,12 +352,31 @@ export function createNoteSession(id: string): NoteSession {
         console.error('jot: a writer did not stop for the handoff', error);
       }
     }
-    handoff = handOff({
-      noteId: id,
-      binding: collab.binding,
-      generation,
-      clients: [...ownClients],
-    });
+    handoff = (async (): Promise<HandoffResult> => {
+      // On this device first (D37): the session freezes the binding and
+      // keeps what it holds as a capture, which the fresh session lists.
+      const result = await offline.serverEpoch(roomGeneration, { reason: 'stale' });
+      if (result.kind === 'moved') {
+        if (result.saved.ok || result.capture === null) {
+          return 'saved';
+        }
+        // The store could not take it (full, closed): to the note's offline
+        // edits instead, as one record (D34).
+        return handOffCapture({
+          noteId: id,
+          capture: result.capture,
+          generation,
+          clients: [...ownClients],
+        });
+      }
+      // No store here (stage off): the record upload (D34).
+      return handOff({
+        noteId: id,
+        binding: collab.binding,
+        generation,
+        clients: [...ownClients],
+      });
+    })();
     void handoff.then((result) => {
       if (result === 'saved') {
         fence.value = 'saved';
@@ -376,10 +485,74 @@ export function createNoteSession(id: string): NoteSession {
     outstanding = [...provider.unconfirmedUpdates];
     settle();
   };
+  // The server holds everything this document holds once every local update
+  // came back (D37): what is stored on this device goes (keep: unsynced).
+  const confirmToStore = () => {
+    if (
+      !offline.ended &&
+      provider.synced &&
+      confirmed.peek() &&
+      provider.unconfirmedUpdates.length === 0
+    ) {
+      offline.markSynced();
+    }
+  };
+  let recovered = false;
+  const refreshCaptures = async () => {
+    if (offline.ended || generation === null || prepared.store === null) {
+      offlineCaptures.value = [];
+      return;
+    }
+    const active = collab.status.peek() === 'active';
+    try {
+      await pruneCaptures(prepared.store, id);
+      const result = await recoverYOfflineEdits({
+        binding: collab.collab,
+        store: prepared.store,
+        key: id,
+        epoch: generation,
+        // Replay writes into the note: only into an editable one.
+        stage: active ? offlineStage : 'persist',
+        config: OFFLINE_CONFIG,
+        session: offline,
+      });
+      if (result.ok) {
+        // A capture the note already holds all of goes (once the server has
+        // everything this page holds, so nothing rests on it).
+        const kept: YOfflineRecovered[] = [];
+        for (const entry of result.value) {
+          if (holdsNothingNew(entry.capture.state, doc)) {
+            if (!offline.hasUnsyncedEdits) {
+              await prepared.store.deleteCapture(id, entry.capture.id);
+            }
+          } else {
+            kept.push(entry);
+          }
+        }
+        offlineCaptures.value = kept;
+      } else {
+        offlineProblem.value = result.error.message;
+        offlineCaptures.value = [];
+      }
+    } catch (error) {
+      console.error('jot: offline edits could not be read', error);
+      offlineCaptures.value = [];
+    }
+  };
+  const stopConfirmed = confirmed.subscribe((value) => {
+    if (value) {
+      confirmToStore();
+      if (!recovered) {
+        recovered = true;
+        void refreshCaptures();
+      }
+    }
+  });
   const onSyncStatus = () => {
     if (provider.unconfirmedUpdates.length === 0) {
       inFlight = 0;
     }
+    confirmToStore();
   };
   // The handshake is re-read for the next connection (the URL is built when
   // a socket opens): after a close, before the provider reconnects.
@@ -447,6 +620,18 @@ export function createNoteSession(id: string): NoteSession {
     pendingEdits,
     merged,
     fence,
+    offline: {
+      stage: offlineStage,
+      problem: offlineProblem,
+      captures: offlineCaptures,
+      refresh: refreshCaptures,
+      async remove(captureId) {
+        if (prepared.store !== null) {
+          await prepared.store.deleteCapture(id, captureId);
+        }
+        await refreshCaptures();
+      },
+    },
     generation: () => generation,
     onBeforeHandoff(listener) {
       beforeHandoffListeners.add(listener);
@@ -476,7 +661,12 @@ export function createNoteSession(id: string): NoteSession {
       replaceListeners.clear();
       stopCap();
       stopEditable();
+      stopConfirmed();
       window.removeEventListener('online', onOnline);
+      window.removeEventListener('pagehide', onPageHide);
+      doc.off('afterTransaction', onAfterTransaction);
+      // What is stored stays; the session lets go of its slot.
+      void offline.flush().finally(() => offline.dispose());
       doc.off('update', onDocUpdate);
       provider.off('connection-close', refreshHandshake);
       provider.off('status', onStatus);

@@ -446,3 +446,37 @@ describe('recovery uploads', () => {
     await response.text();
   });
 });
+
+describe('the generation as the offline epoch (D37)', () => {
+  it('is the same on every connection, eviction included, and new once the note moves on', async () => {
+    const id = generateNoteId();
+    const a = await TestClient.connect(id);
+    a.type(0, 'kept');
+    await flush(id);
+    const first = a.fences[0]!.generation;
+    a.close();
+    await evictDurableObject(stubFor(id));
+    // A page that reloaded presents the generation its stored edits belong to: admitted.
+    const back = await TestClient.connect(id, {
+      handshake: freshHandshake({ generation: first, material: true }),
+    });
+    expect(back.fences[0]).toMatchObject({ verdict: FENCE_ADMIT, generation: first });
+    back.close();
+    // The note moves on: the same page is stale, and the verdict names the new generation.
+    const replaced = await exports.default.fetch(
+      `http://jot.test/api/test/n/${id}/replace-incarnation`,
+      { method: 'POST' },
+    );
+    expect(replaced.status).toBe(200);
+    await replaced.text();
+    const stale = await TestClient.connect(id, {
+      handshake: freshHandshake({ generation: first, material: true }),
+      waitSync: false,
+    });
+    await stale.until(() => stale.fences.length > 0);
+    expect(stale.fences[0]!.verdict).toBe(FENCE_STALE);
+    expect(stale.fences[0]!.generation).not.toBe(first);
+    expect(stale.received).toEqual([]);
+    stale.close();
+  });
+});

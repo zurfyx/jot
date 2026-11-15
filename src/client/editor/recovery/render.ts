@@ -6,6 +6,7 @@
  * first (the runner and the steps join this chunk then).
  */
 import { readYState } from '@lexical/y/headless';
+import type { YOfflineCapture } from '@lexical/y/offline';
 import * as Y from '@y/y';
 import { $getEditor, type SerializedEditorState } from 'lexical';
 
@@ -57,4 +58,17 @@ export function renderView(state: Uint8Array): Rendered {
   } catch (error) {
     return { ok: false, reason: String(error) };
   }
+}
+
+/**
+ * A capture on this device as Lexical JSON (D37): what the editor held when
+ * it froze (`json`, the person's view, refused edits included), else its
+ * stored document read as a record is.
+ */
+export function renderCapture(capture: YOfflineCapture): Rendered {
+  const json = capture.json as { root?: unknown } | null;
+  if (json !== null && typeof json === 'object' && typeof json.root === 'object') {
+    return { ok: true, editorState: json as SerializedEditorState };
+  }
+  return renderView(capture.state);
 }

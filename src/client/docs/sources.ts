@@ -19,6 +19,7 @@ import workOffline from '../../docs/snippets/work-offline.ts?raw';
 import aiMarkdownSource from '../editor/ai/markdown.ts?raw';
 import attributionSource from '../editor/blame/attribution.ts?raw';
 import limitsSource from '../../shared/limits.ts?raw';
+import offlineSource from '../editor/offline.ts?raw';
 import roomSource from '../../worker/room.ts?raw';
 import pkg from '../../../package.json';
 import { excerpt } from './excerpt';
@@ -125,4 +126,9 @@ export const SNIPPETS = {
     'export function $snapshotBlocks(',
   ),
   fitsUnderCap: from('src/shared/limits.ts', limitsSource, 'export function fitsUnderCap('),
+  prepareNote: from(
+    'src/client/editor/offline.ts',
+    offlineSource,
+    'export async function prepareNote(',
+  ),
 } satisfies Record<string, CodeSource>;

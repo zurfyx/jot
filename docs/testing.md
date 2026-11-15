@@ -27,13 +27,24 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
 - the generation fence's wire forms (`src/shared/fence.test.ts`): the handshake round-trips
   through the socket URL, is absent for a client from before the fence and refused when
   malformed; the upload envelope round-trips and refuses trailing bytes, other versions
-  and bad fields; the handoff (`editor/handoff.test.ts`) quiesces first, uploads the same
+  and bad fields; the upload a page makes when it cannot keep its edits on its device
+  (`editor/handoff.test.ts`) quiesces first, uploads the same
   bytes on every retry with backoff, resolves only on an acknowledgement of exactly that
   upload (a bare hash, or one for another note, replica, generation or version, is not),
   keeps a draft only for what could not be committed, stops at a refusal, and a copy gives
   up after its attempts; a record's source view renders with jot's nodes
   (`recovery/render.test.ts`), one recording a higher schema version too, and bytes that
   are no state say so;
+- unsent edits on this device (D37, `editor/offline.test.ts`, on `fake-indexeddb` with Web
+  Locks of its own): a browser without IndexedDB runs without a store; a note this device
+  never stored reads as nothing; edits a page made after the server's generation are stored
+  under the note and that generation, and the next page starts from them; a tab still open
+  keeps its rows (another page does not start from them) until it is gone; nothing stays
+  once the server holds everything; a note that moved on turns them into a capture (the
+  binding frozen), which the fresh page's `recoverYOfflineEdits` lists with jot's nodes,
+  reapplying nothing (no block ids); a copy an earlier jot kept becomes a `legacy` capture
+  (none without a store); captures past 90 days are pruned; a capture the note holds all of
+  (items and deletions) holds nothing new;
 - confirmation: the server's state vector confirms inserts it covers, never deletes;
 - blame: two peers' documents turn into lines of runs (a heading, bold text, a line break,
   a list, typing inside someone else's line), matching Lexical's lines; shares in
@@ -275,6 +286,9 @@ The generation fence (D34, `src/worker/fence.test.ts`):
 - uploads: the hash checked, the acknowledgement after the write, the same upload once,
   records surviving eviction, their source view served whole, 2.6 MB stored in two parts and given back whole, malformed (400) and
   oversized (413) uploads refused.
+- the generation as the offline epoch (D37): the same on every connection, eviction
+  included (a page presenting it with its stored edits is admitted), and new once the note
+  moves on (that page is then stale, told the new generation, and sent nothing).
 
 ## End to end (`pnpm e2e`)
 
@@ -361,9 +375,17 @@ Durable Objects, over real WebSockets.
   nothing and the draft survives the page closing; with `localStorage` throwing, `/new` and
   "Start a new note" still open fresh notes; a leftover draft lands in the new note's
   offline edits, once; a `jot:pending:<id>` copy reaches its own note's offline edits (not
-  either note) when a note page opens, shows as this browser's and as another visitor's
-  elsewhere, and is cleared; a copy the server already holds, with a deletion, is cleared
-  and asks nobody to look at it; a copy is uploaded once, not on every page;
+  either note) when a note page opens, as a capture on this device that another browser
+  doesn't have, and is cleared; a copy the server already holds, with a deletion, is
+  cleared and asks nobody to look at it; a copy is taken once and never uploaded;
+- unsent edits on this device (D37, `e2e/offline-device.spec.ts`): edits typed while
+  working offline survive a reload, sync, and reach a second page, with nothing saved
+  apart; a tab closed with edits waiting, on a note that then moved on, leaves them on
+  this device: the next page shows the banner ("saved on this device"), the note without
+  them, the view with them, a row "On this device" under ⋯ → Offline edits that another
+  browser doesn't have, and Remove clears it for good; a store that refuses every write
+  shows "aren't being saved on this device" while edits wait, keeps them in the page and
+  syncs them on Reconnect;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
   only;
 - blame, with two people in separate browser contexts: off, nothing is painted; on,
@@ -413,10 +435,11 @@ Durable Objects, over real WebSockets.
   code block has the light thumb;
 - a note a newer jot wrote opens read only with its banner (Aa disabled);
 - the generation fence (`e2e/fence.spec.ts`): a page offline while its note moved on (a
-  development-only route gives the note a new incarnation and closes its sockets) hands
-  its edits off and reconnects into the note as it is; its edits are under its banner and
-  ⋯ → Offline edits (another visitor's in another browser), read only, and never in the
-  note; Dismiss is remembered; a client from before the fence, on a note it may not join,
+  development-only route gives the note a new incarnation and closes its sockets) keeps
+  its edits on this device and reconnects into the note as it is; its edits are under its
+  banner and ⋯ → Offline edits ("On this device"; another browser has none), read only,
+  and never in the note; Dismiss is remembered; with no IndexedDB the same edits are
+  uploaded instead, and another browser sees them as another visitor's; a client from before the fence, on a note it may not join,
   receives only the signal and an empty sync step 2, keeps its own text, and its document
   shows under Offline edits; a note this release cannot read reloads the page once, then
   says so;
@@ -595,6 +618,10 @@ and dark, at 1440x900 and 390x844.
   unavailable message, and jot AI's caret after it writes;
 - every docs page, whole, the phone's page list, the inspector following a hovered row, and
   the inspector with a typed quote and highlighted code block (its own size at every width);
+- the generation fence's screens: offline edits saved on this device (the banner, and
+  viewed), ⋯ → Offline edits with this device's capture and another visitor's record, the
+  upload where there is no store ("Saving offline edits…"), edits not saved on this device,
+  and a note this release cannot read;
 - a read-only note, a malformed link and the 404 page.
 
 `e2e/visual/motion.spec.ts` runs in the light 1440 project only. For the landing page's
