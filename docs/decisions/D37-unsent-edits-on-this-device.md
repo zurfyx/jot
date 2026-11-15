@@ -18,7 +18,7 @@ and on a moved epoch freezes the editor and keeps them as a capture, which
 
 - **A store per page, a session per note.** `editor/offline.ts` opens the store once
   (IndexedDB `lexical-y-offline`); each note session attaches the offline session to its
-  binding at stage `replay` with `keep: 'unsynced'`: only what the server has not taken is
+  binding at stage `persist` with `keep: 'unsynced'`: only what the server has not taken is
   kept, and `markSynced()` deletes it once the server has echoed every local update. Key:
   the note id. No write delay, and a flush on `pagehide`.
 - **The epoch is the note's generation** (D34's `getYGeneration`, served in the fence's
@@ -31,9 +31,9 @@ and on a moved epoch freezes the editor and keeps them as a capture, which
   go, and a capture whose every item and deletion the note already holds is dropped. ⋯ →
   Offline edits lists this device's captures ("On this device", View, Export, Remove) beside
   the note's records; the banner covers both.
-- **Nothing is replayed yet.** jot's blocks carry no ids (no `BlockIdExtension`), so the
-  reports match blocks by position and nothing is replayable; the person copies what they
-  want back in. Edits that cannot merge will go into the note through the library's
+- **Nothing is replayed yet** (stage `persist`). jot's blocks carry no ids (no
+  `BlockIdExtension`), so the reports match blocks by position and nothing is replayable
+  anyway; the person copies what they want back in. Edits that cannot merge will go into the note through the library's
   `leftovers` option (a quote labelled "Offline edits that didn't merge · <time>" after the
   conflicting block) once it ships; until then they stay listed.
 - **The record upload stays as a fallback.** A browser without IndexedDB runs at stage `off`

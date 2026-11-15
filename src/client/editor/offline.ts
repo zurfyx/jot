@@ -23,11 +23,12 @@ import { jotNodesExtension } from '../../shared/nodes';
 import { SCHEMA_VERSION } from '../../shared/schema';
 
 /**
- * The rollout stage. `replay` reapplies what is safe at once; jot's blocks
- * carry no ids (no BlockIdExtension), so nothing is replayable yet and every
- * capture is listed for the person to copy back in.
+ * The rollout stage: `persist` stores and captures, and lists every capture
+ * for the person to copy back in. `replay` (reapplying what is safe) waits
+ * for block ids, which the reports match blocks by, and for the library's
+ * leftovers for what cannot be reapplied (D37).
  */
-export const OFFLINE_STAGE: YOfflineStage = 'replay';
+export const OFFLINE_STAGE: YOfflineStage = 'persist';
 
 /** Captures older than this are removed from the device, as the note's own records are (D34). */
 export const CAPTURE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;

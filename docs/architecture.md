@@ -225,7 +225,7 @@ store per page (IndexedDB `lexical-y-offline`; none in a browser without Indexed
 the newest slot of the note (key: the note id) with rows no live tab holds (`load({writers:
 'gone'})`: a page that reloaded or closed, never another open tab's), and the session's
 document starts from it, its generation that slot's epoch. `session.ts` attaches the offline
-session to the binding (`collab.collab`) at stage `replay`, `keep: 'unsynced'` and no write
+session to the binding (`collab.collab`) at stage `persist`, `keep: 'unsynced'` and no write
 delay, and flushes it on `pagehide`: every local edit is written as it is made, and
 `markSynced()` runs whenever the page is synced and the server has echoed every local
 update, which deletes what is stored. The note's generation is the session's epoch: an admit

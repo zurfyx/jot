@@ -19,6 +19,7 @@ import {
   captureLegacyCopy,
   holdsNothingNew,
   OFFLINE_CONFIG,
+  OFFLINE_STAGE,
   offlineStore,
   prepareNote,
   pruneCaptures,
@@ -108,7 +109,7 @@ describe('a note page with edits the server has not taken', () => {
       store,
       key: ID,
       epoch: null,
-      stage: 'replay',
+      stage: OFFLINE_STAGE,
       keep: 'unsynced',
       onError: (error) => {
         throw new Error(error.message);
@@ -136,7 +137,7 @@ describe('a note page with edits the server has not taken', () => {
       store,
       key: ID,
       epoch: 'g1:first',
-      stage: 'replay',
+      stage: OFFLINE_STAGE,
       keep: 'unsynced',
       onError: () => {},
     });
@@ -161,7 +162,7 @@ describe('a note page with edits the server has not taken', () => {
       store,
       key: ID,
       epoch: 'g1:first',
-      stage: 'replay',
+      stage: OFFLINE_STAGE,
       keep: 'unsynced',
       onError: () => {},
     });
@@ -188,7 +189,7 @@ describe('a note page with edits the server has not taken', () => {
       store,
       key: ID,
       epoch: 'g1:first',
-      stage: 'replay',
+      stage: OFFLINE_STAGE,
       keep: 'unsynced',
       onError: () => {},
     });
@@ -209,7 +210,7 @@ describe('a note page with edits the server has not taken', () => {
       store,
       key: ID,
       epoch: 'g1:second',
-      stage: 'replay',
+      stage: OFFLINE_STAGE,
       keep: 'unsynced',
       onError: () => {},
     });
@@ -218,7 +219,7 @@ describe('a note page with edits the server has not taken', () => {
       store,
       key: ID,
       epoch: 'g1:second',
-      stage: 'replay',
+      stage: OFFLINE_STAGE,
       config: OFFLINE_CONFIG,
       session: freshSession,
     });
