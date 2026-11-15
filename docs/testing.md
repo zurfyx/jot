@@ -35,6 +35,13 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   up after its attempts; a record's source view renders with jot's nodes
   (`recovery/render.test.ts`), one recording a higher schema version too, and bytes that
   are no state say so;
+- block ids (D38, `shared/blockIds.test.ts`): a new note stores a unique random id on every
+  block (a reader without the extension sees the same); two tabs seeding an empty note at
+  once still hold one paragraph with one id; a note written before stores none and shows
+  ids derived from its Yjs identity, the same for every reader; two tabs opening it at
+  once show the same ids and write nothing; two tabs editing one block at once store the
+  same id; the migration keeps derived ids; a tab of the release before keeps the ids it
+  finds; ids cost between 30 and 50 bytes a block;
 - unsent edits on this device (D37, `editor/offline.test.ts`, on `fake-indexeddb` with Web
   Locks of its own): a browser without IndexedDB runs without a store; a note this device
   never stored reads as nothing; edits a page made after the server's generation are stored
@@ -42,7 +49,7 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   keeps its rows (another page does not start from them) until it is gone; nothing stays
   once the server holds everything; a note that moved on turns them into a capture (the
   binding frozen), which the fresh page's `recoverYOfflineEdits` lists with jot's nodes,
-  reapplying nothing (no block ids); a copy an earlier jot kept becomes a `legacy` capture
+  its added block replayable by id (D38) and nothing reapplied at stage `persist`; a copy an earlier jot kept becomes a `legacy` capture
   (none without a store); captures past 90 days are pruned; a capture the note holds all of
   (items and deletions) holds nothing new;
 - confirmation: the server's state vector confirms inserts it covers, never deletes;

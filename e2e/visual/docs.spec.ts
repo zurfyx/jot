@@ -14,7 +14,10 @@ import {
 /** Every docs page, the phone's page list, and the live inspector. */
 
 for (const { slug, title } of DOCS_PAGES) {
-  test(`the docs page ${title}`, async ({ page }) => {
+  test(`the docs page ${title}`, async ({ context }) => {
+    // Fixed ids: the live inspector shows block ids (D38).
+    await asPerson(context, GERARD);
+    const page = await context.newPage();
     // Wait for every snippet and lazy part, so the page has its full height.
     await page.goto(docsPath(slug), { waitUntil: 'networkidle' });
     await expect(page.getByTestId('docs-main').getByRole('heading', { level: 1 })).toBeVisible();

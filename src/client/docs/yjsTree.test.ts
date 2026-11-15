@@ -83,13 +83,12 @@ describe("the inspector's rows", () => {
     ).toEqual([{ key: 'lexical-y:4', value: 'true' }]);
 
     const [heading, morning, link, paragraph] = lines(rows);
+    // Every block's marker stores its id (D38): a random 21-character id.
+    const BLOCK_ID = { key: 's:blockId', value: expect.stringMatching(/^"[\w-]{21}"$/) };
     expect(heading).toMatchObject({
       text: 'Agenda',
       line: 0,
-      marker: [
-        { key: 't', value: '"heading"' },
-        { key: 'p:tag', value: '"h2"' },
-      ],
+      marker: [{ key: 't', value: '"heading"' }, { key: 'p:tag', value: '"h2"' }, BLOCK_ID],
     });
     expect(morning).toMatchObject({
       text: 'Morning with demos',
@@ -103,6 +102,7 @@ describe("the inspector's rows", () => {
         { key: 'g', value: '"list"' },
         { key: 'g:listType', value: '"bullet"' },
         { key: 'l', value: '0' },
+        BLOCK_ID,
       ]),
     );
     // Each format run's end is paired with its opener (layouts 3 and 4): the raw tree shows
@@ -117,8 +117,8 @@ describe("the inspector's rows", () => {
         ],
       },
     ]);
-    // A paragraph's marker has no type.
-    expect(paragraph).toMatchObject({ text: 'one\ntwo', marker: [] });
+    // A paragraph's marker has no type, only its id.
+    expect(paragraph).toMatchObject({ text: 'one\ntwo', marker: [BLOCK_ID] });
     expect(visibleText('one\ntwo\tx')).toBe('one↵two⇥x');
   });
 

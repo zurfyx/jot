@@ -359,7 +359,8 @@ describe('the fresh copy (Yjs only)', () => {
         const config = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION };
         const read = (state: Uint8Array) =>
           readYState(state, config, () => $getEditor().getEditorState().toJSON());
-        expect(read(copy)).toEqual(read(prepared.state));
+        // Ids derived from Yjs identity do not carry over to new items (D34, D38).
+        expect(withoutBlockIds(read(copy))).toEqual(withoutBlockIds(read(prepared.state)));
       }
     },
   );
@@ -399,6 +400,24 @@ const JOT = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION };
 /** What this build's editor reads from a state (editor state JSON); throws when read only. */
 function readJot(state: Uint8Array): unknown {
   return readYState(state, JOT, () => $getEditor().getEditorState().toJSON());
+}
+
+/**
+ * Editor state JSON without block ids (D38): what a release before block ids
+ * read. A block stored without an id shows one derived from its Yjs identity,
+ * which a fresh copy (new ids) changes.
+ */
+function withoutBlockIds(json: unknown): unknown {
+  return JSON.parse(
+    JSON.stringify(json, (key, value: unknown) => {
+      if (key === '$' && value !== null && typeof value === 'object') {
+        const rest = { ...(value as Record<string, unknown>) };
+        delete rest.blockId;
+        return Object.keys(rest).length === 0 ? undefined : rest;
+      }
+      return value;
+    }),
+  );
 }
 
 /**
@@ -479,8 +498,12 @@ describe('a layout 3 note (live before this release) after the deploy', () => {
       );
       // The content, exactly: what the layout 3 release's editor read, and the
       // client's copy reads the same.
-      expect(readJot(after)).toEqual(LAYOUT3_READS[name]);
-      expect(readJot(Y.encodeStateAsUpdate(a.doc))).toEqual(LAYOUT3_READS[name]);
+      expect(withoutBlockIds(readJot(after))).toEqual(LAYOUT3_READS[name]);
+      expect(withoutBlockIds(readJot(Y.encodeStateAsUpdate(a.doc)))).toEqual(LAYOUT3_READS[name]);
+      // Its blocks stored no ids: they show ids derived from their Yjs identity,
+      // the same before and after the migration (it keeps every id), and on
+      // every reader.
+      expect(JSON.stringify(readJot(after))).toMatch(/"blockId":"y[0-9a-z]+_[0-9a-z]+/);
       // In place: every character, marker and node keeps its Yjs id, and none is added.
       const was = contentUnits(before);
       const now = contentUnits(after);
