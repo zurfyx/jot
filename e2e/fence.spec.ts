@@ -48,7 +48,7 @@ function noteText(state: Uint8Array): string {
   return JSON.stringify(doc.get('lexical-y').toJSON());
 }
 
-test('a page offline while its note moved on keeps its edits on this device, under Offline edits', async ({
+test('a page offline while its note moved on keeps its edits on this device and reapplies them', async ({
   context,
   otherContext,
   baseURL,
@@ -67,7 +67,7 @@ test('a page offline while its note moved on keeps its edits on this device, und
   await expect(b.getByTestId('status-pill')).toHaveText(/^Offline · \d+ edits? waiting$/);
 
   // A was online: it reconnects (stale: its document belongs to the earlier
-  // generation), hands off nothing new, and opens the note afresh on a new socket.
+  // generation), has nothing of its own to keep, and opens the note afresh.
   const sockets: string[] = [];
   a.on('websocket', (socket) => sockets.push(socket.url()));
   await replaceIncarnation(baseURL!, id);
@@ -77,43 +77,23 @@ test('a page offline while its note moved on keeps its edits on this device, und
   await appendLine(a, 'Written online by A');
 
   await b.getByRole('button', { name: 'Reconnect' }).click();
-  // B's edits were made against the earlier generation: saved apart, never merged.
-  await expect(b.getByTestId('recovery-banner')).toBeVisible({ timeout: 15_000 });
-  await expect(b.getByTestId('status-pill')).toContainText('Synced');
+  // B's edits were made against the earlier generation: never synced, but kept
+  // on this device and reapplied by block id (D37, D38), as one edit of B's.
+  await expect(b.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
   await expect(editor(b)).toContainText('Written online by A');
-  await expect(editor(b)).not.toContainText('Written offline by B');
-  await expect(editor(a)).not.toContainText('Written offline by B');
+  await expect(editor(b)).toContainText('Written offline by B');
+  await expect(editor(a)).toContainText('Written offline by B');
   await expect
     .poll(async () => noteText(await readRawNote(baseURL!, id)))
-    .not.toContain('Written offline by B');
-  // A's own record holds nothing new: no banner there.
-  await expect(a.getByTestId('recovery-banner')).toHaveCount(0);
-
-  await b.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
-  await expect(b.getByTestId('recovery-text')).toContainText('Written offline by B');
-  await expect(b.getByTestId('recovery-text')).toContainText('Shared start');
-  await expect(b.getByTestId('recovery-text')).toHaveAttribute('aria-readonly', 'true');
-
-  // Under ⋯ → Offline edits as this device's; another browser has none (D37).
+    .toContain('Written offline by B');
+  // Nothing is left over: no banner, nothing under Offline edits.
+  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
   await b.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await b.getByTestId('recovery-item').click();
-  const rows = b.getByTestId('recovery-row');
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('On this device');
+  await expect(b.getByTestId('recovery-item')).toHaveCount(0);
   await b.keyboard.press('Escape');
   const c = await otherContext.newPage();
   await openNote(c, id);
-  await expect(c.getByTestId('recovery-banner')).toHaveCount(0);
-  await c.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await expect(c.getByTestId('recovery-item')).toHaveCount(0);
-  await c.keyboard.press('Escape');
-
-  // Dismissed, the banner stays away on the next page.
-  await b.getByTestId('recovery-banner').getByRole('button', { name: 'Dismiss' }).click();
-  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
-  await b.reload();
-  await expect(b.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
-  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
+  await expect(editor(c)).toContainText('Written offline by B');
 });
 
 test('with no store on this device, the edits go to the note and wait there for everyone', async ({

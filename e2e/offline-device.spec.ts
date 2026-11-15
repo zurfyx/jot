@@ -77,7 +77,7 @@ test('edits typed offline survive a reload and then sync', async ({ context, bas
   await expect(page.getByTestId('recovery-banner')).toHaveCount(0);
 });
 
-test('a tab closed with edits waiting, on a note that moved on, keeps them on this device', async ({
+test('a tab closed with edits waiting, on a note that moved on, has them reapplied by the next page', async ({
   context,
   otherContext,
   baseURL,
@@ -96,36 +96,66 @@ test('a tab closed with edits waiting, on a note that moved on, keeps them on th
 
   // The note moves on while no tab holds it (a migration, or a note created again).
   await replaceIncarnation(baseURL!, id);
+  expect(noteText(await readRawNote(baseURL!, id))).not.toContain('Kept on this device');
 
+  // The next page captures what the closed tab left and reapplies it.
   const back = await context.newPage();
   await openNote(back, id);
-  await expect(back.getByTestId('recovery-banner')).toBeVisible({ timeout: 15_000 });
-  await expect(back.getByTestId('recovery-banner')).toContainText('saved on this device');
+  await expect(editor(back)).toContainText('Kept on this device', { timeout: 15_000 });
   await expect(back.getByTestId('status-pill')).toContainText('Synced');
-  await expect(editor(back)).toContainText('Shared start');
-  await expect(editor(back)).not.toContainText('Kept on this device');
-  expect(noteText(await readRawNote(baseURL!, id))).not.toContain('Kept on this device');
-  await back.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
-  await expect(back.getByTestId('recovery-text')).toContainText('Kept on this device');
-
-  // Listed under ⋯ → Offline edits as this device's, and only in this browser.
-  await back.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await back.getByTestId('recovery-item').click();
-  const rows = back.getByTestId('recovery-row');
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('On this device');
+  await expect
+    .poll(async () => noteText(await readRawNote(baseURL!, id)))
+    .toContain('Kept on this device');
+  await expect(back.getByTestId('recovery-banner')).toHaveCount(0);
   const elsewhere = await otherContext.newPage();
   await openNote(elsewhere, id);
-  await elsewhere.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await expect(elsewhere.getByTestId('recovery-item')).toHaveCount(0);
-  await elsewhere.keyboard.press('Escape');
-
-  // Removed, it is gone after a reload too.
-  await rows.first().getByRole('button', { name: 'Remove' }).click();
-  await expect(rows).toHaveCount(0);
+  await expect(editor(elsewhere)).toContainText('Kept on this device');
+  // Once: a reload reapplies nothing more.
   await back.reload();
   await expect(back.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
-  await expect(back.getByTestId('recovery-banner')).toHaveCount(0);
+  await expect(editor(back).getByText('Kept on this device')).toHaveCount(1);
+});
+
+test('a line both sides changed goes in after the note’s version, labelled, for the person to merge', async ({
+  context,
+  otherContext,
+  baseURL,
+}) => {
+  const id = freshNoteId();
+  const mine = await context.newPage();
+  const theirs = await otherContext.newPage();
+  await openNote(mine, id);
+  await openNote(theirs, id);
+  await editor(mine).click();
+  await mine.keyboard.type('Shared start');
+  await expect(editor(theirs)).toContainText('Shared start');
+
+  await workOffline(mine);
+  await editor(mine).click();
+  await mine.keyboard.press('ControlOrMeta+End');
+  await mine.keyboard.type(' (mine)');
+  // Their page reconnects into the note as it is (a new socket) before they
+  // type: an edit made before that would be theirs to recover too.
+  const sockets: string[] = [];
+  theirs.on('websocket', (socket) => sockets.push(socket.url()));
+  await replaceIncarnation(baseURL!, id);
+  await expect.poll(() => sockets.length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  await expect(theirs.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  await editor(theirs).click();
+  await theirs.keyboard.press('ControlOrMeta+End');
+  await theirs.keyboard.type(' (theirs)');
+  await expect(theirs.getByTestId('status-pill')).toContainText('Synced');
+
+  await mine.getByRole('button', { name: 'Reconnect' }).click();
+  // The note keeps its line; mine follows it in a quote under the label.
+  const paragraphs = editor(theirs).locator(':scope > p');
+  await expect(paragraphs.first()).toHaveText('Shared start (theirs)', { timeout: 15_000 });
+  await expect(editor(theirs)).toContainText('Offline edits that didn’t merge · ');
+  await expect(editor(theirs).locator('blockquote')).toHaveText('Shared start (mine)');
+  await expect(editor(mine).locator('blockquote')).toHaveText('Shared start (mine)');
+  await expect
+    .poll(async () => noteText(await readRawNote(baseURL!, id)))
+    .toContain('Shared start (mine)');
 });
 
 test('when the device refuses to store edits, the page says so and keeps them', async ({

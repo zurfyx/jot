@@ -30,8 +30,8 @@ content give it the same ids.
   when it edits a block. Mixed configurations are supported by the library; such a tab
   stores no id on a block it creates (the others show a derived one) and copies an id when
   it duplicates a block (the others show a derived id on the copy). Neither loses content.
-- Replay and leftovers stay off (D37's stage `persist`) until the library's leftovers ship;
-  they turn on together.
+- With ids, D37's replay reapplies offline edits by block id, and leftovers go after the block
+  they conflict with.
 
 ## Why
 

@@ -225,7 +225,7 @@ store per page (IndexedDB `lexical-y-offline`; none in a browser without Indexed
 the newest slot of the note (key: the note id) with rows no live tab holds (`load({writers:
 'gone'})`: a page that reloaded or closed, never another open tab's), and the session's
 document starts from it, its generation that slot's epoch. `session.ts` attaches the offline
-session to the binding (`collab.collab`) at stage `persist`, `keep: 'unsynced'` and no write
+session to the binding (`collab.collab`) at stage `replay`, `keep: 'unsynced'` and no write
 delay, and flushes it on `pagehide`: every local edit is written as it is made, and
 `markSynced()` runs whenever the page is synced and the server has echoed every local
 update, which deletes what is stored. The note's generation is the session's epoch: an admit
@@ -234,9 +234,14 @@ one calls it with the note's new generation, which freezes the binding and moves
 holds into a capture. After the first confirmed sync, the session runs
 `recoverYOfflineEdits` (slots left at another epoch by closed tabs become captures too),
 prunes captures older than 90 days, and drops (and deletes) those the note already holds all
-of (`holdsNothingNew`: every item and deletion in the note's snapshot). jot's blocks carry no
-ids, so the reports match blocks by position and nothing is replayed; `onError` sets
-`offline.problem`, which the page shows while edits are waiting.
+of (`holdsNothingNew`: every item and deletion in the note's snapshot). Recovery reapplies
+each capture in one update (while the note is editable; else it lists them): `autoReplay:
+'replayable'` writes the blocks only the person changed over the note's, matched by block id
+(D38), and `leftovers` (`offline.ts`'s `OFFLINE_LEFTOVERS`, `wrapLeftoversAsQuote` with
+"Offline edits that didn't merge · <time>", `placement: 'after-block'`) writes the rest
+after the block each conflicts with; the capture is then `resolved`, and deleted once the
+server holds the note. `onError` sets `offline.problem`, which the page shows while edits
+are waiting.
 
 **The generation fence** (D34). `session.ts` keeps the generation the page's document
 belongs to, adopted when a full sync with the note completes, and presents it in the

@@ -220,9 +220,11 @@ export function Offline() {
         The note&rsquo;s generation is the session&rsquo;s epoch: the server names it before any
         sync message, on every connection (<C>session.serverEpoch</C>). When the note moved on
         meanwhile (it was migrated to a newer layout, or created again after it expired), the edits
-        never merge: the session freezes the editor and keeps them as a capture, the page opens the
-        note afresh, and <C>recoverYOfflineEdits</C> lists them under ⋯ → Offline edits, read only,
-        to copy back in. jot&rsquo;s blocks carry no ids, so nothing is reapplied for you.
+        never sync: the session freezes the editor and keeps them as a capture, and the page opens
+        the note afresh. Then <C>recoverYOfflineEdits</C> reapplies them, block by block, matched by
+        block id: a block only you changed goes back over the note&rsquo;s, and a block someone else
+        changed too goes in after theirs, under &ldquo;Offline edits that didn&rsquo;t merge
+        &middot; &lt;time&gt;&rdquo;, for you to merge. One undo takes it all out again.
       </P>
       <P>
         A browser without IndexedDB keeps the edits in the page, as before; if the note moves on,

@@ -124,26 +124,28 @@ test("a draft left by jot's earlier version moves into the next new note, once",
     .first()
     .click();
   const id = await expectFreshNote(page);
-  // It has no generation the note can check (D34): it waits under the new note's
-  // offline edits, as this browser's, and is cleared from storage.
+  // It has no generation the note can check (D34): it becomes a capture on this
+  // device (D37), is cleared from storage, and goes into the note as leftovers,
+  // under their label, since nothing of it can be replayed by id (no base).
   await expect.poll(() => storedKeys(page)).toEqual([]);
   await page.reload();
   await expectFreshNote(page);
-  await expect(page.getByTestId('recovery-banner')).toBeVisible();
-  await page.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
-  await expect(page.getByTestId('recovery-text').locator('p')).toHaveText([
+  await expect(editor(page)).toContainText('Offline edits that didn’t merge · ', {
+    timeout: 15_000,
+  });
+  await expect(editor(page).locator('blockquote')).toHaveText(['Draft from before', 'Second line']);
+  await expect(page.getByTestId('recovery-banner')).toHaveCount(0);
+  const other = await otherContext.newPage();
+  await openNote(other, id);
+  await expect(editor(other).locator('blockquote')).toHaveText([
     'Draft from before',
     'Second line',
   ]);
-  await expect(editor(page)).toHaveText('');
-  const other = await otherContext.newPage();
-  await openNote(other, id);
-  await expect(editor(other)).toHaveText('');
 
   // Only once: the next new note has none.
   await page.goto('/new');
   await expectFreshNote(page);
-  await expect(page.getByTestId('recovery-banner')).toHaveCount(0);
+  await expect(editor(page)).toHaveText('');
 });
 
 test("a note copy left by jot's earlier version reaches its note's offline edits when a page opens", async ({
@@ -164,19 +166,17 @@ test("a note copy left by jot's earlier version reaches its note's offline edits
   const id = await expectFreshNote(page);
   expect(id).not.toBe(pendingId);
   await expect.poll(() => storedKeys(page)).toEqual([]);
-  // The copy went to its own note's offline edits, not into either note.
+  // The copy went to its own note, not into the new one: a capture on this device
+  // (D37), written into its note as leftovers when a page opens it.
   await expect(editor(page)).toHaveText('');
   await openNote(page, pendingId);
-  await expect(editor(page)).toHaveText('');
-  await expect(page.getByTestId('recovery-banner')).toBeVisible();
-  await page.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
-  await expect(page.getByTestId('recovery-text')).toHaveText('Shared, then closed');
-  // It is kept on this device (D37): another browser has no offline edits for it.
+  await expect(editor(page)).toContainText('Offline edits that didn’t merge · ', {
+    timeout: 15_000,
+  });
+  await expect(editor(page).locator('blockquote')).toHaveText('Shared, then closed');
   const other = await (await newContext()).newPage();
   await openNote(other, pendingId);
-  await expect(other.getByTestId('recovery-banner')).toHaveCount(0);
-  await other.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await expect(other.getByTestId('recovery-item')).toHaveCount(0);
+  await expect(editor(other).locator('blockquote')).toHaveText('Shared, then closed');
 });
 
 test('a draft is claimed only when the note opens: a page left during a slow load keeps it', async ({

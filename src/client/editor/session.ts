@@ -44,7 +44,9 @@ import { jotEditorExtension } from './extensions';
 import { localUser } from './presence';
 import { handOff, handOffCapture, type HandoffResult } from './handoff';
 import {
+  OFFLINE_AUTO_REPLAY,
   OFFLINE_CONFIG,
+  OFFLINE_LEFTOVERS,
   OFFLINE_STAGE,
   OFFLINE_WRITE_DELAY_MS,
   holdsNothingNew,
@@ -513,6 +515,8 @@ export function createNoteSession(
         epoch: generation,
         // Replay writes into the note: only into an editable one.
         stage: active ? offlineStage : 'persist',
+        autoReplay: OFFLINE_AUTO_REPLAY,
+        leftovers: OFFLINE_LEFTOVERS,
         config: OFFLINE_CONFIG,
         session: offline,
       });

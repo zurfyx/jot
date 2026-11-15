@@ -90,9 +90,10 @@ nofollow` and, with the links that create a note, disallowed in `robots.txt`; on
   "This note is full. Start a new note to keep writing." (D05).
 - **Offline edits are never lost.** If a note changed underneath a page that was offline
   (it was created again after expiring, or upgraded to a newer layout), the page's edits
-  are saved apart, on this device, under ⋯ → Offline edits, read only, to copy back in,
-  for 90 days (D37). A browser that can't store them hands them to the note's own offline
-  edits instead (D34).
+  come back into it: a line only you changed is reapplied, and a line someone else changed
+  too goes in after theirs, under "Offline edits that didn't merge · <time>", for you to
+  merge (D37). A browser that can't store them hands them to the note's own offline edits
+  instead, read only, to copy back in, for 90 days (D34).
 - **Newer notes open read only.** A note written in a document layout this version of the
   binding can't write opens read only rather than being misread.
 
