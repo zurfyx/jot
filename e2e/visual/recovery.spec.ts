@@ -119,15 +119,15 @@ test('edits not saved on this device', async ({ context }) => {
   });
   const page = await pageFor(context, GERARD);
   await openNote(page, freshNoteId());
-  await editor(page).click();
-  await page.keyboard.type('A shared plan');
   await expect(page.getByTestId('status-pill')).toContainText('Synced');
+  // Offline before anything is typed, so every edit waits: three of them.
   await page.getByTestId('status-pill').click();
   await editor(page).click();
-  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('A shared plan');
   await page.keyboard.press('Enter');
   await page.keyboard.insertText('Written on the train');
   await expect(page.getByText('aren’t being saved on this device')).toBeVisible();
+  await expect(page.getByTestId('status-pill')).toHaveText('Offline · 3 edits waiting');
   await rest(page);
   await shoot(page, 'offline-not-saved');
 });
