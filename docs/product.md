@@ -67,8 +67,9 @@ version of the engine.
 - **Work offline on purpose.** ⋯ → Work offline, or a click on the pill, disconnects the
   note and keeps it editable, so a merge can be tried: edit in two windows, then
   Reconnect; blame then shows for four seconds, so the merge is visible. Losing the network
-  behaves the same way. Edits made offline stay in the page
-  until it reconnects; closing the tab while offline loses them (D13).
+  behaves the same way. Edits the server hasn't taken are kept on this device until it has
+  them, so a reload or a closed tab loses nothing: the next page on the note syncs them
+  (D37).
 - **Read how it works.** `/docs` is a short guide for Lexical developers: a quick start,
   how a note is stored in Yjs (with a live inspector: type, and watch the Yjs tree change),
   presence, offline merging, blame, the AI peer, size limits, the relay and server-side
@@ -89,11 +90,14 @@ nofollow` and, with the links that create a note, disallowed in `robots.txt`; on
   "This note is full. Start a new note to keep writing." (D05).
 - **Offline edits are never lost.** If a note changed underneath a page that was offline
   (it was created again after expiring, or upgraded to a newer layout), the page's edits
-  are saved apart under ⋯ → Offline edits, read only, to copy back in, for 90 days (D34).
+  are saved apart, on this device, under ⋯ → Offline edits, read only, to copy back in,
+  for 90 days (D37). A browser that can't store them hands them to the note's own offline
+  edits instead (D34).
 - **Newer notes open read only.** A note written in a document layout this version of the
   binding can't write opens read only rather than being misread.
 
 ## Not in scope
 
 Accounts, permissions, version history, comments, search, export, private drafts, and
-keeping notes on the device. jot is a playground, not a place to keep things.
+keeping notes on the device (only edits waiting for the server are kept there). jot is a
+playground, not a place to keep things.

@@ -14,9 +14,10 @@ import { readRawNote, writeRawNote } from './raw-client';
 
 /**
  * The generation fence (D34) in the browser: a page holding edits made
- * against an earlier generation of its note hands them off and opens the
- * note afresh; the edits wait under ⋯ → Offline edits. A client from before
- * the fence is captured and turned read only on a note it may not join.
+ * against an earlier generation of its note keeps them on this device (D37),
+ * or, with no store here, hands them to the note, and opens the note afresh;
+ * the edits wait under ⋯ → Offline edits. A client from before the fence is
+ * captured and turned read only on a note it may not join.
  */
 
 async function workOffline(page: Page) {
@@ -47,7 +48,7 @@ function noteText(state: Uint8Array): string {
   return JSON.stringify(doc.get('lexical-y').toJSON());
 }
 
-test('a page offline while its note moved on hands its edits off; they wait under Offline edits', async ({
+test('a page offline while its note moved on keeps its edits on this device, under Offline edits', async ({
   context,
   otherContext,
   baseURL,
@@ -93,7 +94,52 @@ test('a page offline while its note moved on hands its edits off; they wait unde
   await expect(b.getByTestId('recovery-text')).toContainText('Shared start');
   await expect(b.getByTestId('recovery-text')).toHaveAttribute('aria-readonly', 'true');
 
-  // Everyone sees it under ⋯ → Offline edits; in another browser it is another visitor's.
+  // Under ⋯ → Offline edits as this device's; another browser has none (D37).
+  await b.getByTestId('dock').getByRole('button', { name: 'More' }).click();
+  await b.getByTestId('recovery-item').click();
+  const rows = b.getByTestId('recovery-row');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('On this device');
+  await b.keyboard.press('Escape');
+  const c = await otherContext.newPage();
+  await openNote(c, id);
+  await expect(c.getByTestId('recovery-banner')).toHaveCount(0);
+  await c.getByTestId('dock').getByRole('button', { name: 'More' }).click();
+  await expect(c.getByTestId('recovery-item')).toHaveCount(0);
+  await c.keyboard.press('Escape');
+
+  // Dismissed, the banner stays away on the next page.
+  await b.getByTestId('recovery-banner').getByRole('button', { name: 'Dismiss' }).click();
+  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
+  await b.reload();
+  await expect(b.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
+});
+
+test('with no store on this device, the edits go to the note and wait there for everyone', async ({
+  context,
+  otherContext,
+  baseURL,
+}) => {
+  // A browser without IndexedDB: the page runs its offline session at stage off.
+  await context.addInitScript(() => {
+    Object.defineProperty(window, 'indexedDB', { value: undefined });
+  });
+  const id = freshNoteId();
+  const b = await context.newPage();
+  await openNote(b, id);
+  await editor(b).click();
+  await b.keyboard.type('Shared start');
+  await expect(b.getByTestId('status-pill')).toContainText('Synced');
+  await workOffline(b);
+  await appendLine(b, 'Written offline by B');
+  await replaceIncarnation(baseURL!, id);
+  await b.getByRole('button', { name: 'Reconnect' }).click();
+  await expect(b.getByTestId('recovery-banner')).toBeVisible({ timeout: 15_000 });
+  await expect(b.getByTestId('recovery-banner')).toContainText('saved here');
+  await expect(editor(b)).not.toContainText('Written offline by B');
+
+  // Another browser sees it as another visitor's, under ⋯ → Offline edits.
   const c = await otherContext.newPage();
   await openNote(c, id);
   await expect(c.getByTestId('recovery-banner')).toHaveCount(0);
@@ -104,13 +150,6 @@ test('a page offline while its note moved on hands its edits off; they wait unde
   await expect(rows.first()).toContainText('Another visitor');
   await rows.first().getByRole('button', { name: 'View' }).click();
   await expect(c.getByTestId('recovery-text')).toContainText('Written offline by B');
-
-  // Dismissed, the banner stays away on the next page.
-  await b.getByTestId('recovery-banner').getByRole('button', { name: 'Dismiss' }).click();
-  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
-  await b.reload();
-  await expect(b.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
-  await expect(b.getByTestId('recovery-banner')).toHaveCount(0);
 });
 
 test('a client from before the fence is captured on a new note: read only, its text kept, the note untouched', async ({

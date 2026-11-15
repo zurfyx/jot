@@ -1,6 +1,6 @@
 # D13: Offline edits stay in memory until a Yjs 14 IndexedDB provider exists
 
-Status: `DEFERRED`
+Status: `SUPERSEDED` by [D37](D37-unsent-edits-on-this-device.md)
 
 ## Context
 

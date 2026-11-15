@@ -5,14 +5,16 @@ import { UNKNOWN_GENERATION } from '../../shared/fence';
 import { isNoteId } from '../../shared/ids';
 import { LEGACY_PENDING_PREFIX } from '../notes';
 import { sessionId, uploadMaterial } from './handoff';
+import { captureLegacyCopy, offlineStore } from './offline';
 
 /**
  * The migration from local drafts (D23). An earlier version of jot kept
  * notes in localStorage: an unshared draft under `jot:draft` (notes.ts hands
  * it to the next new note) and, for a note shared moments before its tab
  * closed, a copy under `jot:pending:<id>` until the relay confirmed it. Each
- * copy left goes to its note's offline edits (D34), and is cleared once the
- * server has acknowledged it, or has refused it.
+ * copy left goes to its note's offline edits: a capture on this device
+ * (D37), or, without a store here, a record of the note (D34). It is cleared
+ * once stored, acknowledged, or refused for good.
  */
 
 /** The Yjs update a stored copy (`{ id, state }`, state in base64) holds; null if unreadable. */
@@ -100,15 +102,15 @@ export function pushLegacyCopies(): void {
 export const LEGACY_PUSH_ATTEMPTS = 4;
 
 /**
- * Hands one copy to its note's offline edits (D34). A copy from an earlier
- * jot has no generation the note can check (it may even be from an earlier
- * life of the note, before it expired and was created again), so it is
- * never merged into the note: it is uploaded as a record of its own, which
- * the note's recovery view shows as this browser's, and removed from
- * storage only once the server acknowledges it. A copy the server refuses
- * for good (malformed, too large, the note keeps too many) is removed too,
- * so it isn't retried on every page; one that could not reach the server
- * waits for the next note page.
+ * Hands one copy to its note's offline edits. A copy from an earlier jot has
+ * no generation the note can check (it may even be from an earlier life of
+ * the note, before it expired and was created again), so it is never merged
+ * into the note: it becomes a capture on this device (D37), listed under ⋯ →
+ * Offline edits, and is removed from localStorage once stored. Without a
+ * store here it is uploaded as a record of its own (D34), removed once the
+ * server acknowledges it or refuses it for good (malformed, too large, the
+ * note keeps too many); one that could not reach the server waits for the
+ * next note page.
  */
 async function pushCopy(id: string): Promise<void> {
   const key = `${LEGACY_PENDING_PREFIX}${id}`;
@@ -121,6 +123,11 @@ async function pushCopy(id: string): Promise<void> {
   }
   pushing.add(id);
   try {
+    const { store } = await offlineStore();
+    if (await captureLegacyCopy(store, id, update)) {
+      removeStored(key, stored);
+      return;
+    }
     const { result } = await uploadMaterial(
       id,
       {

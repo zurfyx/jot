@@ -11,6 +11,7 @@ import { NOTE_FEATURES } from './features';
 import { Avatars } from './people';
 import { RemoteCarets } from './RemoteCarets';
 import { pushLegacyCopies } from './legacy';
+import { prepareNote } from './offline';
 import { createNoteSession, type NoteSession } from './session';
 import { ShareButton } from './ShareButton';
 import { StatusPill } from './StatusPill';
@@ -153,15 +154,26 @@ export default function NotePage({ id }: { id: string }) {
   useEffect(() => {
     // The session is an external system (socket, document, editor) whose
     // lifetime is this effect's; React state only hands it to the children.
-    const created = createNoteSession(id);
-    const stopReplace = created.onReplace(() => setGenerationKey((key) => key + 1));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSession(created);
-    // Notes an earlier version of jot kept in this browser go to the note's offline edits.
-    pushLegacyCopies();
+    // It starts from what this device holds for the note (D37).
+    let created: NoteSession | null = null;
+    let stopReplace = () => {};
+    let cancelled = false;
+    void prepareNote(id).then((prepared) => {
+      if (cancelled) {
+        // Unmounted first: let go of the slot it read.
+        prepared.loaded?.slot?.close();
+        return;
+      }
+      created = createNoteSession(id, prepared);
+      stopReplace = created.onReplace(() => setGenerationKey((key) => key + 1));
+      setSession(created);
+      // Notes an earlier version of jot kept in this browser go to the note's offline edits.
+      pushLegacyCopies();
+    });
     return () => {
+      cancelled = true;
       stopReplace();
-      created.dispose();
+      created?.dispose();
       setSession(null);
     };
   }, [id, generationKey]);
@@ -221,6 +233,8 @@ function NoteBody({ session }: { session: NoteSession }) {
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
   const fence = useSignal(session.fence);
+  const offlineProblem = useSignal(session.offline.problem);
+  const pendingEdits = useSignal(session.pendingEdits);
   const empty = useEmptyAndTitle(session);
   useRecentVisit(session);
   const editable = useEditable(session.editor);
@@ -286,6 +300,12 @@ function NoteBody({ session }: { session: NoteSession }) {
             Start a new note
           </a>{' '}
           to keep writing.
+        </p>
+      )}
+      {offlineProblem !== null && pendingEdits > 0 && fence === 'ok' && (
+        <p {...stylex.props(styles.message, styles.notice)} role="status" data-own-press="">
+          Edits waiting to sync aren&rsquo;t being saved on this device. Keep this page open until
+          they sync.
         </p>
       )}
       {cap === 'warn' && (

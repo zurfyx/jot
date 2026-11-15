@@ -70,16 +70,17 @@ How expensive is this to get wrong?
 | [D33](D33-first-paint-priority-and-caching.md)          | The app's script at low priority; hashed assets cached for a year                   | LOW    | `DECIDED`  |
 | [D34](D34-generation-fence-and-offline-edits.md)        | A generation fence per note; offline edits it cannot take wait under Offline edits  | MED    | `PROPOSED` |
 | [D35](D35-code-highlighting-with-prism-on-demand.md)    | Code highlighting with Prism, in a chunk fetched with a note's first code block     | LOW    | `PROPOSED` |
+| [D37](D37-unsent-edits-on-this-device.md)               | Unsent edits are kept on this device (`@lexical/y/offline`); records are a fallback | MED    | `PROPOSED` |
 
 ## Superseded
 
-| ID                         | Decision                                                           | Superseded by |
-| -------------------------- | ------------------------------------------------------------------ | ------------- |
-| [D18](D18-local-drafts.md) | An unshared note lives only in this browser; Share gives it a link | D23           |
+| ID                                    | Decision                                                              | Superseded by |
+| ------------------------------------- | --------------------------------------------------------------------- | ------------- |
+| [D18](D18-local-drafts.md)            | An unshared note lives only in this browser; Share gives it a link    | D23           |
+| [D13](D13-offline-edits-in-memory.md) | Offline edits stay in memory until a Yjs 14 IndexedDB provider exists | D37           |
 
 ## Tier 3: open, or deferred until something forces it
 
-| ID                                    | Decision                                                              | Status     | Forced by                   |
-| ------------------------------------- | --------------------------------------------------------------------- | ---------- | --------------------------- |
-| [D13](D13-offline-edits-in-memory.md) | Offline edits stay in memory until a Yjs 14 IndexedDB provider exists | `DEFERRED` | a Yjs 14 IndexedDB provider |
-| [D16](D16-abuse-limits.md)            | Abuse limits: rate limits and connection caps                         | `DEFERRED` | traffic or abuse            |
+| ID                         | Decision                                      | Status     | Forced by        |
+| -------------------------- | --------------------------------------------- | ---------- | ---------------- |
+| [D16](D16-abuse-limits.md) | Abuse limits: rate limits and connection caps | `DEFERRED` | traffic or abuse |

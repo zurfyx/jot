@@ -171,12 +171,12 @@ test("a note copy left by jot's earlier version reaches its note's offline edits
   await expect(page.getByTestId('recovery-banner')).toBeVisible();
   await page.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
   await expect(page.getByTestId('recovery-text')).toHaveText('Shared, then closed');
-  // Another browser sees it as another visitor's, under ⋯ → Offline edits.
+  // It is kept on this device (D37): another browser has no offline edits for it.
   const other = await (await newContext()).newPage();
   await openNote(other, pendingId);
   await expect(other.getByTestId('recovery-banner')).toHaveCount(0);
   await other.getByTestId('dock').getByRole('button', { name: 'More' }).click();
-  await expect(other.getByTestId('recovery-item')).toBeVisible();
+  await expect(other.getByTestId('recovery-item')).toHaveCount(0);
 });
 
 test('a draft is claimed only when the note opens: a page left during a slow load keeps it', async ({
@@ -254,7 +254,7 @@ test('a copy the server already holds, deletions included, is cleared and change
   await expect(page.getByTestId('recovery-item')).toHaveCount(0);
 });
 
-test('a copy is uploaded once, not on every page', async ({ page }) => {
+test('a copy is taken once, on this device, and never uploaded', async ({ page }) => {
   const id = freshNoteId();
   const doc = new Y.Doc();
   doc.get('copy').insert(0, 'COPY');
@@ -273,11 +273,11 @@ test('a copy is uploaded once, not on every page', async ({ page }) => {
   await page.goto('/new');
   await expectFreshNote(page);
   await expect.poll(() => storedKeys(page), { timeout: 15_000 }).toEqual([]);
-  expect(uploads).toHaveLength(1);
+  expect(uploads).toHaveLength(0);
 
   // The next note page leaves that note alone.
   await page.goto('/new');
   await expectFreshNote(page);
   await page.waitForTimeout(500);
-  expect(uploads).toHaveLength(1);
+  expect(uploads).toHaveLength(0);
 });

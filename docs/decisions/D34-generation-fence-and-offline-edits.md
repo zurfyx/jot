@@ -29,11 +29,12 @@ memory only (D13), so the pages at risk are the ones open across such a change, 
   object answers with a verdict (`checkYSession`, message 65, sent only to sockets that
   presented the handshake): admit, bootstrap, stale or refuse-layout.
 - **Stale: hand off, then open afresh.** A page whose edits were made against another
-  generation never syncs. It stops its writers (in-tab peers too), commits what the editor
-  holds (`binding.quiesce()`), uploads its whole document as one record and waits for the
-  object's durable acknowledgement of exactly that upload (scoped to the note, the replica
-  and its source generation, naming the upload's SHA-256), retrying the same bytes; only
-  then does it open the note afresh. A page that cannot read the note reloads once.
+  generation never syncs. It stops its writers (in-tab peers too) and keeps its edits as a
+  capture on its device (D37). Where it cannot, it commits what the editor holds
+  (`binding.quiesce()`), uploads its whole document as one record and waits for the object's
+  durable acknowledgement of exactly that upload (scoped to the note, the replica and its
+  source generation, naming the upload's SHA-256), retrying the same bytes. Only then does
+  it open the note afresh. A page that cannot read the note reloads once.
 - **Pages from before the fence** keep editing a note with an inherited, never-migrated
   incarnation as they always did. Anywhere else (a new note, a note created again, a
   migrated note) their whole document is kept as a record (a sync step 1 with an empty
@@ -52,11 +53,12 @@ memory only (D13), so the pages at risk are the ones open across such a change, 
   Offline edits.
 - **Offline edits.** Records are kept in the object's SQLite (parts under the 2 MB row
   cap) for 90 days and go with the note at its expiry. ⋯ → Offline edits lists those that
-  hold something the note lacks; a banner shows this browser's own. The object reads a
-  record with jot's node set and the page shows it read only beside the note, with Copy
-  text and a lossless Export.
-- **Copies from D18 builds** are uploaded as records of their own, never merged into the
-  note, and cleared from storage once acknowledged (D23).
+  hold something the note lacks, beside this device's captures (D37); a banner shows this
+  browser's own. A record reads with jot's node set and the page shows it read only beside
+  the note, with Copy text and a lossless Export.
+- **Copies from D18 builds** become captures on the device (D37), or, where it has no
+  store, records of their own; never merged into the note, and cleared from storage once
+  kept (D23).
 
 ## Why
 

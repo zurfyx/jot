@@ -1,12 +1,15 @@
 /**
- * The recovery handoff (D34): the note moved on while this page held edits
- * made against an earlier generation. The page stops every writer, commits
- * what the editor holds (`binding.quiesce()`), uploads its whole document as
- * one record, and waits for the server's durable acknowledgement before it
- * lets go of anything. Then the page opens the note afresh; the edits wait in
- * the note's offline edits (the recovery view).
+ * The recovery upload (D34), for a page that cannot keep its edits on this
+ * device (D37: no store here, or the store refused the capture): the note
+ * moved on while this page held edits made against an earlier generation.
+ * The page stops every writer, commits what the editor holds
+ * (`binding.quiesce()`, or the offline session's frozen capture), uploads its
+ * whole document as one record, and waits for the server's durable
+ * acknowledgement before it lets go of anything. Then the page opens the note
+ * afresh; the edits wait in the note's offline edits (the recovery view).
  */
 import { LAYOUT_VERSION, MIN_LAYOUT, type YBinding } from '@lexical/y';
+import type { YOfflineCapture } from '@lexical/y/offline';
 
 import {
   acknowledges,
@@ -149,6 +152,29 @@ export async function handOff(
     return 'refused';
   }
   const { state, draft } = quiesced;
+  return uploadSnapshot(input, state, draft.differs ? draft.json : null, deps);
+}
+
+export interface CaptureHandoffInput extends Omit<HandoffInput, 'binding'> {
+  /** What the offline session froze and the store could not take. */
+  capture: YOfflineCapture;
+}
+
+/** Uploads a frozen capture as one record (the binding is already stopped). */
+export async function handOffCapture(
+  input: CaptureHandoffInput,
+  deps: UploadDeps = defaultDeps,
+): Promise<HandoffResult> {
+  const { capture } = input;
+  return uploadSnapshot(input, capture.state, capture.differs ? capture.json : null, deps);
+}
+
+async function uploadSnapshot(
+  input: Omit<HandoffInput, 'binding'>,
+  state: Uint8Array,
+  draftJson: unknown,
+  deps: UploadDeps,
+): Promise<HandoffResult> {
   const upload: Upload = {
     session: sessionId(),
     replica: 'tab',
@@ -164,7 +190,7 @@ export async function handOff(
     snapshot: state,
     queue: [],
     // Only what the editor could not commit (`differs`) is a draft.
-    draft: draft.differs ? { json: draft.json, differs: true } : null,
+    draft: draftJson === null ? null : { json: draftJson, differs: true },
     clients: input.clients,
     peers: false,
   };
