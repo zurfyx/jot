@@ -44,7 +44,9 @@ export function shadowReceipt(note: string, state: Uint8Array): ShadowReceipt {
   }
   const started = Date.now();
   try {
+    // A dry run keeps nothing: the receipt counts what a migration would split out.
     const result = migrateYState(state, LAYOUT_STEPS, {
+      pending: 'discard',
       roots: ['lexical-y'],
       to: SHADOW_LAYOUT,
     });
@@ -57,7 +59,7 @@ export function shadowReceipt(note: string, state: Uint8Array): ShadowReceipt {
       ms: Date.now() - started,
       from: receipt.roots[0]?.from ?? null,
       changed: receipt.changed,
-      pending: result.pending?.byteLength ?? 0,
+      pending: receipt.pendingBytes,
     };
   } catch (error) {
     return {

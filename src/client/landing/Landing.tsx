@@ -766,7 +766,11 @@ const editor = buildEditorFromExtensions(
     name: 'jot/note',
     dependencies: [
       RichTextExtension,
-      configExtension(YCollabExtension, {doc, schemaVersion: 1}),
+      configExtension(YCollabExtension, {
+        doc,
+        onYStatus: showStatus,
+        schemaVersion: 1,
+      }),
     ],
   }),
 );

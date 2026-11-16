@@ -195,7 +195,7 @@ test('a note a newer jot wrote opens read only', async ({ page, baseURL }) => {
   const id = freshNoteId();
   // What a jot one schema version ahead writes: a note it can read, recorded with its version.
   const written = seedYState(
-    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 },
+    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1, onWarn: null },
     () => {
       $getRoot().append($createParagraphNode().append($createTextNode('From a newer jot')));
     },

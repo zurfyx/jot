@@ -72,6 +72,8 @@ export const OFFLINE_WRITE_DELAY_MS = 0;
 export const OFFLINE_CONFIG: HeadlessYConfig = {
   extensions: [jotNodesExtension],
   schemaVersion: SCHEMA_VERSION,
+  // A capture read with something it couldn't keep says so, in production too.
+  onWarn: (warning) => console.warn('jot: reading offline edits', warning),
 };
 
 export interface OfflineStore {
@@ -129,11 +131,11 @@ async function openStore(idb: IdbGlobals): Promise<OfflineStore> {
  * Reads what this device holds for note `id`: the newest slot with rows no
  * live tab holds (a page that reloaded, a tab that closed). Never rejects.
  *
- * `loadYOffline` would also take the rows of a tab still open on the note,
- * even one left at an earlier generation (offline across a migration): this
- * page would start from that tab's edits and capture them as its own. Those
- * rows stay that tab's; it captures them itself when it learns the note
- * moved on.
+ * `loadYOffline` also loads the rows of a tab still open on the note (and
+ * flags them, `unsyncedInLiveTabs`, so it no longer captures them on a moved
+ * generation). jot reads only rows of tabs that are gone: this page must not
+ * start from, or sync, edits a tab keeps back with Work offline. Those rows
+ * stay that tab's; it syncs or captures them itself.
  */
 export async function prepareNote(id: string, idb?: IdbGlobals): Promise<PreparedNote> {
   const { store, problem } = await offlineStore(idb);
@@ -159,6 +161,8 @@ export async function prepareNote(id: string, idb?: IdbGlobals): Promise<Prepare
           base: read.value.base,
           baseAt: read.value.baseAt ?? null,
           hasUnsyncedEdits: read.value.hasUnsyncedEdits,
+          // Only rows of tabs that are gone were read.
+          unsyncedInLiveTabs: false,
           slot,
         };
         return { store, problem: null, loaded };

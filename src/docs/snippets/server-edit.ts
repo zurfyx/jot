@@ -15,6 +15,8 @@ import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical';
 const config: HeadlessYConfig = {
   extensions: [RichTextExtension, ListExtension],
   schemaVersion: 1, // your clients' schemaVersion
+  // What couldn't be stored as the editor had it: to your logs (null: console, dev only).
+  onWarn: (warning) => console.warn(warning),
 };
 
 /** A new note's state: content-hashed, so seeding it twice merges into one copy. */

@@ -112,9 +112,12 @@ function upload(snapshot: Uint8Array, overrides: Partial<Upload> = {}): Upload {
 
 /** A note's state as jot's editor stores it, with one paragraph. */
 function noteState(text: string): Uint8Array {
-  return seedYState({ extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION }, () => {
-    $getRoot().append($createParagraphNode().append($createTextNode(text)));
-  });
+  return seedYState(
+    { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION, onWarn: null },
+    () => {
+      $getRoot().append($createParagraphNode().append($createTextNode(text)));
+    },
+  );
 }
 
 describe('incarnation', () => {

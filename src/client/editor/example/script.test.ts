@@ -66,7 +66,12 @@ function setup() {
       name: 'test/page',
       dependencies: [
         jotEditorExtension,
-        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+        configExtension(YCollabExtension, {
+          doc,
+          onYStatus: null,
+          schemaVersion: SCHEMA_VERSION,
+          synced: true,
+        }),
       ],
     }),
   );

@@ -287,6 +287,14 @@ binding status, size, cap state, Work offline, edits waiting and "merged".
   client id never comes back as an echo); the provider removes what the relay echoes. The
   session is `confirmed` once synced and every update that was unconfirmed at the sync has
   been confirmed.
+- **Status.** The binding reports every status with its cause (`onYStatus`, required by
+  `@lexical/y`): `readOnlyCause` holds it while the note is read only, and the page's banner
+  says what to do (`readOnly.ts`): reload for a newer jot (a newer schema or layout), copy
+  first then reload when the editor holds what the note can't keep (`unstorable-change`,
+  `unreadable-content`). Every other `YCollabExtension` (in-tab peers, the docs' inspector,
+  tests) passes `onYStatus: null` and reads the binding's status signal; the lint rule
+  `@lexical/y-collab-status` (`@lexical/eslint-plugin`, from the same Lexical build, D04)
+  fails a config that passes neither.
 - **Work offline** calls `provider.disconnect()` and keeps the editor editable; the
   browser's `online` event no longer reconnects while it is on. Local transactions count
   as edits waiting from the first sync on, whenever the note is not confirmed. Those made

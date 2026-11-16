@@ -8,9 +8,12 @@ import { SCHEMA_VERSION } from '../../../shared/schema';
 import { readSchemaVersion, renderView } from './render';
 
 function note(text: string): Uint8Array {
-  return seedYState({ extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION }, () => {
-    $getRoot().append($createParagraphNode().append($createTextNode(text)));
-  });
+  return seedYState(
+    { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION, onWarn: null },
+    () => {
+      $getRoot().append($createParagraphNode().append($createTextNode(text)));
+    },
+  );
 }
 
 describe('rendering a record', () => {

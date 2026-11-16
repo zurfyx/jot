@@ -134,6 +134,8 @@ export function createInTabPeer(host: PeerHost, person: PeerPerson): InTabPeer {
         // Already synced (a copy of the host); no undo: peers never undo.
         configExtension(YCollabExtension, {
           doc,
+          // The peer reads the binding's status signal (writable() below).
+          onYStatus: null,
           schemaVersion: SCHEMA_VERSION,
           synced: true,
           captureTimeout: null,

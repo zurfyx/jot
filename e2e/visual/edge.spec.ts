@@ -17,7 +17,7 @@ test('a read-only note', async ({ context, baseURL }) => {
   // A note a newer jot wrote (D29). One whose layout this release cannot read
   // reloads instead (D34): fence-reload in recovery.spec.ts.
   const written = seedYState(
-    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 },
+    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1, onWarn: null },
     () => {
       $getRoot().append($createParagraphNode().append($createTextNode('From the future')));
     },

@@ -148,9 +148,12 @@ test('a client from before the fence is captured on a new note: read only, its t
   const doc = new Y.Doc();
   Y.applyUpdate(
     doc,
-    seedYState({ extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION }, () => {
-      $getRoot().append($createParagraphNode().append($createTextNode('Kept by an older tab')));
-    }),
+    seedYState(
+      { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION, onWarn: null },
+      () => {
+        $getRoot().append($createParagraphNode().append($createTextNode('Kept by an older tab')));
+      },
+    ),
   );
   // No handshake: the URL of a jot from before the fence.
   const socket = new WebSocket(`${baseURL!.replace(/^http/, 'ws')}/api/n/${id}/ws`);

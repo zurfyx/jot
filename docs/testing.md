@@ -17,6 +17,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   is what the relay would store, not the deleted content an undo stack keeps alive;
 - size and copy formatting for the pill and Note info ("238 KB", "1.72 MB", "2 MB", edits
   waiting, the kept-until date);
+- the read-only banner (`editor/readOnly.test.ts`): a newer schema or layout (or no cause)
+  asks for a reload; an edit the note can't keep, or content it can't read, asks to copy
+  first;
 - the migration from local drafts (D23): a leftover draft moves to the new note's pending
   copy under the Web Lock (none taken without a draft); of two tabs claiming at once only
   one gets it, and the draft is re-read inside the lock; with no room for the copy the

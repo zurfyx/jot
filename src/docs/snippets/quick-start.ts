@@ -17,7 +17,14 @@ export function openNote(element: HTMLElement, id: string) {
       name: 'my-app/note',
       dependencies: [
         RichTextExtension,
-        configExtension(YCollabExtension, { doc, schemaVersion: 1 }),
+        configExtension(YCollabExtension, {
+          doc,
+          // Say why a note is read only: a newer schema, an edit it can't store…
+          onYStatus: (status) => {
+            element.title = status.kind === 'readonly' ? `Read only: ${status.cause.code}` : '';
+          },
+          schemaVersion: 1,
+        }),
       ],
     }),
   );

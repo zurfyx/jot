@@ -348,19 +348,26 @@ describe('the fresh copy (Yjs only)', () => {
         gc: true,
         to,
       });
-      const copy = freshCopy(prepared.state);
-      expect(structure(copy)).toEqual(structure(prepared.state));
-      expect(copy.byteLength).toBeLessThanOrEqual(prepared.state.byteLength);
+      // Every step changes a layout 1 note: what a migration stores is in `write`.
+      expect(prepared.changed).toBe(true);
+      const migrated = prepared.changed ? prepared.write.state : prepared.state;
+      const copy = freshCopy(migrated);
+      expect(structure(copy)).toEqual(structure(migrated));
+      expect(copy.byteLength).toBeLessThanOrEqual(migrated.byteLength);
       // No id of the original survives.
-      const original = new Set(Y.decodeUpdate(prepared.state).structs.map((s) => s.id.client));
+      const original = new Set(Y.decodeUpdate(migrated).structs.map((s) => s.id.client));
       expect(Y.decodeUpdate(copy).structs.some((s) => original.has(s.id.client))).toBe(false);
       // Read through jot's editor at the layout this build reads.
       if (to === TARGET) {
-        const config = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION };
+        const config = {
+          extensions: [jotNodesExtension],
+          schemaVersion: SCHEMA_VERSION,
+          onWarn: null,
+        };
         const read = (state: Uint8Array) =>
           readYState(state, config, () => $getEditor().getEditorState().toJSON());
         // Ids derived from Yjs identity do not carry over to new items (D34, D38).
-        expect(withoutBlockIds(read(copy))).toEqual(withoutBlockIds(read(prepared.state)));
+        expect(withoutBlockIds(read(copy))).toEqual(withoutBlockIds(read(migrated)));
       }
     },
   );
@@ -395,7 +402,7 @@ describe('the 2 MB fallback', () => {
 });
 
 /** The note config this build reads with: jot's node set and schema version. */
-const JOT = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION };
+const JOT = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION, onWarn: null };
 
 /** What this build's editor reads from a state (editor state JSON); throws when read only. */
 function readJot(state: Uint8Array): unknown {

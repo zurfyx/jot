@@ -11,6 +11,7 @@ import { NOTE_FEATURES } from './features';
 import { Avatars } from './people';
 import { RemoteCarets } from './RemoteCarets';
 import { pushLegacyCopies } from './legacy';
+import { readOnlyMessage } from './readOnly';
 import { prepareNote } from './offline';
 import { createNoteSession, type NoteSession } from './session';
 import { ShareButton } from './ShareButton';
@@ -233,6 +234,7 @@ function NoteBody({ session }: { session: NoteSession }) {
   const status = useSignal(session.status);
   const cap = useSignal(session.cap);
   const fence = useSignal(session.fence);
+  const readOnlyCause = useSignal(session.readOnlyCause);
   const offlineProblem = useSignal(session.offline.problem);
   const pendingEdits = useSignal(session.pendingEdits);
   const empty = useEmptyAndTitle(session);
@@ -283,7 +285,7 @@ function NoteBody({ session }: { session: NoteSession }) {
       )}
       {status === 'readonly' && fence === 'ok' && (
         <p {...stylex.props(styles.message, styles.banner)} role="status" data-own-press="">
-          Read only. This note was written by a newer version of jot; reload to edit.
+          {readOnlyMessage(readOnlyCause)}
         </p>
       )}
       {cap === 'full' && (

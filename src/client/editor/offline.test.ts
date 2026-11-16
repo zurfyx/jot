@@ -1,7 +1,11 @@
 import { buildEditorFromExtensions, getExtensionDependencyFromEditor } from '@lexical/extension';
 import { createYDoc, YCollabExtension } from '@lexical/y';
 import { readYState } from '@lexical/y/headless';
-import { attachYOfflineSession, recoverYOfflineEdits } from '@lexical/y/offline';
+import {
+  attachYOfflineSession,
+  recoverYOfflineEdits,
+  type YOfflineSession,
+} from '@lexical/y/offline';
 import * as Y from '@y/y';
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import {
@@ -73,7 +77,12 @@ function bound(doc: ReturnType<typeof createYDoc>) {
       name: 'test/offline',
       dependencies: [
         jotEditorExtension,
-        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+        configExtension(YCollabExtension, {
+          doc,
+          onYStatus: null,
+          schemaVersion: SCHEMA_VERSION,
+          synced: true,
+        }),
       ],
       onWarn: () => {},
     }),
@@ -89,6 +98,15 @@ function type(editor: ReturnType<typeof bound>['editor'], text: string) {
     },
     { discrete: true },
   );
+}
+
+/** The note's generation is confirmed ('same'), and the server holds everything: mark it synced. */
+async function markSynced(session: YOfflineSession, epoch: string) {
+  const verdict = await session.serverEpoch(epoch);
+  expect(verdict.kind).toBe('same');
+  if (verdict.kind === 'same') {
+    verdict.markSynced();
+  }
 }
 
 afterEach(() => resetOfflineStore());
@@ -116,17 +134,16 @@ describe('a note page with edits the server has not taken', () => {
     const { editor, collab } = bound(doc);
     const session = attachYOfflineSession({
       binding: collab,
-      store,
       key: ID,
       epoch: null,
-      stage: OFFLINE_STAGE,
-      keep: 'unsynced',
+      loaded: null,
+      offline: { stage: OFFLINE_STAGE, store: store!, persist: 'unsynced' },
+      stopSync: () => {},
       onError: (error) => {
         throw new Error(error.message);
       },
     });
-    expect((await session.serverEpoch('g1:first')).kind).toBe('same');
-    session.markSynced();
+    await markSynced(session, 'g1:first');
     type(editor, 'Typed offline');
     await session.flush();
     expect(session.hasUnsyncedEdits).toBe(true);
@@ -144,11 +161,11 @@ describe('a note page with edits the server has not taken', () => {
     const { editor, collab } = bound(createYDoc());
     const session = attachYOfflineSession({
       binding: collab,
-      store,
       key: ID,
       epoch: 'g1:first',
-      stage: OFFLINE_STAGE,
-      keep: 'unsynced',
+      loaded: null,
+      offline: { stage: OFFLINE_STAGE, store: store!, persist: 'unsynced' },
+      stopSync: () => {},
       onError: () => {},
     });
     type(editor, 'Still open, offline');
@@ -169,16 +186,16 @@ describe('a note page with edits the server has not taken', () => {
     const { editor, collab } = bound(doc);
     const session = attachYOfflineSession({
       binding: collab,
-      store,
       key: ID,
       epoch: 'g1:first',
-      stage: OFFLINE_STAGE,
-      keep: 'unsynced',
+      loaded: null,
+      offline: { stage: OFFLINE_STAGE, store: store!, persist: 'unsynced' },
+      stopSync: () => {},
       onError: () => {},
     });
     type(editor, 'Sent');
     await session.flush();
-    session.markSynced();
+    await markSynced(session, 'g1:first');
     await session.flush();
     expect(session.hasUnsyncedEdits).toBe(false);
     session.dispose();
@@ -205,14 +222,14 @@ describe('a note page with edits the server has not taken', () => {
     const page = bound(createYDoc(Y.encodeStateAsUpdate(server)));
     const session = attachYOfflineSession({
       binding: page.collab,
-      store,
       key: ID,
       epoch: 'g1:first',
-      stage: OFFLINE_STAGE,
-      keep: 'unsynced',
+      loaded: null,
+      offline: { stage: OFFLINE_STAGE, store: store!, persist: 'unsynced' },
+      stopSync: () => {},
       onError: () => {},
     });
-    session.markSynced();
+    await markSynced(session, 'g1:first');
     offline(page.editor);
     await session.flush();
     meanwhile(first.editor);
@@ -225,11 +242,11 @@ describe('a note page with edits the server has not taken', () => {
     const fresh = bound(freshDoc);
     const freshSession = attachYOfflineSession({
       binding: fresh.collab,
-      store,
       key: ID,
       epoch: 'g1:second',
-      stage: OFFLINE_STAGE,
-      keep: 'unsynced',
+      loaded: null,
+      offline: { stage: OFFLINE_STAGE, store: store!, persist: 'unsynced' },
+      stopSync: () => {},
       onError: () => {},
     });
     const recovered = await recoverYOfflineEdits({

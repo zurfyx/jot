@@ -41,7 +41,12 @@ function createHost(from?: Y.Doc) {
       name: 'test/ai-host',
       dependencies: [
         jotEditorExtension,
-        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+        configExtension(YCollabExtension, {
+          doc,
+          onYStatus: null,
+          schemaVersion: SCHEMA_VERSION,
+          synced: true,
+        }),
       ],
     }),
   );

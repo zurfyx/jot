@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import lexical from '@lexical/eslint-plugin';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
@@ -31,6 +32,12 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
+  },
+  {
+    // configExtension(YCollabExtension, {doc, ...}) without onYStatus compiles
+    // (an extension's config is partial) and throws when the editor is built.
+    plugins: { '@lexical': lexical },
+    rules: { '@lexical/y-collab-status': 'error' },
   },
   prettier,
 );

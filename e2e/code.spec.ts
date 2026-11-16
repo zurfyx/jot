@@ -107,7 +107,7 @@ test('a note that opens with a code block fetches the highlighter', async ({ pag
   const id = freshNoteId();
   // Code stored as plain text, as a jot without the highlighter wrote it.
   const written = seedYState(
-    { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION },
+    { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION, onWarn: null },
     () => {
       $getRoot().append(
         $createParagraphNode().append($createTextNode('Stored code')),
