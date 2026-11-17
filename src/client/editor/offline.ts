@@ -10,6 +10,9 @@
 import type { HeadlessYConfig } from '@lexical/y/headless';
 import {
   openYOfflineStore,
+  wrapLeftoversAsQuote,
+  type YAutoReplay,
+  type YLeftovers,
   type YOfflineCapture,
   type YOfflineLoaded,
   type YOfflineLocks,
@@ -23,12 +26,37 @@ import { jotNodesExtension } from '../../shared/nodes';
 import { SCHEMA_VERSION } from '../../shared/schema';
 
 /**
- * The rollout stage: `persist` stores and captures, and lists every capture
- * for the person to copy back in. `replay` (reapplying what is safe) waits
- * for block ids, which the reports match blocks by, and for the library's
- * leftovers for what cannot be reapplied (D37).
+ * The rollout stage: `replay`. A note's fresh page reapplies what this
+ * device captured (D37): blocks only the person changed are written over the
+ * note, matched by block id (D38); the rest go in as leftovers.
  */
-export const OFFLINE_STAGE: YOfflineStage = 'persist';
+export const OFFLINE_STAGE: YOfflineStage = 'replay';
+
+/** Which blocks a replay writes by itself: every replayable one (only the person changed it). */
+export const OFFLINE_AUTO_REPLAY: YAutoReplay = 'replayable';
+
+const LEFTOVER_TIME = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+/** The label above leftover blocks: when the edits were made. */
+export function leftoversLabel(capturedAt: number): string {
+  return `Offline edits that didn’t merge · ${LEFTOVER_TIME.format(capturedAt)}`;
+}
+
+/**
+ * Blocks a replay cannot apply (someone changed them too, or they are gone)
+ * go into the note after the block they conflict with: a bold label line,
+ * then each block, a paragraph as a quote. Nothing typed is dropped, and the
+ * person merges by hand.
+ */
+export const OFFLINE_LEFTOVERS: YLeftovers = {
+  wrap: wrapLeftoversAsQuote((context) => leftoversLabel(context.capturedAt)),
+  placement: 'after-block',
+};
 
 /** Captures older than this are removed from the device, as the note's own records are (D34). */
 export const CAPTURE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -44,6 +72,8 @@ export const OFFLINE_WRITE_DELAY_MS = 0;
 export const OFFLINE_CONFIG: HeadlessYConfig = {
   extensions: [jotNodesExtension],
   schemaVersion: SCHEMA_VERSION,
+  // A capture read with something it couldn't keep says so, in production too.
+  onWarn: (warning) => console.warn('jot: reading offline edits', warning),
 };
 
 export interface OfflineStore {
@@ -101,11 +131,11 @@ async function openStore(idb: IdbGlobals): Promise<OfflineStore> {
  * Reads what this device holds for note `id`: the newest slot with rows no
  * live tab holds (a page that reloaded, a tab that closed). Never rejects.
  *
- * `loadYOffline` would also take the rows of a tab still open on the note,
- * even one left at an earlier generation (offline across a migration): this
- * page would start from that tab's edits and capture them as its own. Those
- * rows stay that tab's; it captures them itself when it learns the note
- * moved on.
+ * `loadYOffline` also loads the rows of a tab still open on the note (and
+ * flags them, `unsyncedInLiveTabs`, so it no longer captures them on a moved
+ * generation). jot reads only rows of tabs that are gone: this page must not
+ * start from, or sync, edits a tab keeps back with Work offline. Those rows
+ * stay that tab's; it syncs or captures them itself.
  */
 export async function prepareNote(id: string, idb?: IdbGlobals): Promise<PreparedNote> {
   const { store, problem } = await offlineStore(idb);
@@ -129,7 +159,10 @@ export async function prepareNote(id: string, idb?: IdbGlobals): Promise<Prepare
           epoch: info.epoch,
           state: read.value.state,
           base: read.value.base,
+          baseAt: read.value.baseAt ?? null,
           hasUnsyncedEdits: read.value.hasUnsyncedEdits,
+          // Only rows of tabs that are gone were read.
+          unsyncedInLiveTabs: false,
           slot,
         };
         return { store, problem: null, loaded };

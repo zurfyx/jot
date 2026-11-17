@@ -30,6 +30,7 @@ export function createPeer(note: Y.Doc) {
         RichTextExtension,
         configExtension(YCollabExtension, {
           doc,
+          onYStatus: null, // a peer reads collab.status before it writes
           schemaVersion: 1, // the same as the note's other clients
           synced: true,
           captureTimeout: null,

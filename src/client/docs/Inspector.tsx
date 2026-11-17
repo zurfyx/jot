@@ -102,7 +102,12 @@ export default function Inspector() {
           // Its first line has the inspector's own style, not the note's title.
           configExtension(TitleExtension, { disabled: true }),
           // A local document is synced from the start: initialize at once.
-          configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+          configExtension(YCollabExtension, {
+            doc,
+            onYStatus: null,
+            schemaVersion: SCHEMA_VERSION,
+            synced: true,
+          }),
         ],
       }),
     );

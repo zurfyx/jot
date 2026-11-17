@@ -51,9 +51,12 @@ export function renderView(state: Uint8Array): Rendered {
     doc.destroy();
   }
   try {
-    const editorState = readYState(state, { extensions: [jotNodesExtension], schemaVersion }, () =>
-      $getEditor().getEditorState().toJSON(),
-    );
+    const config = {
+      extensions: [jotNodesExtension],
+      schemaVersion,
+      onWarn: (warning: unknown) => console.warn('jot: reading offline edits', warning),
+    };
+    const editorState = readYState(state, config, () => $getEditor().getEditorState().toJSON());
     return { ok: true, editorState };
   } catch (error) {
     return { ok: false, reason: String(error) };

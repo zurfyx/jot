@@ -68,7 +68,10 @@ export function recoveryState(session: NoteSession): RecoveryState {
 export function shownCaptures(recovered: readonly YOfflineRecovered[]): YOfflineCapture[] {
   return recovered
     .filter(
-      ({ report }) => !report.ok || report.value.blocks.length > 0 || report.value.orderDiffers,
+      ({ capture, report }) =>
+        // Replayed, or written into the note as leftovers: nothing left to show.
+        capture.resolved === undefined &&
+        (!report.ok || report.value.blocks.length > 0 || report.value.orderDiffers),
     )
     .map(({ capture }) => capture)
     .sort((a, b) => a.capturedAt - b.capturedAt);

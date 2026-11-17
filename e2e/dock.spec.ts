@@ -145,7 +145,7 @@ test('Aa is disabled on a read-only note', async ({ page, baseURL }) => {
   const id = freshNoteId();
   // A note a newer jot wrote: this release reads it, read only (D29).
   const written = seedYState(
-    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1 },
+    { extensions: [RichTextExtension], schemaVersion: SCHEMA_VERSION + 1, onWarn: null },
     () => {
       $getRoot().append($createParagraphNode().append($createTextNode('From a newer jot')));
     },

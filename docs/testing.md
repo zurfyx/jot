@@ -17,6 +17,9 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   is what the relay would store, not the deleted content an undo stack keeps alive;
 - size and copy formatting for the pill and Note info ("238 KB", "1.72 MB", "2 MB", edits
   waiting, the kept-until date);
+- the read-only banner (`editor/readOnly.test.ts`): a newer schema or layout (or no cause)
+  asks for a reload; an edit the note can't keep, or content it can't read, asks to copy
+  first;
 - the migration from local drafts (D23): a leftover draft moves to the new note's pending
   copy under the Web Lock (none taken without a draft); of two tabs claiming at once only
   one gets it, and the draft is re-read inside the lock; with no room for the copy the
@@ -48,10 +51,13 @@ Vitest in Node, next to the code (`src/shared/*.test.ts`, `src/client/**/*.test.
   under the note and that generation, and the next page starts from them; a tab still open
   keeps its rows (another page does not start from them) until it is gone; nothing stays
   once the server holds everything; a note that moved on turns them into a capture (the
-  binding frozen), which the fresh page's `recoverYOfflineEdits` lists with jot's nodes,
-  its added block replayable by id (D38) and nothing reapplied at stage `persist`; a copy an earlier jot kept becomes a `legacy` capture
+  binding frozen), which the fresh page's `recoverYOfflineEdits` reapplies: an added block
+  goes in after the block before it, by block id (D38), and the capture is resolved; a
+  block both sides changed stays the note's, with the person's version after it under the
+  label "Offline edits that didn't merge · <time>" as a quote, and one undo takes that out;
+  a copy an earlier jot kept becomes a `legacy` capture
   (none without a store); captures past 90 days are pruned; a capture the note holds all of
-  (items and deletions) holds nothing new;
+  (items and deletions) holds nothing new; the label reads the capture's time;
 - confirmation: the server's state vector confirms inserts it covers, never deletes;
 - blame: two peers' documents turn into lines of runs (a heading, bold text, a line break,
   a list, typing inside someone else's line), matching Lexical's lines; shares in
@@ -380,17 +386,18 @@ Durable Objects, over real WebSockets.
   shows up in the next new note exactly once (its two lines, no extra empty one), reaches
   a second browser, and is cleared; with the editor chunk held back, a start claims
   nothing and the draft survives the page closing; with `localStorage` throwing, `/new` and
-  "Start a new note" still open fresh notes; a leftover draft lands in the new note's
-  offline edits, once; a `jot:pending:<id>` copy reaches its own note's offline edits (not
-  either note) when a note page opens, as a capture on this device that another browser
-  doesn't have, and is cleared; a copy the server already holds, with a deletion, is
+  "Start a new note" still open fresh notes; a leftover draft lands in the new note as
+  leftovers (the label, then its lines as quotes), seen in a second browser, once; a
+  `jot:pending:<id>` copy goes into its own note (not the new one) as leftovers when a
+  page opens that note, and is cleared; a copy the server already holds, with a deletion, is
   cleared and asks nobody to look at it; a copy is taken once and never uploaded;
 - unsent edits on this device (D37, `e2e/offline-device.spec.ts`): edits typed while
   working offline survive a reload, sync, and reach a second page, with nothing saved
   apart; a tab closed with edits waiting, on a note that then moved on, leaves them on
-  this device: the next page shows the banner ("saved on this device"), the note without
-  them, the view with them, a row "On this device" under ⋯ → Offline edits that another
-  browser doesn't have, and Remove clears it for good; a store that refuses every write
+  this device: the next page reapplies them into the note (the server and another browser
+  have them, no banner), once; a line both sides changed keeps the note's version, and
+  the person's follows it in a quote under the leftovers label, in both browsers and on
+  the server; a store that refuses every write
   shows "aren't being saved on this device" while edits wait, keeps them in the page and
   syncs them on Reconnect;
 - Aa is disabled on a read-only note, and an open Aa menu closes when the note turns read
@@ -443,10 +450,10 @@ Durable Objects, over real WebSockets.
 - a note a newer jot wrote opens read only with its banner (Aa disabled);
 - the generation fence (`e2e/fence.spec.ts`): a page offline while its note moved on (a
   development-only route gives the note a new incarnation and closes its sockets) keeps
-  its edits on this device and reconnects into the note as it is; its edits are under its
-  banner and ⋯ → Offline edits ("On this device"; another browser has none), read only,
-  and never in the note; Dismiss is remembered; with no IndexedDB the same edits are
-  uploaded instead, and another browser sees them as another visitor's; a client from before the fence, on a note it may not join,
+  its edits on this device, reconnects into the note as it is, and reapplies them: the
+  line it added is in the note for both pages, the server and another browser, with no
+  banner and nothing under Offline edits; with no IndexedDB the same edits are uploaded
+  instead, under the banner, and another browser sees them as another visitor's; a client from before the fence, on a note it may not join,
   receives only the signal and an empty sync step 2, keeps its own text, and its document
   shows under Offline edits; a note this release cannot read reloads the page once, then
   says so;
@@ -625,10 +632,10 @@ and dark, at 1440x900 and 390x844.
   unavailable message, and jot AI's caret after it writes;
 - every docs page, whole, the phone's page list, the inspector following a hovered row, and
   the inspector with a typed quote and highlighted code block (its own size at every width);
-- the generation fence's screens: offline edits saved on this device (the banner, and
-  viewed), ⋯ → Offline edits with this device's capture and another visitor's record, the
-  upload where there is no store ("Saving offline edits…"), edits not saved on this device,
-  and a note this release cannot read;
+- the generation fence's screens: offline edits that didn't merge, written into the note
+  under their label; offline edits saved apart where a browser has no store (the banner,
+  viewed, ⋯ → Offline edits in another browser, and "Saving offline edits…"); edits not
+  saved on this device; and a note this release cannot read;
 - a read-only note, a malformed link and the 404 page.
 
 `e2e/visual/motion.spec.ts` runs in the light 1440 project only. For the landing page's

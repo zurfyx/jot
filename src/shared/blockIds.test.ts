@@ -48,8 +48,8 @@ const previousRelease = defineExtension({
   ],
 });
 
-const NOW = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION };
-const BEFORE = { extensions: [previousRelease], schemaVersion: SCHEMA_VERSION };
+const NOW = { extensions: [jotNodesExtension], schemaVersion: SCHEMA_VERSION, onWarn: null };
+const BEFORE = { extensions: [previousRelease], schemaVersion: SCHEMA_VERSION, onWarn: null };
 
 function $build() {
   const root = $getRoot();
@@ -90,7 +90,12 @@ function bind(doc: ReturnType<typeof createYDoc>, synced = true) {
       name: 'test/block-ids',
       dependencies: [
         jotNodesExtension,
-        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced }),
+        configExtension(YCollabExtension, {
+          doc,
+          onYStatus: null,
+          schemaVersion: SCHEMA_VERSION,
+          synced,
+        }),
       ],
       onWarn: () => {},
     }),

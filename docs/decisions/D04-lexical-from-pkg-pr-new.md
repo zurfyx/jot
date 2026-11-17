@@ -16,10 +16,11 @@ on `main` and every PR commit to pkg.pr.new, and a nightly of `main` to npm.
   for a `main` commit (`0.53.1-main.g<sha>`) or a pull request. Use the long form
   (`pkg.pr.new/meta/lexical/<package>@<sha>`): the short form (`pkg.pr.new/<package>@<sha>`)
   does not resolve every package, and the packages name each other by the long form.
-  Currently `main` at `85d811d` (`0.53.1-main.g85d811d`), which carries the whole
-  `@lexical/y` stack at layout 4 (NodeState on text as paired runs, with the frozen `3to4`
-  step; D36) with its load-repair and composition-hold fixes, and the markdown shortcut
-  fixes (meta/lexical#9868; the quote shortcut's bare `>` from #9913).
+  Currently the nightly `0.53.1-nightly.20261117.0`, built from `main` at `d28a883`: the whole
+  `@lexical/y` stack at layout 4 (D36), `@lexical/y/offline`'s leftovers (meta/lexical#9924,
+  D37) and its required choices (#9925: a status handler, `onWarn`, the offline mode, the
+  migration's `pending`), with the markdown shortcut fixes (#9868, #9913).
+  `@lexical/eslint-plugin` comes from the same build, for `@lexical/y-collab-status`.
 - Full shas for pkg.pr.new, not 7-character ones: those packages name their own Lexical
   dependencies by full-sha URL, so matching them keeps one resolution per package.
 - `overrides` in `pnpm-workspace.yaml` pin every `@lexical/*` package (direct or

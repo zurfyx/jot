@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
 
 import { writeRawNote } from '../raw-client';
 import {
@@ -17,10 +17,18 @@ import {
 } from './setup';
 
 /**
- * The generation fence's screens (D34, D37): offline edits saved apart on this
- * device, the upload where there is no store, edits not saved on this device,
- * and the reload notice.
+ * The generation fence's screens (D34, D37): offline edits that didn't merge,
+ * written into the note; offline edits saved apart in the note where a
+ * browser has no store (the banner, viewed, ⋯ → Offline edits, the upload);
+ * edits not saved on this device; and the reload notice.
  */
+
+/** A browser without IndexedDB: its offline edits go to the note's records (D34). */
+async function withoutStore(context: BrowserContext) {
+  await context.addInitScript(() => {
+    Object.defineProperty(window, 'indexedDB', { value: undefined });
+  });
+}
 
 async function replaceIncarnation(page: Page, id: string) {
   const response = await page.request.post(`/api/test/n/${id}/replace-incarnation`);
@@ -47,6 +55,7 @@ async function savedApart(page: Page, id: string, line = 'Written on the train',
 }
 
 test('offline edits saved apart: the banner', async ({ context }) => {
+  await withoutStore(context);
   const page = await pageFor(context, GERARD);
   await savedApart(page, freshNoteId());
   await rest(page);
@@ -54,6 +63,7 @@ test('offline edits saved apart: the banner', async ({ context }) => {
 });
 
 test('offline edits saved apart: viewed', async ({ context }) => {
+  await withoutStore(context);
   const page = await pageFor(context, GERARD);
   await savedApart(page, freshNoteId());
   await page.getByTestId('recovery-banner').getByRole('button', { name: 'View' }).click();
@@ -62,24 +72,61 @@ test('offline edits saved apart: viewed', async ({ context }) => {
   await shoot(page, 'recovery-viewed');
 });
 
-test('offline edits under ⋯ → Offline edits, on this device and in the note', async ({
+test('offline edits under ⋯ → Offline edits, in another browser', async ({
   context,
   otherContext,
 }) => {
   const id = freshNoteId();
-  // Ana's browser has no store: her offline edits wait in the note, for everyone.
-  await otherContext.addInitScript(() => {
-    Object.defineProperty(window, 'indexedDB', { value: undefined });
-  });
-  const ana = await pageFor(otherContext, ANA);
-  await savedApart(ana, id, 'Ana, offline');
+  await withoutStore(context);
   const page = await pageFor(context, GERARD);
-  await savedApart(page, id, 'Written on the train', false);
-  await openMore(page);
-  await page.getByTestId('recovery-item').click();
-  await expect(page.getByTestId('recovery-row')).toHaveCount(2);
+  await savedApart(page, id);
+  const ana = await pageFor(otherContext, ANA);
+  await openNote(ana, id);
+  await openMore(ana);
+  await ana.getByTestId('recovery-item').click();
+  await expect(ana.getByTestId('recovery-row')).toHaveCount(1);
+  await rest(ana);
+  await shoot(ana, 'recovery-panel');
+});
+
+test('offline edits that didn’t merge, written into the note', async ({
+  context,
+  otherContext,
+}) => {
+  const id = freshNoteId();
+  const page = await pageFor(context, GERARD);
+  const ana = await pageFor(otherContext, ANA);
+  await openNote(page, id);
+  await openNote(ana, id);
+  await editor(page).click();
+  await page.keyboard.insertText('A shared plan');
+  await page.keyboard.press('Enter');
+  await page.keyboard.insertText('Lunch at noon');
+  await expect(editor(ana)).toContainText('Lunch at noon');
+  // Gerard goes offline and changes the second line; Ana changes it too.
+  await page.getByTestId('status-pill').click();
+  await expect(page.getByTestId('status-pill')).toHaveText(/^Offline/);
+  await editor(page).getByText('Lunch at noon').click();
+  await page.keyboard.press('End');
+  await page.keyboard.insertText(', on the terrace');
+  // Ana's page reconnects into the note as it is (a new socket) before she types:
+  // an edit she made before that would be hers to recover too.
+  const sockets: string[] = [];
+  ana.on('websocket', (socket) => sockets.push(socket.url()));
+  await replaceIncarnation(page, id);
+  await expect.poll(() => sockets.length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+  await expect(ana.getByTestId('status-pill')).toContainText('Synced', { timeout: 15_000 });
+  await editor(ana).getByText('Lunch at noon').click();
+  await ana.keyboard.press('End');
+  await ana.keyboard.insertText(' sharp');
+  await expect(ana.getByTestId('status-pill')).toContainText('Synced');
+  await chrome(page).getByRole('button', { name: 'Reconnect' }).click();
+  await expect(editor(page).locator('blockquote')).toHaveText('Lunch at noon, on the terrace', {
+    timeout: 15_000,
+  });
+  await expect(page.getByTestId('status-pill')).toContainText('Synced');
   await rest(page);
-  await shoot(page, 'recovery-panel');
+  await shoot(page, 'offline-leftovers');
 });
 
 test('saving offline edits', async ({ context }) => {

@@ -125,7 +125,12 @@ function createClient(name: string, from?: Y.Doc) {
       name: `test/text-diff-${name}`,
       dependencies: [
         jotEditorExtension,
-        configExtension(YCollabExtension, { doc, schemaVersion: SCHEMA_VERSION, synced: true }),
+        configExtension(YCollabExtension, {
+          doc,
+          onYStatus: null,
+          schemaVersion: SCHEMA_VERSION,
+          synced: true,
+        }),
       ],
     }),
   );

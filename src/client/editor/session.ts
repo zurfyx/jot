@@ -11,6 +11,8 @@ import {
   type YBinding,
   type YBindingStatus,
   YCollabExtension,
+  type YReadOnlyCause,
+  type YStatus,
 } from '@lexical/y';
 import {
   attachYOfflineSession,
@@ -44,7 +46,9 @@ import { jotEditorExtension } from './extensions';
 import { localUser } from './presence';
 import { handOff, handOffCapture, type HandoffResult } from './handoff';
 import {
+  OFFLINE_AUTO_REPLAY,
   OFFLINE_CONFIG,
+  OFFLINE_LEFTOVERS,
   OFFLINE_STAGE,
   OFFLINE_WRITE_DELAY_MS,
   holdsNothingNew,
@@ -99,6 +103,8 @@ export interface NoteSession {
   binding: YBinding;
   /** The binding: pending until the first sync, then active or readonly. */
   status: ReadonlySignal<YBindingStatus>;
+  /** Why the note is read only, while it is (the binding's own cause). */
+  readOnlyCause: ReadonlySignal<YReadOnlyCause | null>;
   connection: ReadonlySignal<Connection>;
   /** True once the first sync finished; stays true across reconnects. */
   everSynced: ReadonlySignal<boolean>;
@@ -159,6 +165,7 @@ export function createNoteSession(
   const stored =
     prepared.loaded !== null && prepared.loaded.state !== null ? prepared.loaded : null;
   const doc = createYDoc(stored?.state ?? null);
+  const readOnlyCause = signal<YReadOnlyCause | null>(null);
 
   const editor = buildEditorFromExtensions(
     defineExtension({
@@ -172,6 +179,12 @@ export function createNoteSession(
           layoutUpgrade: LAYOUT_HANDLE,
           // Initialized on the first sync (onSync below).
           synced: false,
+          // Every status, with its cause: the page says why a note is read
+          // only (NotePage's banner), and a cause that holds an edit the note
+          // doesn't (unstorable-change) is never left unsaid.
+          onYStatus: (status: YStatus) => {
+            readOnlyCause.value = status.kind === 'readonly' ? status.cause : null;
+          },
           selfCheck: import.meta.env.DEV,
         }),
       ],
@@ -189,17 +202,25 @@ export function createNoteSession(
   const offlineCaptures = signal<YOfflineRecovered[] | null>(null);
   const offline: YOfflineSession = attachYOfflineSession({
     binding: collab.collab,
-    store: prepared.store,
     key: id,
     epoch: stored?.epoch ?? null,
-    loaded: stored ?? undefined,
-    stage: offlineStage,
-    keep: 'unsynced',
+    loaded: stored,
+    offline:
+      prepared.store === null
+        ? { stage: 'off' }
+        : { stage: OFFLINE_STAGE, store: prepared.store, persist: 'unsynced' },
+    // On a moved generation the session freezes the binding, then stops the
+    // provider itself, before it stores the capture (startHandoff also does).
+    stopSync: () => provider.disconnect(),
     writeDelay: OFFLINE_WRITE_DELAY_MS,
     onError: (error) => {
       offlineProblem.value = error.message;
     },
   });
+  // The 'same' verdict of the note's generation: only it can mark the device's
+  // copy synced, so a document of a replaced note never makes its unsynced
+  // edits the base (D37).
+  let markSynced: (() => void) | null = null;
   // A write that succeeds again clears the problem.
   const onAfterTransaction = () => {
     if (offlineProblem.peek() !== null) {
@@ -333,6 +354,9 @@ export function createNoteSession(
       void offline.serverEpoch(roomGeneration).then((result) => {
         if (result.kind === 'moved') {
           startHandoff(roomGeneration);
+        } else if (result.kind === 'same') {
+          markSynced = result.markSynced;
+          confirmToStore();
         }
       });
     }
@@ -486,17 +510,18 @@ export function createNoteSession(
     settle();
   };
   // The server holds everything this document holds once every local update
-  // came back (D37): what is stored on this device goes (keep: unsynced).
-  const confirmToStore = () => {
+  // came back (D37): what is stored on this device goes (persist: unsynced).
+  function confirmToStore() {
     if (
+      markSynced !== null &&
       !offline.ended &&
       provider.synced &&
       confirmed.peek() &&
       provider.unconfirmedUpdates.length === 0
     ) {
-      offline.markSynced();
+      markSynced();
     }
-  };
+  }
   let recovered = false;
   const refreshCaptures = async () => {
     if (offline.ended || generation === null || prepared.store === null) {
@@ -513,6 +538,8 @@ export function createNoteSession(
         epoch: generation,
         // Replay writes into the note: only into an editable one.
         stage: active ? offlineStage : 'persist',
+        autoReplay: OFFLINE_AUTO_REPLAY,
+        leftovers: OFFLINE_LEFTOVERS,
         config: OFFLINE_CONFIG,
         session: offline,
       });
@@ -597,6 +624,7 @@ export function createNoteSession(
     editor,
     binding: collab.binding,
     status: collab.status,
+    readOnlyCause,
     connection,
     everSynced,
     synced,

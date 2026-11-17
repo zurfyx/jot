@@ -490,13 +490,16 @@ export class NoteRoom extends DurableObject<Env> {
     if (!prepared.changed) {
       return;
     }
-    if (prepared.state.byteLength > this.maxBytes()) {
-      this.freshDocument(room, stored, prepared.state);
+    // Everything a migration stores comes together (`write`): the state, its
+    // generation, the old generation's base and any pending material.
+    const { write } = prepared;
+    if (write.state.byteLength > this.maxBytes()) {
+      this.freshDocument(room, stored, write.state);
       return;
     }
     // 4. Commit atomically: the state, the generation, the base, the transition.
-    const migrated = prepared.state;
-    const generation = prepared.generation;
+    const migrated = write.state;
+    const generation = write.generation;
     this.ctx.storage.transactionSync(() => {
       sql.exec(
         'UPDATE note SET state = ?, saved_at = ? WHERE id = 0',
@@ -506,10 +509,10 @@ export class NoteRoom extends DurableObject<Env> {
       insertBase(sql, room.generation, room.incarnation, stored);
       insertTransition(sql, room.generation, generation, 'in-place', prepared.receipt);
       writeRoom(sql, { ...room, generation });
-      if (prepared.pending !== null) {
+      if (write.pending !== null) {
         const built = pendingRecord(
           stored,
-          prepared.pending,
+          write.pending,
           {
             incarnation: room.incarnation,
             generation: room.generation,
