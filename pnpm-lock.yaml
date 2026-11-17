@@ -163,37 +163,37 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@lexical/a11y': https://pkg.pr.new/meta/lexical/@lexical/a11y@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/code': https://pkg.pr.new/meta/lexical/@lexical/code@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/code-prism': https://pkg.pr.new/meta/lexical/@lexical/code-prism@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/devtools-core': https://pkg.pr.new/meta/lexical/@lexical/devtools-core@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/eslint-plugin': https://pkg.pr.new/meta/lexical/@lexical/eslint-plugin@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/file': https://pkg.pr.new/meta/lexical/@lexical/file@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/hashtag': https://pkg.pr.new/meta/lexical/@lexical/hashtag@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/headless': https://pkg.pr.new/meta/lexical/@lexical/headless@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/history': https://pkg.pr.new/meta/lexical/@lexical/history@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/link': https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/list': https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/mark': https://pkg.pr.new/meta/lexical/@lexical/mark@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/markdown': https://pkg.pr.new/meta/lexical/@lexical/markdown@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/offset': https://pkg.pr.new/meta/lexical/@lexical/offset@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/overflow': https://pkg.pr.new/meta/lexical/@lexical/overflow@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/plain-text': https://pkg.pr.new/meta/lexical/@lexical/plain-text@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/react': https://pkg.pr.new/meta/lexical/@lexical/react@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/rich-text': https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/table': https://pkg.pr.new/meta/lexical/@lexical/table@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/text': https://pkg.pr.new/meta/lexical/@lexical/text@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/y': https://pkg.pr.new/meta/lexical/@lexical/y@faa10275419959865d8230d0ae367699bf9ebcbc
-  '@lexical/yjs': https://pkg.pr.new/meta/lexical/@lexical/yjs@faa10275419959865d8230d0ae367699bf9ebcbc
-  lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc
+  '@lexical/a11y': 0.53.1-nightly.20261117.0
+  '@lexical/clipboard': 0.53.1-nightly.20261117.0
+  '@lexical/code': 0.53.1-nightly.20261117.0
+  '@lexical/code-core': 0.53.1-nightly.20261117.0
+  '@lexical/code-prism': 0.53.1-nightly.20261117.0
+  '@lexical/devtools-core': 0.53.1-nightly.20261117.0
+  '@lexical/dragon': 0.53.1-nightly.20261117.0
+  '@lexical/eslint-plugin': 0.53.1-nightly.20261117.0
+  '@lexical/extension': 0.53.1-nightly.20261117.0
+  '@lexical/file': 0.53.1-nightly.20261117.0
+  '@lexical/hashtag': 0.53.1-nightly.20261117.0
+  '@lexical/headless': 0.53.1-nightly.20261117.0
+  '@lexical/history': 0.53.1-nightly.20261117.0
+  '@lexical/html': 0.53.1-nightly.20261117.0
+  '@lexical/internal': 0.53.1-nightly.20261117.0
+  '@lexical/link': 0.53.1-nightly.20261117.0
+  '@lexical/list': 0.53.1-nightly.20261117.0
+  '@lexical/mark': 0.53.1-nightly.20261117.0
+  '@lexical/markdown': 0.53.1-nightly.20261117.0
+  '@lexical/offset': 0.53.1-nightly.20261117.0
+  '@lexical/overflow': 0.53.1-nightly.20261117.0
+  '@lexical/plain-text': 0.53.1-nightly.20261117.0
+  '@lexical/react': 0.53.1-nightly.20261117.0
+  '@lexical/rich-text': 0.53.1-nightly.20261117.0
+  '@lexical/selection': 0.53.1-nightly.20261117.0
+  '@lexical/table': 0.53.1-nightly.20261117.0
+  '@lexical/text': 0.53.1-nightly.20261117.0
+  '@lexical/utils': 0.53.1-nightly.20261117.0
+  '@lexical/y': 0.53.1-nightly.20261117.0
+  '@lexical/yjs': 0.53.1-nightly.20261117.0
+  lexical: 0.53.1-nightly.20261117.0
 
 importers:
 
@@ -206,41 +206,41 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@lexical/code-core':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/code-prism':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/code-prism@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/code-prism@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/extension':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/internal':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/link':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/list':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/markdown':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/markdown@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/markdown@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/rich-text':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/selection':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/table':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/table@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/table@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/utils':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@lexical/y':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/y@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/y@faa10275419959865d8230d0ae367699bf9ebcbc(@y/y@14.0.0-rc.29)(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(@y/y@14.0.0-rc.29)(typescript@6.0.3)
       '@mlc-ai/web-llm':
         specifier: 0.2.86
         version: 0.2.86
@@ -257,8 +257,8 @@ importers:
         specifier: 14.0.0-rc.29
         version: 14.0.0-rc.29
       lexical:
-        specifier: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       lib0:
         specifier: 1.0.0-rc.36
         version: 1.0.0-rc.36
@@ -282,8 +282,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.13.0(jiti@2.7.0)(supports-color@10.2.2))
       '@lexical/eslint-plugin':
-        specifier: https://pkg.pr.new/meta/lexical/@lexical/eslint-plugin@faa10275419959865d8230d0ae367699bf9ebcbc
-        version: https://pkg.pr.new/meta/lexical/@lexical/eslint-plugin@faa10275419959865d8230d0ae367699bf9ebcbc(eslint@10.13.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)
+        specifier: 0.53.1-nightly.20261117.0
+        version: 0.53.1-nightly.20261117.0(eslint@10.13.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -898,54 +898,48 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lexical/a11y@https://pkg.pr.new/meta/lexical/@lexical/a11y@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-gjHljtbiHCqYl9XvGQRiQVAYJRuij084elCULcUhzCvLsEVYm6/z14RDU56xoni+FhT/SswnuLQnjtHg4zK/ZA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/a11y@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/a11y@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-5U8ml4AyiNb23XwROZNwXefUJFWmCXsNdIc2NImKv8cS4SvQnG0vAHqOvBY8D3e3U8T6rfKKGBlUUGlZRIBjWg==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/clipboard@https://pkg.pr.new/meta/lexical/@lexical/clipboard@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-ipdQNFT5VnRCkpsXjTYbLeGMejdNq981Zeb1hUJ3btvmSHFd3dbaMEcB7bLta/QzStLB4VU1UiBUgrSePmFd6w==, tarball: https://pkg.pr.new/meta/lexical/@lexical/clipboard@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/clipboard@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-g9Xo4iszLppadl/m/BRcdKD5QdGPhlp3Q8rd3f9lxxR4ouM52Zp4wGHkvfIyNGC5awK/QhKF2kcwTR2KDGLT7Q==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/code-core@https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-3hHT1QkvhgMk05NVrkJdFp88ZACyDELxTAcHtBMOrmMtSR2IClGGSjtdr+MaLdy9Wwaw8uLcY+w1I+LabRI2pA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/code-core@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-riJ0DUFtFNaOyqtsm14fuoTxIdxlYWfe1i35fF93NwcON+/Is0c/p+qd9lk6xITezK7JTBVlAE2JETw7uEXgrA==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/code-prism@https://pkg.pr.new/meta/lexical/@lexical/code-prism@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-hbFoDlY7wvy/0LFXzT2FbPP3Ka8MZa+Ixs5h8sEXpbfTBMirwm+lXEPRAQpesn3CYkzFdR85ZQO2aTMQnfeLaw==, tarball: https://pkg.pr.new/meta/lexical/@lexical/code-prism@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/code-prism@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-QOdqn0y56UpLB2OS9zjR19/md5g9riQzhxM3Xw5IomAHBkcuwganHHP7ldvNHFynNvhr08+vs48nb3l5YUY+Lg==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/dragon@https://pkg.pr.new/meta/lexical/@lexical/dragon@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-f57e1XZ77QxdewfYuKzF7cSfVe14aQxlbUXVhtVFGF4SoYB3gPQyONajI5bpAKYWR9BUnwPwHfhjJ8PyoRzmjQ==, tarball: https://pkg.pr.new/meta/lexical/@lexical/dragon@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/dragon@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-kw1TrwO9ez7xbELypGv4tci7ICsC9937tGVAY4HTmCEc4YX2EdHuyJ4MaH2l/NNnLyVKo8DcgxUD+wrQJc/SKg==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/eslint-plugin@https://pkg.pr.new/meta/lexical/@lexical/eslint-plugin@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-NNggMQzNcnj537wN4rqy2or2n0mDQvBy0Qt7NTjwn0akLupH9Ga0/LS0u1piZTPzeWkCIjZSX1ZzaDz3F9bgvQ==, tarball: https://pkg.pr.new/meta/lexical/@lexical/eslint-plugin@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/eslint-plugin@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-BjtnvHfOHBnyMKKKl/lA8eFHKXFDY3hWEbYCCXBUJlUP49qbq9+P/1GgFE8GDQ0qqBJtfJPf7SDXpBi/55g3BQ==}
     peerDependencies:
       eslint: '>=9.0.0'
       typescript: '>=5.2'
@@ -953,108 +947,96 @@ packages:
       typescript:
         optional: true
 
-  '@lexical/extension@https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-yzLZI/uX/SJwEAO80aL04nQDqnumhZMPNp3WwYbzXBCHOqnUkQx8hEqxzLN06+VMOQhZQfLCi91d+AJOxPHOig==, tarball: https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/extension@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-c4zfGbE/rh674bEZZcZCRccqHFWlQ73zq0gM9nL4hwpJYi6IlrMqjjA6f2wHAHd2twyCKzCIMnecZE9byxmFxA==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/html@https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-tE4QT0NnSHNWjjjI/FXdEu2b2B2F5NkSGoePM/sCkF1OkgJcJKRp7dWNl9InY3SHbaO3St61f7asbItPzYqVMg==, tarball: https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/html@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-DJmOXieMY1qOiuQRwXfKV0TGv1DT9L1lzXD8h81KNevv88BIXkl/8wX142samLj8oycRSVSXbUGddSRu5d+lkQ==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/internal@https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-mt0dt5UremA6c/uE2aiqZYtu/iwyZuh//5rpcCbgtrvQILdYIJwqhDnxyhZQXmnHGUEach1N7uXdycaKlebPRw==, tarball: https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/internal@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-2wFo2kKy/e++IEs9AstwhqIrNTzEM0y/s4/UFMIiLDq2LgzSICDLi7v+2TvlukJ9gaewoR8yLhm40qKYH1Gkkw==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/link@https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-H0KbUgk+4Y494bikdSFTQYc2JEjKGOWHnu2gVg1XEk94fQzwt1uhYBkqA8PdkQLLZUFldl52NwT7P4te5t78KA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/link@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-FXk8mF9IgjvE3D+6jilyOjv9xhl4Na4KNceD42Xcfmjn/j3ksnsEP3tPeKfqYw9zH17y8xvmQZUX0sZyNHfKxg==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/list@https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-6OWXuoVCCIg0+8OnrHNTUPm0TnsS4dLmxBecdW0g1J9q5yT0AHQ9+uqP+5Ixt4o9V0a0WyA2hVDbroJkfLzHKA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/list@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-GaKdaYYQIoGqwIC36oyhaeuwHUCWU9PvgfQH16uxlqRCCGcEfdaI3YslvIemF0GyCnxya7rooe8xO1hbX/dFGw==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/markdown@https://pkg.pr.new/meta/lexical/@lexical/markdown@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-3xohuFh9w2RczhT/68RTvUNY2NSwSeLQHgMfYgUrS2lVgxcp1FqROq9DptlvFoMOFm/Qi8uN+piC0USRUjB+lg==, tarball: https://pkg.pr.new/meta/lexical/@lexical/markdown@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/markdown@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-C41WiWJLvZy0Kbq6WfeZPmuQnMSSqJYWzzXFzJWtO6JNH5jackvacvMnrUnW7QY/+8KF1GXM/HajT3f+hsRXFg==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/rich-text@https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-vCYHDm4pH8DIrW5xts5v4uWRfyFgbBwe7ImB18RCqmGN+xquLUTsLqdxHYRHYQVfxaMIVoAj5OhhyTykUH6BdA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/rich-text@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-HSXXP++EnIZK2CLL0g9teE/oGQXQP4iVWkSlnnSXf+FzN0RjT2l9sGZrt7w0qV24WLVXHoy8W1ebzl0s1zoOXA==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/selection@https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-iouayU4OHnzCPVqn+ze0zeKydfVg7wBXhkd9DmaxsLDm/1ezKlSQpefyvaMDnMBuunORyQG0n6FbR+Ie1YFi+Q==, tarball: https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/selection@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-EwQA08tzvXL1vpd+YGqmX7tmBXW2Qtzwo3Jo/+oAubO9UssoxcvDGRcy4jH7EVZnBciRlGjeKBBQzTtWqVbSHA==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/table@https://pkg.pr.new/meta/lexical/@lexical/table@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-sYvrPqFbjAXfAlc+IYBebBQk/2AOmI60VAcXTlsJz6Kq4AAJCD/VMovxHlhP4OEcrix/F/lVwD1kl0Zc41YzMA==, tarball: https://pkg.pr.new/meta/lexical/@lexical/table@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/table@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-z7upmAxuvRmdMcMnAONUp6MWvlQtTGoZC2qDX6PldGh/6th/miLN8J/M8uwFAAEfitpP82m2SytgaJv+Tmcw2w==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/text@https://pkg.pr.new/meta/lexical/@lexical/text@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-L64SYZawe/XMrfkr9jNFGYeiUh2b7oXzeJqw/8/tHEAi17HJrv4wwcTqUyo/NPxyCl0KeDseIPFdgCx9PpFvmw==, tarball: https://pkg.pr.new/meta/lexical/@lexical/text@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/text@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-hV5C20iOx1oslAxgE9pXqTLue287GDEBQpjCaOeAtm3Z1MA0+P9XgPgMLBcaSReUmyI8WcfdoVPTE1LCNG67dw==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/utils@https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-bPat0l3dESkx9QcLbPuGQjHBNRHyAA7AP8eg9r0/jSUCnKNIJHb5TwALDzdcSBiJwmKDcljKhmqPbbZ3w0WRHQ==, tarball: https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/utils@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-1gFMJ3YsExj3vXiovwvk3EK5WwRVws42CHcWispr0Zl0tnH4tPzf7pVjxbvDB4DXbnIfYlrvh4aSpFrP9zT7rw==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@lexical/y@https://pkg.pr.new/meta/lexical/@lexical/y@faa10275419959865d8230d0ae367699bf9ebcbc':
-    resolution: {integrity: sha512-yCQNKQ3f3ZXpImv8NC84Hzr79Qv3L39ykRGOYk4rZ7k1ymD8NI0SubSJALl2vA0AfDPWVY3CrNxjdQ6L8QJMYw==, tarball: https://pkg.pr.new/meta/lexical/@lexical/y@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  '@lexical/y@0.53.1-nightly.20261117.0':
+    resolution: {integrity: sha512-HKOfbjhyBLlH5+ZPasBHGBfB6HjvhRlVkQMeDgP1qwbPFmmC9SLj1Tlszmk/p/BxtvbzPczU95UYkMadWVvgCw==}
     peerDependencies:
       '@y/y': 14.0.0-rc.29
       typescript: '>=5.2'
@@ -1646,9 +1628,8 @@ packages:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
 
-  lexical@https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc:
-    resolution: {integrity: sha512-Nqed3Z1Sz4Aa3LIrBbSOavwrz2da7qG+EDcEx+DcI1xGJG1kp1feAkclxkeO1LUFP8WtpcYys5Gqj2riYcnj7A==, tarball: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc}
-    version: 0.53.1-main.gfaa1027
+  lexical@0.53.1-nightly.20261117.0:
+    resolution: {integrity: sha512-VEkbMKCCSBbZdIC3cTG6s/Uj7SRUDX7bK4Mmsfi3SNE4INQMjqDig5FTkUGF64BD9BBTlBKxRYtrsdWIcpyUpg==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
@@ -2585,169 +2566,169 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lexical/a11y@https://pkg.pr.new/meta/lexical/@lexical/a11y@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/a11y@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/clipboard@https://pkg.pr.new/meta/lexical/@lexical/clipboard@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/clipboard@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/list': https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/html': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/list': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/selection': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@types/trusted-types': 2.0.7
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/code-core@https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/code-core@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/html': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/code-prism@https://pkg.pr.new/meta/lexical/@lexical/code-prism@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/code-prism@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/code-core': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
       prismjs: 1.30.0
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/dragon@https://pkg.pr.new/meta/lexical/@lexical/dragon@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/dragon@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/eslint-plugin@https://pkg.pr.new/meta/lexical/@lexical/eslint-plugin@faa10275419959865d8230d0ae367699bf9ebcbc(eslint@10.13.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)':
+  '@lexical/eslint-plugin@0.53.1-nightly.20261117.0(eslint@10.13.0(jiti@2.7.0)(supports-color@10.2.2))(typescript@6.0.3)':
     dependencies:
       eslint: 10.13.0(jiti@2.7.0)(supports-color@10.2.2)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/extension@https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/extension@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@preact/signals-core': 1.14.4
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/html@https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/html@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/selection': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/internal@https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/internal@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/link@https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/link@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/a11y': https://pkg.pr.new/meta/lexical/@lexical/a11y@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/a11y': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/html': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/list@https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/list@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/html': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/markdown@https://pkg.pr.new/meta/lexical/@lexical/markdown@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/markdown@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/code-core': https://pkg.pr.new/meta/lexical/@lexical/code-core@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/link': https://pkg.pr.new/meta/lexical/@lexical/link@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/list': https://pkg.pr.new/meta/lexical/@lexical/list@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/rich-text': https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/text': https://pkg.pr.new/meta/lexical/@lexical/text@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/code-core': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/link': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/list': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/rich-text': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/selection': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/text': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/rich-text@https://pkg.pr.new/meta/lexical/@lexical/rich-text@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/rich-text@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/a11y': https://pkg.pr.new/meta/lexical/@lexical/a11y@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/dragon': https://pkg.pr.new/meta/lexical/@lexical/dragon@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/a11y': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/clipboard': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/dragon': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/html': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/selection': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/selection@https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/selection@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/table@https://pkg.pr.new/meta/lexical/@lexical/table@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/table@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/clipboard': https://pkg.pr.new/meta/lexical/@lexical/clipboard@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/html': https://pkg.pr.new/meta/lexical/@lexical/html@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/utils': https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/clipboard': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/html': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/text@https://pkg.pr.new/meta/lexical/@lexical/text@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/text@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/utils@https://pkg.pr.new/meta/lexical/@lexical/utils@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)':
+  '@lexical/utils@0.53.1-nightly.20261117.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/selection': https://pkg.pr.new/meta/lexical/@lexical/selection@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/selection': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
-  '@lexical/y@https://pkg.pr.new/meta/lexical/@lexical/y@faa10275419959865d8230d0ae367699bf9ebcbc(@y/y@14.0.0-rc.29)(typescript@6.0.3)':
+  '@lexical/y@0.53.1-nightly.20261117.0(@y/y@14.0.0-rc.29)(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': https://pkg.pr.new/meta/lexical/@lexical/extension@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/extension': 0.53.1-nightly.20261117.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
       '@y/y': 14.0.0-rc.29
-      lexical: https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      lexical: 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
@@ -3312,9 +3293,9 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
-  lexical@https://pkg.pr.new/meta/lexical/lexical@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3):
+  lexical@0.53.1-nightly.20261117.0(typescript@6.0.3):
     dependencies:
-      '@lexical/internal': https://pkg.pr.new/meta/lexical/@lexical/internal@faa10275419959865d8230d0ae367699bf9ebcbc(typescript@6.0.3)
+      '@lexical/internal': 0.53.1-nightly.20261117.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
 
